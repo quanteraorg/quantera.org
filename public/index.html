@@ -56,7 +56,13 @@ header{backdrop-filter:none}.sw{margin-left:auto}
 nav{position:fixed;left:0;top:58px;bottom:0;width:176px;flex-direction:column;gap:2px;padding:16px 10px;border-right:1px solid var(--ln);background:var(--bg);overflow-y:auto;z-index:15}nav a{padding:9px 12px}
 main{margin:0 0 0 176px;max-width:1380px}
 @media(max-width:800px){nav{top:auto;bottom:0;left:0;right:0;width:auto;flex-direction:row;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));border-right:0;border-top:1px solid var(--ln)}main{margin-left:0;padding-bottom:90px}}
-</style></head><body>
+</style>
+<!-- Vercel Speed Insights -->
+<script type="module">
+import { injectSpeedInsights } from 'https://cdn.jsdelivr.net/npm/@vercel/speed-insights@1/dist/index.mjs';
+injectSpeedInsights();
+</script>
+</head><body>
 <header><a class="logo" href="#/">QUANTERA</a><nav id="nav"></nav><div class="sw"><input id="q" placeholder="Search stocks, funds, crypto, anything…" autocomplete="off"><div id="res"></div></div></header>
 <style>#sub{margin-left:176px;padding:10px 24px 0;gap:6px;border-bottom:1px solid var(--ln);display:none}#sub a{padding:7px 16px;border-radius:8px 8px 0 0;color:var(--mu)}#sub a.on{color:var(--ac);border-bottom:2px solid var(--ac)}@media(max-width:800px){#sub{margin-left:0;padding:8px 14px 0;overflow-x:auto}}</style><div id="sub"></div><main id="m"></main>
 <script>
