@@ -21,9 +21,14 @@ final class Providers {
     static boolean newsOn() { return cfg("MARKETAUX_API_TOKEN", null) != null; }
     static boolean aiOn() { return cfg("ANTHROPIC_API_KEY", null) != null; }
 
+    /** After Alpha Vantage reports a rate limit, skip calling it until this time (calls made while blocked can still count against the quota). */
+    static volatile long AV_BLOCKED_UNTIL = 0;
+    static final String AV_LIMIT = "Live prices are paused: the market data provider's limit was reached. Try again later.";
+
     private static String avRaw(Map<String, String> p, int timeoutSec) {
         String key = cfg("ALPHAVANTAGE_API_KEY", null);
         if (key == null) throw new UpstreamException("Market data is not configured", 503);
+        if (System.currentTimeMillis() < AV_BLOCKED_UNTIL) throw new UpstreamException(AV_LIMIT, 429);
         StringBuilder u = new StringBuilder(cfg("AV_BASE_URL", "https://www.alphavantage.co/query")).append("?");
         Map<String, String> all = new LinkedHashMap<>(p);
         all.put("apikey", key);
@@ -42,7 +47,8 @@ final class Providers {
             // Free-tier limit messages also advertise "premium plans", so check for a rate limit first
             boolean limit = info.contains("rate limit") || info.contains("per day") || info.contains("per minute") || info.contains("call frequency");
             if (!limit && info.contains("premium")) throw new UpstreamException("This data needs a premium Alpha Vantage plan", 402);
-            throw new UpstreamException("Market data rate limit reached. Try again later.", 429);
+            AV_BLOCKED_UNTIL = System.currentTimeMillis() + (info.contains("per day") ? 30 * 60_000L : 60_000L);
+            throw new UpstreamException(AV_LIMIT, 429);
         }
         if (j.containsKey("Error Message")) {
             if (String.valueOf(j.get("Error Message")).toLowerCase().contains("apikey")) throw new UpstreamException("Market data is not configured correctly", 503);
@@ -195,6 +201,46 @@ final class Providers {
         }
         if (f.length() > 0 || !row.isEmpty()) { row.add(f.toString()); rows.add(row); }
         return rows;
+    }
+
+    private static HttpResponse<String> mx(String path) {
+        String key = cfg("MARKETAUX_API_TOKEN", null);
+        if (key == null) throw new UpstreamException("News is not configured", 503);
+        String u = cfg("MARKETAUX_BASE_URL", "https://api.marketaux.com/v1") + path + (path.contains("?") ? "&" : "?") + "api_token=" + URLEncoder.encode(key, StandardCharsets.UTF_8);
+        HttpResponse<String> r;
+        try { r = HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(10)).GET().build(), HttpResponse.BodyHandlers.ofString()); }
+        catch (Exception e) { throw new UpstreamException("News provider error"); }
+        if (r.statusCode() == 402 || r.statusCode() == 429) throw new UpstreamException("News rate limit reached. Try again later.", 429);
+        if (r.statusCode() == 404) throw new UpstreamException("Story not found", 404);
+        if (r.statusCode() != 200) throw new UpstreamException("News provider error");
+        return r;
+    }
+
+    static String plain(Object html) { return html == null ? null : String.valueOf(html).replaceAll("<[^>]+>", "").replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'").trim(); }
+
+    /** One story with the passages that mention each company, plus related stories. */
+    static Map<String, Object> article(String id) {
+        return CACHE.get("a" + id, 3600_000L, () -> {
+            Map<String, Object> a;
+            try { a = map(Json.parse(mx("/news/uuid/" + id).body())); } catch (IllegalArgumentException e) { throw new UpstreamException("News provider error"); }
+            if (str(a.get("uuid")) == null) throw new UpstreamException("Story not found", 404);
+            List<Object> ents = new ArrayList<>();
+            for (Object e : list(a.get("entities"))) {
+                Map<String, Object> en = map(e);
+                if (str(en.get("symbol")) == null || ents.size() >= 8) continue;
+                List<Object> hl = new ArrayList<>();
+                for (Object h : list(en.get("highlights"))) { Map<String, Object> x = map(h); if (hl.size() < 3) hl.add(Json.obj("text", plain(x.get("highlight")), "sentiment", num(x.get("sentiment")))); }
+                ents.add(Json.obj("symbol", str(en.get("symbol")), "name", str(en.get("name")), "type", str(en.get("type")), "industry", str(en.get("industry")), "sentiment", num(en.get("sentiment_score")), "highlights", hl));
+            }
+            List<Object> similar = new ArrayList<>();
+            try {
+                for (Object o : list(map(Json.parse(mx("/news/similar/" + id + "?language=en&limit=3").body())).get("data"))) {
+                    Map<String, Object> s = map(o);
+                    similar.add(Json.obj("id", str(s.get("uuid")), "title", str(s.get("title")), "source", str(s.get("source")), "publishedAt", str(s.get("published_at")), "url", str(s.get("url"))));
+                }
+            } catch (RuntimeException ignored) {} // related stories are optional
+            return Json.obj("id", str(a.get("uuid")), "title", str(a.get("title")), "description", plain(a.get("description")), "snippet", plain(a.get("snippet")), "url", str(a.get("url")), "image", str(a.get("image_url")), "source", str(a.get("source")), "publishedAt", str(a.get("published_at")), "keywords", str(a.get("keywords")), "entities", ents, "similar", similar);
+        });
     }
 
     static List<Object> news(String symbols, String text, int limit) {

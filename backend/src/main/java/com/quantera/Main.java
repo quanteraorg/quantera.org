@@ -65,6 +65,11 @@ public final class Main {
             try { limit = Integer.parseInt(r.query().getOrDefault("limit", "6")); } catch (NumberFormatException ignored) {}
             return Json.obj("articles", Providers.news(symbols, text, limit));
         }, 600, 60));
+        ROUTES.put("/api/article", new Route(r -> {
+            String id = r.query().getOrDefault("id", "").trim().toLowerCase();
+            if (!id.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) throw new UpstreamException("Bad story id", 400);
+            return Providers.article(id);
+        }, 3600, 60));
         ROUTES.put("/api/calendar", new Route(r -> {
             String type = r.query().getOrDefault("type", "earnings");
             if (!type.equals("earnings") && !type.equals("ipo")) throw new UpstreamException("type must be earnings or ipo", 400);

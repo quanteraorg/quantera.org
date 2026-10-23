@@ -24,18 +24,25 @@ final class Support {
         UpstreamException(String msg) { this(msg, 502); }
     }
 
-    /** Time-based cache with a size cap. */
+    /** Time-based cache with a size cap. When a refresh fails because a provider is rate limited or down, the last good value (up to a day old) is served instead. */
     static final class Cache {
         private record E(long t, Object v) {}
+        static final long STALE_MS = 24 * 3600_000L;
         private final Map<String, E> m = Collections.synchronizedMap(new LinkedHashMap<>() {
             @Override protected boolean removeEldestEntry(Map.Entry<String, E> e) { return size() > 400; }
         });
         @SuppressWarnings("unchecked")
         <T> T get(String key, long ttlMs, Supplier<T> fn) {
             E e = m.get(key);
-            if (e != null && System.currentTimeMillis() - e.t < ttlMs) return (T) e.v;
-            T v = fn.get();
-            m.put(key, new E(System.currentTimeMillis(), v));
+            long now = System.currentTimeMillis();
+            if (e != null && now - e.t < ttlMs) return (T) e.v;
+            T v;
+            try { v = fn.get(); }
+            catch (UpstreamException x) {
+                if (e != null && now - e.t < STALE_MS && (x.code == 429 || x.code >= 500)) return (T) e.v;
+                throw x;
+            }
+            m.put(key, new E(now, v));
             return v;
         }
         void clear() { m.clear(); }

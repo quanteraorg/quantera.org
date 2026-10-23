@@ -68,6 +68,8 @@ public class TestMain {
             upstreamCalls.add(ex.getRequestURI().toString());
             reply(ex, 200, "application/json", "{\"data\":[{\"uuid\":\"1\",\"title\":\"T\",\"snippet\":\"S\",\"url\":\"https://x.test\",\"source\":\"Src\",\"published_at\":\"2026-10-05T00:00:00Z\",\"entities\":[{\"symbol\":\"AAPL\",\"name\":\"Apple\",\"sentiment_score\":0.3},{\"symbol\":null,\"name\":\"x\"}]}]}");
         });
+        fake.createContext("/mx/news/uuid/", ex -> reply(ex, 200, "application/json", "{\"uuid\":\"11111111-2222-3333-4444-555555555555\",\"title\":\"Apple rises\",\"description\":\"Desc &amp; more\",\"snippet\":\"S\",\"url\":\"https://x.test/a\",\"source\":\"Src\",\"published_at\":\"2026-10-05T00:00:00Z\",\"entities\":[{\"symbol\":\"AAPL\",\"name\":\"Apple\",\"type\":\"equity\",\"industry\":\"Technology\",\"sentiment_score\":0.4,\"highlights\":[{\"highlight\":\"iPhone demand is <em>strong</em>\",\"sentiment\":0.6}]}]}"));
+        fake.createContext("/mx/news/similar/", ex -> reply(ex, 200, "application/json", "{\"data\":[{\"uuid\":\"9\",\"title\":\"Related\",\"source\":\"Src\",\"published_at\":\"2026-10-04T00:00:00Z\",\"url\":\"https://x.test/b\"}]}"));
         fake.createContext("/an/v1/messages", ex -> {
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             upstreamCalls.add("anthropic key=" + ex.getRequestHeaders().getFirst("x-api-key") + " hasTools=" + body.contains("get_quote"));
@@ -120,13 +122,22 @@ public class TestMain {
         t("calendar bad type -> 400", get(p, "/api/calendar?type=x").code == 400);
         Providers.CACHE.clear(); avMode = "limit";
         r = get(p, "/api/quote?symbol=MSFT");
-        t("provider rate limit -> 429 with friendly message", r.code == 429 && r.raw.toLowerCase().contains("rate limit"));
-        Providers.CACHE.clear(); avMode = "daily";
+        t("provider rate limit -> 429 with friendly message", r.code == 429 && r.raw.toLowerCase().contains("limit was reached"));
+        int nb = upstreamCalls.size(); r = get(p, "/api/quote?symbol=IBM");
+        t("while blocked, no further provider calls are made", r.code == 429 && upstreamCalls.size() == nb);
+        Providers.AV_BLOCKED_UNTIL = 0; Providers.CACHE.clear(); avMode = "daily";
         t("daily limit mentioning premium plans -> 429, not 402", get(p, "/api/quote?symbol=MSFT").code == 429);
-        Providers.CACHE.clear(); avMode = "premium";
+        Providers.AV_BLOCKED_UNTIL = 0; Providers.CACHE.clear(); avMode = "premium";
         t("premium-only endpoint -> 402", get(p, "/api/quote?symbol=MSFT").code == 402);
         Providers.CACHE.clear(); avMode = "badkey";
-        t("invalid API key -> 503, not symbol not found", get(p, "/api/quote?symbol=MSFT").code == 503); avMode = "ok";
+        t("invalid API key -> 503, not symbol not found", get(p, "/api/quote?symbol=MSFT").code == 503); avMode = "ok"; Providers.AV_BLOCKED_UNTIL = 0;
+        Providers.CACHE.get("stale-test", 0, () -> "good");
+        t("rate-limited refresh serves the last good value", "good".equals(Providers.CACHE.get("stale-test", 0, () -> { throw new Support.UpstreamException("limit", 429); })));
+        boolean nf = false; try { Providers.CACHE.get("stale-test", 0, () -> { throw new Support.UpstreamException("gone", 404); }); } catch (Support.UpstreamException e) { nf = e.code == 404; }
+        t("not-found errors are not hidden by stale data", nf);
+        r = get(p, "/api/article?id=11111111-2222-3333-4444-555555555555");
+        t("article: entities with plain-text highlights + similar stories", r.code == 200 && "AAPL".equals(m(l(m(r.body).get("entities")).get(0)).get("symbol")) && "iPhone demand is strong".equals(m(l(m(l(m(r.body).get("entities")).get(0)).get("highlights")).get(0)).get("text")) && l(m(r.body).get("similar")).size() == 1);
+        t("article rejects bad id", get(p, "/api/article?id=../etc").code == 400);
         HttpResponse<String> head = C.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + p + "/")).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
         t("HEAD probe gets a status without a body", head.statusCode() == 404 && head.body().isEmpty());
         String join = "{\"email\":\"Ada@Example.com\",\"interest\":\"Pro\",\"source\":\"pricing\"}";
