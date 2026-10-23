@@ -20,7 +20,9 @@ final class Store {
     /** Inserts rows into a table; duplicate rows (by unique constraint) are skipped. Returns the rows actually inserted. */
     private static List<Object> insert(String table, Map<String, Object> row) {
         if (!on()) throw new UpstreamException("Storage is not configured", 503);
-        String key = cfg("SUPABASE_SERVICE_KEY", "");
+        String key = cfg("SUPABASE_SERVICE_KEY", "").trim();
+        // A key pasted from a masked display (dots, line breaks) is rejected here, without ever echoing it into logs
+        if (!key.matches("[A-Za-z0-9._\\-]+")) { System.out.println("SUPABASE_SERVICE_KEY is malformed: copy the full key after revealing it"); throw new UpstreamException("Storage is not configured correctly", 503); }
         HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(cfg("SUPABASE_URL", "").replaceAll("/+$", "") + "/rest/v1/" + table))
                 .timeout(Duration.ofSeconds(8))
                 .header("apikey", key).header("Content-Type", "application/json")

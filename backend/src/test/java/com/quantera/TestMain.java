@@ -146,6 +146,9 @@ public class TestMain {
         t("event rejects bad name", call(p, "POST", "/api/events", "{\"name\":\"<x>\"}", ip()).code == 400);
         Main.MARKETS = Json.obj("movers", null, "indices", List.of(), "crypto", List.of(), "updated", "warm");
         t("markets served from background snapshot", "warm".equals(m(get(p, "/api/markets").body).get("updated"))); Main.MARKETS = null;
+        System.setProperty("SUPABASE_SERVICE_KEY", "sb_secret_abc\n••••");
+        r = call(p, "POST", "/api/waitlist", "{\"email\":\"masked@y.io\"}", ip());
+        t("masked/multi-line storage key -> 503, key never echoed", r.code == 503 && !r.raw.contains("sb_secret"));
         System.clearProperty("SUPABASE_URL"); System.clearProperty("SUPABASE_SERVICE_KEY");
         r = get(p, "/api/health");
         t("health reports configured services", d(1) == 1 && Boolean.TRUE.equals(m(r.body).get("market")) && Boolean.TRUE.equals(m(r.body).get("news")) && Boolean.TRUE.equals(m(r.body).get("ai")));
