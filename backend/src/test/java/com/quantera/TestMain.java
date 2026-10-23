@@ -74,6 +74,13 @@ public class TestMain {
             if (aiStep.incrementAndGet() % 2 == 1) reply(ex, 200, "application/json", "{\"stop_reason\":\"tool_use\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"get_quote\",\"input\":{\"symbol\":\"AAPL\"}}]}");
             else reply(ex, 200, "application/json", "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"**Data** Apple is $226 [[asset:AAPL]]\"}]}");
         });
+        Set<String> joined = Collections.synchronizedSet(new HashSet<>());
+        fake.createContext("/sb/rest/v1/", ex -> {
+            String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8), table = ex.getRequestURI().getPath().substring("/sb/rest/v1/".length());
+            upstreamCalls.add("supabase " + table + " key=" + ex.getRequestHeaders().getFirst("apikey") + " " + body);
+            if (table.equals("waitlist")) { String email = String.valueOf(m(l(Json.parse(body)).get(0)).get("email")); reply(ex, 201, "application/json", joined.add(email) ? body : "[]"); }
+            else reply(ex, 201, "application/json", body);
+        });
         fake.start();
         String base = "http://127.0.0.1:" + fake.getAddress().getPort();
         System.setProperty("AV_BASE_URL", base + "/av"); System.setProperty("MARKETAUX_BASE_URL", base + "/mx"); System.setProperty("ANTHROPIC_BASE_URL", base + "/an");
@@ -122,6 +129,24 @@ public class TestMain {
         t("invalid API key -> 503, not symbol not found", get(p, "/api/quote?symbol=MSFT").code == 503); avMode = "ok";
         HttpResponse<String> head = C.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + p + "/")).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
         t("HEAD probe gets a status without a body", head.statusCode() == 404 && head.body().isEmpty());
+        String join = "{\"email\":\"Ada@Example.com\",\"interest\":\"Pro\",\"source\":\"pricing\"}";
+        t("waitlist without storage -> 503", call(p, "POST", "/api/waitlist", join, ip()).code == 503);
+        System.setProperty("SUPABASE_URL", base + "/sb/"); System.setProperty("SUPABASE_SERVICE_KEY", "sb-test");
+        r = call(p, "POST", "/api/waitlist", join, ip());
+        t("waitlist stores lower-cased email via Supabase, key server-side only", r.code == 200 && Boolean.FALSE.equals(m(r.body).get("alreadyJoined")) && upstreamCalls.stream().anyMatch(u -> u.startsWith("supabase waitlist key=sb-test") && u.contains("ada@example.com")) && !r.raw.contains("sb-test"));
+        r = call(p, "POST", "/api/waitlist", join, ip());
+        t("waitlist duplicate -> alreadyJoined", r.code == 200 && Boolean.TRUE.equals(m(r.body).get("alreadyJoined")));
+        t("waitlist rejects bad email", call(p, "POST", "/api/waitlist", "{\"email\":\"nope\"}", ip()).code == 400);
+        t("waitlist rejects GET", get(p, "/api/waitlist").code == 405);
+        int wl = 0; for (int i = 0; i < 7; i++) wl = call(p, "POST", "/api/waitlist", "{\"email\":\"x" + i + "@y.io\"}", "9.9.9.9").code;
+        t("waitlist rate limited per IP", wl == 429);
+        t("event accepted", call(p, "POST", "/api/events", "{\"name\":\"view_pricing\"}", ip()).code == 200);
+        Thread.sleep(300);
+        t("event forwarded to storage", upstreamCalls.stream().anyMatch(u -> u.startsWith("supabase events") && u.contains("view_pricing")));
+        t("event rejects bad name", call(p, "POST", "/api/events", "{\"name\":\"<x>\"}", ip()).code == 400);
+        Main.MARKETS = Json.obj("movers", null, "indices", List.of(), "crypto", List.of(), "updated", "warm");
+        t("markets served from background snapshot", "warm".equals(m(get(p, "/api/markets").body).get("updated"))); Main.MARKETS = null;
+        System.clearProperty("SUPABASE_URL"); System.clearProperty("SUPABASE_SERVICE_KEY");
         r = get(p, "/api/health");
         t("health reports configured services", d(1) == 1 && Boolean.TRUE.equals(m(r.body).get("market")) && Boolean.TRUE.equals(m(r.body).get("news")) && Boolean.TRUE.equals(m(r.body).get("ai")));
         aiStep.set(0);
