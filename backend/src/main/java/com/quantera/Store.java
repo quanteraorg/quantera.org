@@ -21,11 +21,12 @@ final class Store {
     private static List<Object> insert(String table, Map<String, Object> row) {
         if (!on()) throw new UpstreamException("Storage is not configured", 503);
         String key = cfg("SUPABASE_SERVICE_KEY", "");
-        HttpRequest req = HttpRequest.newBuilder(URI.create(cfg("SUPABASE_URL", "").replaceAll("/+$", "") + "/rest/v1/" + table))
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(cfg("SUPABASE_URL", "").replaceAll("/+$", "") + "/rest/v1/" + table))
                 .timeout(Duration.ofSeconds(8))
-                .header("apikey", key).header("Authorization", "Bearer " + key).header("Content-Type", "application/json")
-                .header("Prefer", "return=representation,resolution=ignore-duplicates")
-                .POST(HttpRequest.BodyPublishers.ofString(Json.write(List.of(row)))).build();
+                .header("apikey", key).header("Content-Type", "application/json")
+                .header("Prefer", "return=representation,resolution=ignore-duplicates");
+        if (key.startsWith("eyJ")) b.header("Authorization", "Bearer " + key); // legacy JWT service_role key; new sb_secret_ keys go in apikey only
+        HttpRequest req = b.POST(HttpRequest.BodyPublishers.ofString(Json.write(List.of(row)))).build();
         try {
             HttpResponse<String> r = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
             if (r.statusCode() / 100 != 2) throw new UpstreamException("Storage error");
