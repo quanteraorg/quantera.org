@@ -23,7 +23,7 @@ final class Providers {
 
     /** After Alpha Vantage reports a rate limit, skip calling it until this time (calls made while blocked can still count against the quota). */
     static volatile long AV_BLOCKED_UNTIL = 0;
-    static final String AV_LIMIT = "Live prices are paused: the market data provider's limit was reached. Try again later.";
+    static final String AV_LIMIT = "Live prices are refreshing. Please check back in a few minutes.";
 
     private static String avRaw(Map<String, String> p, int timeoutSec) {
         String key = cfg("ALPHAVANTAGE_API_KEY", null);

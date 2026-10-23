@@ -122,7 +122,7 @@ public class TestMain {
         t("calendar bad type -> 400", get(p, "/api/calendar?type=x").code == 400);
         Providers.CACHE.clear(); avMode = "limit";
         r = get(p, "/api/quote?symbol=MSFT");
-        t("provider rate limit -> 429 with friendly message", r.code == 429 && r.raw.toLowerCase().contains("limit was reached"));
+        t("provider rate limit -> 429 with friendly message", r.code == 429 && r.raw.toLowerCase().contains("check back"));
         int nb = upstreamCalls.size(); r = get(p, "/api/quote?symbol=IBM");
         t("while blocked, no further provider calls are made", r.code == 429 && upstreamCalls.size() == nb);
         Providers.AV_BLOCKED_UNTIL = 0; Providers.CACHE.clear(); avMode = "daily";
