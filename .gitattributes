@@ -1,0 +1,3 @@
+# Store text files with LF in the repo regardless of local autocrlf settings
+* text=auto eol=lf
+*.mp4 binary
