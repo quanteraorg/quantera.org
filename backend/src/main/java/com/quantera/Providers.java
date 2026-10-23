@@ -38,11 +38,16 @@ final class Providers {
 
     private static void checkAv(Map<String, Object> j) {
         if (j.containsKey("Note") || j.containsKey("Information")) {
-            String info = str(j.get("Information"));
-            if (info != null && info.toLowerCase().contains("premium")) throw new UpstreamException("This data needs a premium Alpha Vantage plan", 402);
+            String info = String.valueOf(j.containsKey("Information") ? j.get("Information") : j.get("Note")).toLowerCase();
+            // Free-tier limit messages also advertise "premium plans", so check for a rate limit first
+            boolean limit = info.contains("rate limit") || info.contains("per day") || info.contains("per minute") || info.contains("call frequency");
+            if (!limit && info.contains("premium")) throw new UpstreamException("This data needs a premium Alpha Vantage plan", 402);
             throw new UpstreamException("Market data rate limit reached. Try again later.", 429);
         }
-        if (j.containsKey("Error Message")) throw new UpstreamException("Symbol not found", 404);
+        if (j.containsKey("Error Message")) {
+            if (String.valueOf(j.get("Error Message")).toLowerCase().contains("apikey")) throw new UpstreamException("Market data is not configured correctly", 503);
+            throw new UpstreamException("Symbol not found", 404);
+        }
     }
 
     private static Map<String, Object> av(Map<String, String> p) {

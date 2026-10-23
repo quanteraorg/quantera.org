@@ -4,7 +4,7 @@ Serves live market data, news, calendars and the Claude-powered AI to the Quante
 Keys stay on this server. The browser never sees them.
 
 ## Run locally
-    ./test.sh                                   # 31 checks against fake providers (no keys needed)
+    ./test.sh                                   # 35 checks against fake providers (no keys needed)
     ./build.sh
     ALPHAVANTAGE_API_KEY=... MARKETAUX_API_TOKEN=... ANTHROPIC_API_KEY=... java -cp out com.quantera.Main
     curl localhost:8080/api/health
@@ -26,10 +26,10 @@ Note: Vercel itself does not run long-lived Java servers, which is why the API i
 - Anthropic.java  Claude chat with server-side tools (quote, history stats, company, search, news)
 - Support.java    config, cache, rate limiter, helpers
 - Json.java       small JSON reader/writer
-- src/test/.../TestMain.java  the 31 checks
+- src/test/.../TestMain.java  the 35 checks
 
 ## Honest limits
-- Docker build is not tested in the authoring environment; the Java code compiles and passes the 31 checks on JDK 21.
+- Docker build is not tested in the authoring environment; the Java code compiles and passes the 35 checks on JDK 21.
 - Cache and rate limiter live in memory per instance. Use Redis if you run several instances.
 - Not built yet: user accounts, database, Academy progress and Market Lab storage (the research report's Phases 2 to 4).
 - Free Alpha Vantage / Marketaux plans are tiny; check their terms before showing data publicly.

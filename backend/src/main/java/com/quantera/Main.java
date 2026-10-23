@@ -120,6 +120,7 @@ public final class Main {
             h.set("Access-Control-Allow-Origin", origin); h.set("Vary", "Origin");
             h.set("Access-Control-Allow-Headers", "content-type"); h.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
         }
+        if (ex.getRequestMethod().equals("HEAD")) { ex.sendResponseHeaders(code, -1); ex.close(); return; } // HEAD responses carry no body
         ex.sendResponseHeaders(code, b.length);
         try (OutputStream o = ex.getResponseBody()) { o.write(b); }
     }

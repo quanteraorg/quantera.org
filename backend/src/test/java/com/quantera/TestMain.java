@@ -49,6 +49,9 @@ public class TestMain {
             upstreamCalls.add(ex.getRequestURI().toString());
             String f = fn(ex), J = "application/json";
             if (avMode.equals("limit")) { reply(ex, 200, J, "{\"Information\":\"rate limit\"}"); return; }
+            if (avMode.equals("daily")) { reply(ex, 200, J, "{\"Information\":\"We have detected your API key as AV-TEST and our standard API rate limit is 25 requests per day. Please subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly remove all daily rate limits.\"}"); return; }
+            if (avMode.equals("premium")) { reply(ex, 200, J, "{\"Information\":\"Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium endpoints\"}"); return; }
+            if (avMode.equals("badkey")) { reply(ex, 200, J, "{\"Error Message\":\"the parameter apikey is invalid or missing. Please claim your free API key on (https://www.alphavantage.co/support/#api-key). It should take less than 20 seconds.\"}"); return; }
             switch (f) {
                 case "GLOBAL_QUOTE" -> reply(ex, 200, J, sym(ex).equals("ZZZ") ? "{\"Global Quote\":{}}" : "{\"Global Quote\":{\"05. price\":\"226.10\",\"09. change\":\"1.5\",\"10. change percent\":\"0.67%\",\"06. volume\":\"5000\",\"07. latest trading day\":\"2026-10-05\",\"08. previous close\":\"224.6\"}}");
                 case "TIME_SERIES_DAILY" -> reply(ex, 200, J, "{\"Time Series (Daily)\":{\"2026-10-02\":{\"1. open\":\"10\",\"2. high\":\"12\",\"3. low\":\"9\",\"4. close\":\"11\",\"5. volume\":\"100\"},\"2026-10-01\":{\"1. open\":\"9\",\"2. high\":\"10\",\"3. low\":\"8\",\"4. close\":\"10\",\"5. volume\":\"90\"}}}");
@@ -110,7 +113,15 @@ public class TestMain {
         t("calendar bad type -> 400", get(p, "/api/calendar?type=x").code == 400);
         Providers.CACHE.clear(); avMode = "limit";
         r = get(p, "/api/quote?symbol=MSFT");
-        t("provider rate limit -> 429 with friendly message", r.code == 429 && r.raw.toLowerCase().contains("rate limit")); avMode = "ok";
+        t("provider rate limit -> 429 with friendly message", r.code == 429 && r.raw.toLowerCase().contains("rate limit"));
+        Providers.CACHE.clear(); avMode = "daily";
+        t("daily limit mentioning premium plans -> 429, not 402", get(p, "/api/quote?symbol=MSFT").code == 429);
+        Providers.CACHE.clear(); avMode = "premium";
+        t("premium-only endpoint -> 402", get(p, "/api/quote?symbol=MSFT").code == 402);
+        Providers.CACHE.clear(); avMode = "badkey";
+        t("invalid API key -> 503, not symbol not found", get(p, "/api/quote?symbol=MSFT").code == 503); avMode = "ok";
+        HttpResponse<String> head = C.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + p + "/")).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
+        t("HEAD probe gets a status without a body", head.statusCode() == 404 && head.body().isEmpty());
         r = get(p, "/api/health");
         t("health reports configured services", d(1) == 1 && Boolean.TRUE.equals(m(r.body).get("market")) && Boolean.TRUE.equals(m(r.body).get("news")) && Boolean.TRUE.equals(m(r.body).get("ai")));
         aiStep.set(0);
