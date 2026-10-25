@@ -368,11 +368,10 @@ final class Providers {
     static final Map<String, String> INDEX_SYM = Map.of("SPX", "^GSPC", "NDX", "^NDX", "DJI", "^DJI", "RUT", "^RUT", "VIX", "^VIX");
 
     static Map<String, Object> indexQuote(String name) {
-        if (CACHE.age("ixno" + name) < 6 * 3600_000L) throw new UpstreamException("Index levels are not in the current data plan", 402);
-        return CACHE.get("ix" + name, 5 * 60_000L, () -> {
+        return CACHE.get("ix" + name, 60_000L, () -> {
             Map<String, Object> q;
             if (Yahoo.on()) try { q = new LinkedHashMap<>(Yahoo.quote(INDEX_SYM.get(name))); q.put("symbol", name); return q; } catch (UpstreamException ignored) {}
-            if (!finnhubOn()) throw new UpstreamException("Index levels are unavailable right now");
+            if (!finnhubOn() || CACHE.age("ixno" + name) < 6 * 3600_000L) throw new UpstreamException("Index levels are unavailable right now");
             try { q = new LinkedHashMap<>(finnhubQuote(INDEX_SYM.get(name))); }
             catch (UpstreamException e) { if (e.code == 404 || e.code == 402 || e.code == 503) CACHE.put("ixno" + name, true); throw e; } // remember "not in plan" so we stop spending 4 calls per refresh
             q.put("symbol", name);

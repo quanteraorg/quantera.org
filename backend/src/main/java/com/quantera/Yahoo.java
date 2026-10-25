@@ -366,11 +366,42 @@ final class Yahoo {
                     cs.add(Json.obj("code", c.code(), "name", c.name(), "currency", c.currency(), "hasStocks", c.exchanges() != null, "indexes", indexRows(c, q)));
                 regions.add(Json.obj("name", reg, "countries", cs));
             }
-            return Json.obj("regions", regions, "sectors", SECTORS, "source", "Yahoo Finance (delayed)", "updated", Instant.now().toString());
+            return Json.obj("regions", regions, "assets", assetGroups(), "sectors", SECTORS, "source", "Yahoo Finance (delayed)", "updated", Instant.now().toString());
         });
     }
 
     static final int PER_PAGE = 25;
+
+    /** Commodities, currencies, government bond yields and crypto shown alongside the countries. */
+    static final String[][][] ASSETS = {
+        {{"Commodities"}, {"GC=F", "Gold", "USD per troy ounce"}, {"SI=F", "Silver", "USD per troy ounce"}, {"PL=F", "Platinum", "USD per troy ounce"}, {"PA=F", "Palladium", "USD per troy ounce"},
+            {"HG=F", "Copper", "USD per pound"}, {"CL=F", "Crude oil (WTI)", "USD per barrel"}, {"BZ=F", "Brent crude oil", "USD per barrel"}, {"NG=F", "Natural gas", "USD per MMBtu"},
+            {"RB=F", "Gasoline", "USD per gallon"}, {"HO=F", "Heating oil", "USD per gallon"}, {"ZC=F", "Corn", "US cents per bushel"}, {"ZW=F", "Wheat", "US cents per bushel"},
+            {"ZS=F", "Soybeans", "US cents per bushel"}, {"KC=F", "Coffee", "US cents per pound"}, {"CC=F", "Cocoa", "USD per tonne"}, {"SB=F", "Sugar", "US cents per pound"},
+            {"CT=F", "Cotton", "US cents per pound"}, {"LE=F", "Live cattle", "US cents per pound"}},
+        {{"Currencies"}, {"DX-Y.NYB", "US dollar index", "vs six major currencies"}, {"EURUSD=X", "EUR / USD", "US dollars per euro"}, {"GBPUSD=X", "GBP / USD", "US dollars per pound"},
+            {"USDJPY=X", "USD / JPY", "yen per US dollar"}, {"USDCNY=X", "USD / CNY", "yuan per US dollar"}, {"USDINR=X", "USD / INR", "rupees per US dollar"}, {"AUDUSD=X", "AUD / USD", "US dollars per Australian dollar"},
+            {"USDCAD=X", "USD / CAD", "Canadian dollars per US dollar"}, {"USDCHF=X", "USD / CHF", "Swiss francs per US dollar"}},
+        {{"US Treasury yields"}, {"^IRX", "13-week bill", "yield, %"}, {"^FVX", "5-year note", "yield, %"}, {"^TNX", "10-year note", "yield, %"}, {"^TYX", "30-year bond", "yield, %"}},
+        {{"Crypto"}, {"BTC-USD", "Bitcoin", "USD"}, {"ETH-USD", "Ethereum", "USD"}, {"SOL-USD", "Solana", "USD"}, {"XRP-USD", "XRP", "USD"}}};
+
+    static List<Object> assetGroups() {
+        List<String> all = new ArrayList<>();
+        for (String[][] g : ASSETS) for (int i = 1; i < g.length; i++) all.add(g[i][0]);
+        Map<String, Map<String, Object>> q;
+        try { q = quotes(all); } catch (UpstreamException e) { q = Map.of(); }
+        List<Object> out = new ArrayList<>();
+        for (String[][] g : ASSETS) {
+            List<Object> items = new ArrayList<>();
+            for (int i = 1; i < g.length; i++) {
+                Map<String, Object> r = new LinkedHashMap<>(q.getOrDefault(g[i][0], Json.obj("symbol", g[i][0])));
+                r.put("symbol", g[i][0]); r.put("name", g[i][1]); r.put("unit", g[i][2]);
+                items.add(r);
+            }
+            out.add(Json.obj("name", g[0][0], "items", items));
+        }
+        return out;
+    }
 
     /** Twelve Data exchange (MIC) to Yahoo symbol suffix, for the main exchange(s) of each country. */
     static final Map<String, String> MIC_SUFFIX = Map.ofEntries(Map.entry("XNAS", ""), Map.entry("XNGS", ""), Map.entry("XNMS", ""), Map.entry("XNCM", ""), Map.entry("XNYS", ""), Map.entry("ARCX", ""),
@@ -466,7 +497,7 @@ final class Yahoo {
 
     /** Exchange suffixes Yahoo uses for non-US listings (BRK.B and BF.B stay US). */
     static final Set<String> SUFFIXES = Set.of("NS", "BO", "T", "L", "IL", "DE", "F", "PA", "AS", "BR", "LS", "MI", "MC", "SW", "VI", "ST", "OL", "CO", "HE", "IR", "WA", "AT", "PR", "BD",
-            "HK", "SS", "SZ", "KS", "KQ", "TW", "TWO", "AX", "NZ", "SI", "JK", "KL", "BK", "PS", "TO", "V", "NE", "CN", "SA", "MX", "BA", "SN", "SR", "TA", "JO", "IS", "CA", "QA", "KW", "AE", "XC");
+            "HK", "SS", "SZ", "KS", "KQ", "TW", "TWO", "AX", "NZ", "SI", "JK", "KL", "BK", "PS", "TO", "V", "NE", "CN", "SA", "MX", "BA", "SN", "SR", "TA", "JO", "IS", "CA", "QA", "KW", "AE", "XC", "NYB");
 
     static boolean isGlobal(String s) {
         if (s.startsWith("^") || s.contains("=")) return true;

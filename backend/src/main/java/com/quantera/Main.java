@@ -81,7 +81,7 @@ public final class Main {
         ROUTES.put("/api/markets", new Route(r -> {
             Map<String, Object> warm = MARKETS;
             return warm != null ? warm : markets();
-        }, 300, 30));
+        }, 60, 30));
         ROUTES.put("/api/world", new Route(r -> Yahoo.world(), 60, 30));
         ROUTES.put("/api/world/country", new Route(r -> {
             String c = r.query().getOrDefault("c", "").toLowerCase(), kind = r.query().getOrDefault("kind", "stocks"), sector = r.query().getOrDefault("sector", ""), sort = r.query().getOrDefault("sort", "cap");
@@ -163,7 +163,15 @@ public final class Main {
         for (int i = 0; i < indices.size(); i++) { Map<String, Object> e = new LinkedHashMap<>(map(indices.get(i))); e.put("spark", Providers.spark(String.valueOf(e.get("symbol")))); indices.set(i, e); }
         for (var f : List.of(btc, eth)) f.join().ifPresent(c -> { Map<String, Object> e = new LinkedHashMap<>(map(c)); e.put("spark", Providers.spark(e.get("from") + "-USD")); crypto.add(e); });
         if (movers == null && indices.isEmpty() && crypto.isEmpty()) throw errs.isEmpty() ? new UpstreamException("Market data provider error") : (RuntimeException) errs.get(0);
-        return Json.obj("movers", movers, "indices", indices, "world", world, "crypto", crypto, "updated", java.time.Instant.now().toString());
+        List<Object> assets = new ArrayList<>();
+        if (Yahoo.on()) try {
+            String[][] a = {{"GC=F", "Gold"}, {"SI=F", "Silver"}, {"CL=F", "Crude oil (WTI)"}, {"BZ=F", "Brent oil"}, {"NG=F", "Natural gas"}, {"HG=F", "Copper"}, {"^TNX", "US 10-year yield"}, {"DX-Y.NYB", "US dollar index"}, {"EURUSD=X", "EUR/USD"}};
+            List<String> syms = new ArrayList<>();
+            for (String[] x : a) syms.add(x[0]);
+            Map<String, Map<String, Object>> q = Yahoo.quotes(syms);
+            for (String[] x : a) if (q.containsKey(x[0])) { Map<String, Object> e = new LinkedHashMap<>(q.get(x[0])); e.put("name", x[1]); assets.add(e); }
+        } catch (RuntimeException ignored) {}
+        return Json.obj("movers", movers, "indices", indices, "world", world, "assets", assets, "crypto", crypto, "updated", java.time.Instant.now().toString());
     }
 
     /** Refreshes markets on a fixed schedule so upstream usage stays flat however many visitors arrive. Off unless MARKET_REFRESH_SEC is set (60 or more). */
