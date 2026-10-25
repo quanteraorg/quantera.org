@@ -103,8 +103,49 @@ final class Providers {
         });
     }
 
+    static boolean twelveOn() { return cfg("TWELVEDATA_API_KEY", null) != null; }
+
+    /** GET a JSON document from Finnhub ("fh") or Twelve Data ("td"); maps provider errors to friendly ones. */
+    static Object getJson(String who, String pathAndQuery) {
+        boolean fh = who.equals("fh");
+        String base = fh ? cfg("FINNHUB_BASE_URL", "https://finnhub.io/api/v1") : cfg("TWELVEDATA_BASE_URL", "https://api.twelvedata.com");
+        String key = URLEncoder.encode(cfg(fh ? "FINNHUB_API_KEY" : "TWELVEDATA_API_KEY", ""), StandardCharsets.UTF_8);
+        String u = base + pathAndQuery + (pathAndQuery.contains("?") ? "&" : "?") + (fh ? "token=" : "apikey=") + key;
+        HttpResponse<String> r;
+        try { r = HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(10)).GET().build(), HttpResponse.BodyHandlers.ofString()); }
+        catch (Exception e) { throw new UpstreamException("Market data provider error"); }
+        if (r.statusCode() == 429) throw new UpstreamException(AV_LIMIT, 429);
+        if (r.statusCode() == 401 || r.statusCode() == 403) throw new UpstreamException("This data is not included in the current data plan", 402);
+        if (r.statusCode() != 200) throw new UpstreamException("Market data provider error");
+        Object j;
+        try { j = Json.parse(r.body()); } catch (IllegalArgumentException e) { throw new UpstreamException("Market data provider error"); }
+        if (!fh && "error".equals(map(j).get("status"))) { // Twelve Data reports errors in the body with HTTP 200
+            Double code = num(map(j).get("code"));
+            throw code != null && code == 429 ? new UpstreamException(AV_LIMIT, 429) : code != null && code == 403 ? new UpstreamException("This data is not included in the current data plan", 402) : new UpstreamException("No price history for this symbol", 404);
+        }
+        return j;
+    }
+
+    /** Daily bars from Twelve Data (free: 800 calls/day), oldest first, in the same shape as before. */
+    private static Map<String, Object> twelveHistory(String s, boolean full) {
+        String sym = s.equals("BTC-USD") ? "BTC/USD" : s.equals("ETH-USD") ? "ETH/USD" : s;
+        Map<String, Object> j = map(getJson("td", "/time_series?interval=1day&outputsize=" + (full ? 1300 : 130) + "&symbol=" + URLEncoder.encode(sym, StandardCharsets.UTF_8)));
+        List<Object> vals = list(j.get("values"));
+        if (vals.isEmpty()) throw new UpstreamException("No price history for this symbol", 404);
+        List<Object> bars = new ArrayList<>();
+        for (int i = vals.size() - 1; i >= 0; i--) {
+            Map<String, Object> v = map(vals.get(i));
+            bars.add(Json.obj("t", String.valueOf(v.get("datetime")).substring(0, 10), "o", num(v.get("open")), "h", num(v.get("high")), "l", num(v.get("low")), "c", num(v.get("close")), "v", num(v.get("volume"))));
+        }
+        return Json.obj("symbol", s, "bars", bars, "source", "Twelve Data", "adjusted", false);
+    }
+
     static Map<String, Object> history(String s, boolean full) {
         return CACHE.get("h" + s + (full ? 1 : 0), 6 * 3600_000L, () -> {
+            if (twelveOn()) {
+                try { return twelveHistory(s, full); }
+                catch (UpstreamException e) { if (e.code == 404 || cfg("ALPHAVANTAGE_API_KEY", null) == null) throw e; }
+            }
             Map<String, Object> j;
             try { j = av(q("function", "TIME_SERIES_DAILY", "symbol", s, "outputsize", full ? "full" : "compact")); }
             catch (UpstreamException e) {
@@ -127,6 +168,15 @@ final class Providers {
     static Map<String, Object> search(String text) {
         return CACHE.get("s" + text.toLowerCase(), 3600_000L, () -> {
             List<Object> out = new ArrayList<>();
+            if (finnhubOn()) {
+                for (Object o : list(map(getJson("fh", "/search?exchange=US&q=" + URLEncoder.encode(text, StandardCharsets.UTF_8))).get("result"))) {
+                    Map<String, Object> m = map(o);
+                    String sym = str(m.get("symbol")), type = str(m.get("type"));
+                    if (sym == null || !US_TICKER.matcher(sym).matches() || out.size() >= 10) continue;
+                    out.add(Json.obj("symbol", sym, "name", str(m.get("description")), "type", "Common Stock".equals(type) ? "Equity" : "ETP".equals(type) ? "ETF" : type, "region", "United States", "currency", "USD"));
+                }
+                return Json.obj("results", out);
+            }
             for (Object o : list(av(q("function", "SYMBOL_SEARCH", "keywords", text)).get("bestMatches"))) {
                 if (out.size() >= 10) break;
                 Map<String, Object> m = map(o);
@@ -136,8 +186,26 @@ final class Providers {
         });
     }
 
+    /** Company profile + key metrics from Finnhub, converted to the same units as before (dollars and fractions, not millions and percent). */
+    private static Map<String, Object> finnhubOverview(String s) {
+        String q = "?symbol=" + URLEncoder.encode(s, StandardCharsets.UTF_8);
+        Map<String, Object> p = map(getJson("fh", "/stock/profile2" + q)), mt = map(map(getJson("fh", "/stock/metric" + q + "&metric=all")).get("metric"));
+        if (p.isEmpty() && mt.isEmpty()) throw new UpstreamException("No company data for this symbol", 404);
+        java.util.function.Function<String, Double> pct = k -> { Double v = num(mt.get(k)); return v == null ? null : v / 100; };
+        Double cap = num(p.get("marketCapitalization"));
+        if (cap == null) cap = num(mt.get("marketCapitalization"));
+        Double pe = num(mt.get("peTTM"));
+        if (pe == null) pe = num(mt.get("peBasicExclExtraTTM"));
+        return Json.obj("symbol", s, "name", str(p.get("name")) == null ? s : str(p.get("name")), "type", p.isEmpty() ? "ETF" : "Common Stock", "sector", str(p.get("finnhubIndustry")), "industry", str(p.get("finnhubIndustry")),
+                "country", str(p.get("country")), "currency", str(p.get("currency")), "exchange", str(p.get("exchange")), "marketCap", cap == null ? null : cap * 1e6,
+                "pe", pe, "beta", num(mt.get("beta")), "dividendYield", pct.apply("dividendYieldIndicatedAnnual"), "high52", num(mt.get("52WeekHigh")), "low52", num(mt.get("52WeekLow")),
+                "revenueGrowthYoY", pct.apply("revenueGrowthTTMYoy"), "profitMargin", pct.apply("netProfitMarginTTM"), "roe", pct.apply("roeTTM"), "description", null,
+                "logo", str(p.get("logo")), "website", str(p.get("weburl")), "source", "Finnhub");
+    }
+
     static Map<String, Object> overview(String s) {
         return CACHE.get("o" + s, 24 * 3600_000L, () -> {
+            if (finnhubOn()) return finnhubOverview(s);
             Map<String, Object> j = av(q("function", "OVERVIEW", "symbol", s));
             if (str(j.get("Symbol")) == null) throw new UpstreamException("No company data for this symbol", 404);
             return Json.obj("symbol", str(j.get("Symbol")), "name", str(j.get("Name")), "type", str(j.get("AssetType")), "sector", str(j.get("Sector")), "industry", str(j.get("Industry")),
@@ -188,6 +256,12 @@ final class Providers {
 
     static Map<String, Object> fx(String from, String to) {
         return CACHE.get("fx" + from + to, 5 * 60_000L, () -> {
+            if (finnhubOn() && to.equals("USD")) {
+                Map<String, Object> j = map(getJson("fh", "/quote?symbol=" + URLEncoder.encode("BINANCE:" + from + "USDT", StandardCharsets.UTF_8)));
+                Double c = num(j.get("c")), t = num(j.get("t"));
+                if (c != null && c > 0) return Json.obj("from", from, "to", to, "name", from.equals("BTC") ? "Bitcoin" : from.equals("ETH") ? "Ethereum" : from, "rate", c, "changePct", num(j.get("dp")),
+                        "asOf", t == null ? null : java.time.Instant.ofEpochSecond(t.longValue()).toString());
+            }
             Map<String, Object> j = map(av(q("function", "CURRENCY_EXCHANGE_RATE", "from_currency", from, "to_currency", to)).get("Realtime Currency Exchange Rate"));
             if (j.isEmpty()) throw new UpstreamException("No exchange rate available", 404);
             return Json.obj("from", from, "to", to, "name", str(j.get("2. From_Currency Name")), "rate", num(j.get("5. Exchange Rate")), "asOf", str(j.get("6. Last Refreshed")));
@@ -197,6 +271,22 @@ final class Providers {
     static List<Object> calendar(String kind) {
         return CACHE.get("c" + kind, 12 * 3600_000L, () -> {
             boolean ipo = kind.equals("ipo");
+            if (finnhubOn()) {
+                java.time.LocalDate d0 = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
+                Map<String, Object> j = map(getJson("fh", "/calendar/" + (ipo ? "ipo" : "earnings") + "?from=" + d0 + "&to=" + d0.plusDays(ipo ? 90 : 30)));
+                List<Map<String, Object>> items = new ArrayList<>();
+                for (Object o : list(j.get(ipo ? "ipoCalendar" : "earningsCalendar"))) {
+                    Map<String, Object> m = map(o);
+                    String sym = str(m.get("symbol")), date = str(m.get("date"));
+                    if (sym == null || sym.isBlank() || date == null || (!ipo && !US_TICKER.matcher(sym).matches())) continue;
+                    if (ipo) {
+                        String[] pr = String.valueOf(m.getOrDefault("price", "")).split("-");
+                        items.add(Json.obj("symbol", sym, "name", str(m.get("name")), "date", date, "low", num(pr[0]), "high", num(pr[pr.length - 1]), "exchange", str(m.get("exchange"))));
+                    } else items.add(Json.obj("symbol", sym, "name", null, "date", date, "estimate", num(m.get("epsEstimate")), "currency", "USD"));
+                }
+                items.sort(Comparator.comparing(m -> (String) m.get("date")));
+                return new ArrayList<Object>(items.subList(0, Math.min(400, items.size())));
+            }
             String text = avRaw(ipo ? q("function", "IPO_CALENDAR") : q("function", "EARNINGS_CALENDAR", "horizon", "3month"), 15).trim();
             if (text.startsWith("{")) {
                 try { checkAv(map(Json.parse(text))); } catch (IllegalArgumentException ignored) {}

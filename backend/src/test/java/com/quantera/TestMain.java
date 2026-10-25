@@ -74,6 +74,12 @@ public class TestMain {
             upstreamCalls.add("finnhub " + sy + " token=" + tok);
             reply(ex, 200, "application/json", sy.equals("ZZZ") ? "{\"c\":0,\"d\":null,\"dp\":null,\"pc\":0,\"t\":0}" : "{\"c\":226.6,\"d\":0.56,\"dp\":" + (sy.equals("TSLA") ? "-3.1" : sy.equals("NVDA") ? "2.4" : "0.25") + ",\"h\":227,\"l\":224,\"o\":225,\"pc\":226.04,\"t\":1792800000}");
         });
+        fake.createContext("/fh/stock/profile2", ex -> reply(ex, 200, "application/json", "{\"name\":\"Apple Inc\",\"country\":\"US\",\"currency\":\"USD\",\"exchange\":\"NASDAQ\",\"finnhubIndustry\":\"Technology\",\"marketCapitalization\":3400000,\"logo\":\"https://x.test/l.png\",\"weburl\":\"https://apple.com\"}"));
+        fake.createContext("/fh/stock/metric", ex -> reply(ex, 200, "application/json", "{\"metric\":{\"peTTM\":33.1,\"beta\":1.2,\"52WeekHigh\":350,\"52WeekLow\":200,\"dividendYieldIndicatedAnnual\":0.45,\"revenueGrowthTTMYoy\":6.1,\"netProfitMarginTTM\":24,\"roeTTM\":150}}"));
+        fake.createContext("/fh/search", ex -> reply(ex, 200, "application/json", "{\"result\":[{\"description\":\"SHOPIFY INC\",\"symbol\":\"SHOP\",\"type\":\"Common Stock\"},{\"description\":\"SHOPIFY INC\",\"symbol\":\"SHOP.TO\",\"type\":\"Common Stock\"}]}"));
+        fake.createContext("/fh/calendar/earnings", ex -> reply(ex, 200, "application/json", "{\"earningsCalendar\":[{\"date\":\"2026-10-30\",\"epsEstimate\":1.5,\"symbol\":\"AAPL\"},{\"date\":\"2026-10-28\",\"epsEstimate\":null,\"symbol\":\"MSFT\"},{\"date\":\"2026-10-29\",\"symbol\":\"RELI.NS\"}]}"));
+        fake.createContext("/fh/calendar/ipo", ex -> reply(ex, 200, "application/json", "{\"ipoCalendar\":[{\"date\":\"2026-11-01\",\"exchange\":\"NASDAQ\",\"name\":\"NewCo\",\"price\":\"10.00-12.00\",\"symbol\":\"NEW\"}]}"));
+        fake.createContext("/td/time_series", ex -> { upstreamCalls.add("twelvedata " + ex.getRequestURI().getRawQuery()); reply(ex, 200, "application/json", ex.getRequestURI().getRawQuery().contains("symbol=ZZZ") ? "{\"code\":400,\"message\":\"symbol not found\",\"status\":\"error\"}" : "{\"values\":[{\"datetime\":\"2026-10-23\",\"open\":\"11\",\"high\":\"12\",\"low\":\"10\",\"close\":\"11.5\",\"volume\":\"100\"},{\"datetime\":\"2026-10-22\",\"open\":\"10\",\"high\":\"11\",\"low\":\"9\",\"close\":\"10.5\",\"volume\":\"90\"}],\"status\":\"ok\"}"); });
         fake.createContext("/fh/news", ex -> { upstreamCalls.add("finnhub news"); reply(ex, 200, "application/json", "[{\"id\":7001,\"headline\":\"Apple and Nvidia rally as Intelligence report lands\",\"summary\":\"Chip stocks rose.\",\"url\":\"https://x.test/fh1\",\"source\":\"Reuters\",\"datetime\":1792900000,\"related\":\"\"},{\"id\":7002,\"headline\":\"Weekend weather outlook\",\"summary\":\"Sunny.\",\"url\":\"https://x.test/fh2\",\"source\":\"Wire\",\"datetime\":1792900100,\"related\":\"\"}]"); });
         fake.createContext("/fh/company-news", ex -> { upstreamCalls.add("finnhub company-news " + ex.getRequestURI().getRawQuery().split("&")[0]); reply(ex, 200, "application/json", "[{\"id\":8001,\"headline\":\"Tesla deliveries beat\",\"summary\":\"S\",\"url\":\"https://x.test/fh3\",\"source\":\"CNBC\",\"datetime\":1792900200,\"related\":\"TSLA\"}]"); });
         fake.createContext("/mx/news/uuid/", ex -> reply(ex, 200, "application/json", "{\"uuid\":\"11111111-2222-3333-4444-555555555555\",\"title\":\"Apple rises\",\"description\":\"Desc &amp; more\",\"snippet\":\"S\",\"url\":\"https://x.test/a\",\"source\":\"Src\",\"published_at\":\"2026-10-05T00:00:00Z\",\"entities\":[{\"symbol\":\"AAPL\",\"name\":\"Apple\",\"type\":\"equity\",\"industry\":\"Technology\",\"sentiment_score\":0.4,\"highlights\":[{\"highlight\":\"iPhone demand is <em>strong</em>\",\"sentiment\":0.6}]}]}"));
@@ -81,6 +87,7 @@ public class TestMain {
         fake.createContext("/an/v1/messages", ex -> {
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             upstreamCalls.add("anthropic key=" + ex.getRequestHeaders().getFirst("x-api-key") + " hasTools=" + body.contains("get_quote"));
+            if (body.contains("Task: ")) { upstreamCalls.add("explain " + (body.contains("Today's price moves: AAPL +0.25% today") ? "with-moves" : "no-moves")); reply(ex, 200, "application/json", "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"- **What**: Apple rose\"}]}"); return; }
             if (aiStep.incrementAndGet() % 2 == 1) reply(ex, 200, "application/json", "{\"stop_reason\":\"tool_use\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"get_quote\",\"input\":{\"symbol\":\"AAPL\"}}]}");
             else reply(ex, 200, "application/json", "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"**Data** Apple is $226 [[asset:AAPL]]\"}]}");
         });
@@ -93,7 +100,7 @@ public class TestMain {
         });
         fake.start();
         String base = "http://127.0.0.1:" + fake.getAddress().getPort();
-        System.setProperty("AV_BASE_URL", base + "/av"); System.setProperty("MARKETAUX_BASE_URL", base + "/mx"); System.setProperty("FINNHUB_BASE_URL", base + "/fh"); System.setProperty("ANTHROPIC_BASE_URL", base + "/an");
+        System.setProperty("AV_BASE_URL", base + "/av"); System.setProperty("MARKETAUX_BASE_URL", base + "/mx"); System.setProperty("FINNHUB_BASE_URL", base + "/fh"); System.setProperty("TWELVEDATA_BASE_URL", base + "/td"); System.setProperty("ANTHROPIC_BASE_URL", base + "/an");
         System.setProperty("ALPHAVANTAGE_API_KEY", "av-test"); System.setProperty("MARKETAUX_API_TOKEN", "mx-test"); System.setProperty("ANTHROPIC_API_KEY", "an-test");
         HttpServer app = Main.start(0);
         int p = app.getAddress().getPort();
@@ -137,6 +144,25 @@ public class TestMain {
         t("main feed merges Finnhub stories tagged with stocks, drops untagged ones", r.code == 200 && arts.stream().anyMatch(x -> "fh7001".equals(m(x).get("id")) && l(m(x).get("symbols")).size() == 2) && arts.stream().noneMatch(x -> "fh7002".equals(m(x).get("id"))));
         r = get(p, "/api/news?symbols=TSLA&limit=6");
         t("single-stock news adds that company's Finnhub news with its move", r.code == 200 && l(m(r.body).get("articles")).stream().anyMatch(x -> "fh8001".equals(m(x).get("id")) && d(m(l(m(x).get("symbols")).get(0)).get("changePct")) == -3.1));
+        r = get(p, "/api/overview?symbol=AAPL");
+        t("Finnhub profile + metrics in old units (cap in $, yield/margins as fractions)", r.code == 200 && "Apple Inc".equals(m(r.body).get("name")) && d(m(r.body).get("marketCap")) == 3.4e12 && Math.abs(d(m(r.body).get("dividendYield")) - 0.0045) < 1e-9 && Math.abs(d(m(r.body).get("profitMargin")) - 0.24) < 1e-9 && d(m(r.body).get("pe")) == 33.1);
+        r = get(p, "/api/search?q=shop");
+        t("Finnhub search keeps US listings only", r.code == 200 && l(m(r.body).get("results")).size() == 1 && "Equity".equals(m(l(m(r.body).get("results")).get(0)).get("type")));
+        r = get(p, "/api/calendar?type=earnings");
+        t("Finnhub earnings calendar sorted, US tickers only", r.code == 200 && l(m(r.body).get("items")).size() == 2 && "MSFT".equals(m(l(m(r.body).get("items")).get(0)).get("symbol")));
+        r = get(p, "/api/calendar?type=ipo");
+        t("Finnhub IPO price range parsed", r.code == 200 && d(m(l(m(r.body).get("items")).get(0)).get("high")) == 12);
+        t("crypto from Finnhub", d(Providers.fx("BTC", "USD").get("rate")) == 226.6);
+        System.setProperty("TWELVEDATA_API_KEY", "td-test");
+        r = get(p, "/api/history?symbol=AAPL");
+        t("Twelve Data history oldest first, key server-side", r.code == 200 && "2026-10-22".equals(m(l(m(r.body).get("bars")).get(0)).get("t")) && d(m(l(m(r.body).get("bars")).get(1)).get("c")) == 11.5 && "Twelve Data".equals(m(r.body).get("source")) && !r.raw.contains("td-test") && upstreamCalls.stream().anyMatch(u -> u.startsWith("twelvedata") && u.contains("apikey=td-test")));
+        t("Twelve Data unknown symbol -> 404", get(p, "/api/history?symbol=ZZZ").code == 404);
+        System.clearProperty("TWELVEDATA_API_KEY");
+        r = call(p, "POST", "/api/explain", "{\"lens\":\"five_w\",\"title\":\"Apple rises\",\"summary\":\"Shares rose.\",\"symbols\":[\"AAPL\"]}", ip());
+        t("explain: lens answer grounded with today's move", r.code == 200 && String.valueOf(m(r.body).get("text")).contains("Apple rose") && upstreamCalls.contains("explain with-moves"));
+        int ne = upstreamCalls.size(); call(p, "POST", "/api/explain", "{\"lens\":\"five_w\",\"title\":\"Apple rises\",\"summary\":\"Shares rose.\",\"symbols\":[\"AAPL\"]}", ip());
+        t("explain: repeat answer served from cache", upstreamCalls.size() == ne);
+        t("explain: unknown lens -> 400", call(p, "POST", "/api/explain", "{\"lens\":\"hack\",\"title\":\"x\"}", ip()).code == 400);
         System.clearProperty("FINNHUB_API_KEY"); Providers.CACHE.clear();
         t("news bad search text -> 400", get(p, "/api/news?q=%3Cscript%3E").code == 400);
         r = get(p, "/api/markets");

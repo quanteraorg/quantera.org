@@ -66,6 +66,51 @@ final class Anthropic {
         } catch (RuntimeException e) { return Json.obj("error", e.getMessage()); }
     }
 
+    /** Ways to explain a news story (like Particle's lenses). Each answer must stay inside the story's own text. */
+    static final Map<String, String> LENSES = Map.of(
+            "tldr", "Give a TL;DR in exactly 3 short bullets: what happened, why it happened, what could happen next.",
+            "eli5", "Explain it like the reader is 12: plain words, one everyday analogy, at most 110 words.",
+            "matters", "Explain why it matters for investors: which listed companies or sectors could be affected, in which direction and why, and what to watch next. 3 to 5 bullets.",
+            "sides", "Give two sides: **Bull case** (2 to 3 bullets) and **Bear case** (2 to 3 bullets), then one line on what would settle the debate.",
+            "five_w", "Answer the 5 W's, one line each: **Who**, **What**, **When**, **Where**, **Why**. Add **How** only if the story says.",
+            "numbers", "List the key numbers in the story and what each one means for a beginner. If the story has no numbers, say so in one line.",
+            "questions", "Give 3 questions a smart investor would ask next, each with a one-line hint about where to find the answer.");
+    static final String EXPLAIN_SYSTEM = "You explain financial news for Quantera, an education app for beginner investors. Use only the headline, summary, companies and price moves you are given: "
+            + "never invent facts, figures, quotes or events, and if the story does not say something, say it is not in the story. Plain English, short sentences. "
+            + "Format with '- ' bullets and **bold** labels only. Keep it under 170 words. This is education, not investment advice.";
+
+    static Map<String, Object> explain(Object body) {
+        String key = cfg("ANTHROPIC_API_KEY", null);
+        if (key == null) throw new UpstreamException("The AI is not configured", 503);
+        Map<String, Object> b = map(body);
+        String lens = String.valueOf(b.getOrDefault("lens", "")), title = String.valueOf(b.getOrDefault("title", "")).trim(), summary = String.valueOf(b.getOrDefault("summary", "")).trim();
+        if (!LENSES.containsKey(lens) || title.isEmpty() || title.length() > 300 || summary.length() > 2000) throw new UpstreamException("Invalid request", 400);
+        List<String> syms = new ArrayList<>();
+        for (Object o : list(b.get("symbols"))) { String s = String.valueOf(o).toUpperCase(); if (SYM.matcher(s).matches() && syms.size() < 8) syms.add(s); }
+        return Providers.CACHE.get("x" + lens + "|" + title.hashCode() + "|" + summary.hashCode() + "|" + syms, 6 * 3600_000L, () -> {
+            StringBuilder moves = new StringBuilder();
+            for (String s : syms) {
+                try { Map<String, Object> q = Providers.quote(s, 5 * 60_000L); Double c = num(q.get("changePct")); if (c != null) moves.append(s).append(' ').append(c >= 0 ? "+" : "").append(String.format("%.2f", c)).append("% today; "); }
+                catch (RuntimeException e) { moves.append(s).append("; "); }
+            }
+            String prompt = "Headline: " + title + "\nSummary: " + (summary.isEmpty() ? "(none)" : summary) + "\nCompanies tagged: " + (syms.isEmpty() ? "none" : String.join(", ", syms))
+                    + "\nToday's price moves: " + (moves.length() == 0 ? "not available" : moves) + "\n\nTask: " + LENSES.get(lens);
+            String req = Json.write(Json.obj("model", cfg("ANTHROPIC_MODEL", "claude-sonnet-4-6"), "max_tokens", 450, "system", EXPLAIN_SYSTEM, "messages", List.of(Json.obj("role", "user", "content", prompt))));
+            HttpResponse<String> r;
+            try {
+                r = Providers.HTTP.send(HttpRequest.newBuilder(URI.create(cfg("ANTHROPIC_BASE_URL", "https://api.anthropic.com") + "/v1/messages")).timeout(Duration.ofSeconds(40))
+                        .header("x-api-key", key).header("anthropic-version", "2023-06-01").header("content-type", "application/json").POST(HttpRequest.BodyPublishers.ofString(req)).build(), HttpResponse.BodyHandlers.ofString());
+            } catch (Exception e) { throw new UpstreamException("AI provider error"); }
+            if (r.statusCode() == 429) throw new UpstreamException("The AI is busy. Please try again shortly.", 429);
+            if (r.statusCode() != 200) throw new UpstreamException("AI provider error");
+            StringBuilder t = new StringBuilder();
+            try { for (Object o : list(map(Json.parse(r.body())).get("content"))) if ("text".equals(map(o).get("type"))) t.append(str(map(o).get("text"))); }
+            catch (IllegalArgumentException e) { throw new UpstreamException("AI provider error"); }
+            if (t.length() == 0) throw new UpstreamException("AI provider error");
+            return Json.obj("lens", lens, "text", t.toString());
+        });
+    }
+
     static Map<String, Object> chat(List<Map<String, Object>> input) {
         String key = cfg("ANTHROPIC_API_KEY", null);
         if (key == null) throw new UpstreamException("The AI is not configured", 503);

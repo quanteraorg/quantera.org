@@ -36,7 +36,7 @@ public final class Main {
     }
 
     static void routes() {
-        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage"), 0, 120));
+        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage"), 0, 120));
         ROUTES.put("/api/quote", new Route(r -> Providers.quote(symbol(r), 60_000), 60, 60));
         ROUTES.put("/api/history", new Route(r -> Providers.history(symbol(r), "1".equals(r.query().get("full"))), 3600, 60));
         ROUTES.put("/api/overview", new Route(r -> Providers.overview(symbol(r)), 86400, 60));
@@ -79,6 +79,10 @@ public final class Main {
             Map<String, Object> warm = MARKETS;
             return warm != null ? warm : markets();
         }, 300, 30));
+        ROUTES.put("/api/explain", new Route(r -> {
+            if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405);
+            return Anthropic.explain(r.body());
+        }, 0, 20));
         ROUTES.put("/api/waitlist", new Route(r -> {
             if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405);
             return Store.joinWaitlist(r.body());
