@@ -87,6 +87,8 @@ public class TestMain {
         fake.createContext("/an/v1/messages", ex -> {
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             upstreamCalls.add("anthropic key=" + ex.getRequestHeaders().getFirst("x-api-key") + " hasTools=" + body.contains("get_quote"));
+            if (body.contains("AUTHFAIL")) { reply(ex, 401, "application/json", "{\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"}}"); return; }
+            if (body.contains("NOCREDIT")) { reply(ex, 400, "application/json", "{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API.\"}}"); return; }
             if (body.contains("Task: ")) { upstreamCalls.add("explain " + (body.contains("Today's price moves: AAPL +0.25% today") ? "with-moves" : "no-moves")); reply(ex, 200, "application/json", "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"- **What**: Apple rose\"}]}"); return; }
             if (aiStep.incrementAndGet() % 2 == 1) reply(ex, 200, "application/json", "{\"stop_reason\":\"tool_use\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"get_quote\",\"input\":{\"symbol\":\"AAPL\"}}]}");
             else reply(ex, 200, "application/json", "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"**Data** Apple is $226 [[asset:AAPL]]\"}]}");
@@ -162,6 +164,10 @@ public class TestMain {
         t("explain: lens answer grounded with today's move", r.code == 200 && String.valueOf(m(r.body).get("text")).contains("Apple rose") && upstreamCalls.contains("explain with-moves"));
         int ne = upstreamCalls.size(); call(p, "POST", "/api/explain", "{\"lens\":\"five_w\",\"title\":\"Apple rises\",\"summary\":\"Shares rose.\",\"symbols\":[\"AAPL\"]}", ip());
         t("explain: repeat answer served from cache", upstreamCalls.size() == ne);
+        r = call(p, "POST", "/api/explain", "{\"lens\":\"tldr\",\"title\":\"AUTHFAIL\"}", ip());
+        t("AI invalid key -> clear 503 message", r.code == 503 && r.raw.contains("key is invalid"));
+        r = call(p, "POST", "/api/explain", "{\"lens\":\"tldr\",\"title\":\"NOCREDIT\"}", ip());
+        t("AI out of credits -> clear 503 message", r.code == 503 && r.raw.contains("out of credits"));
         t("explain: unknown lens -> 400", call(p, "POST", "/api/explain", "{\"lens\":\"hack\",\"title\":\"x\"}", ip()).code == 400);
         System.clearProperty("FINNHUB_API_KEY"); Providers.CACHE.clear();
         t("news bad search text -> 400", get(p, "/api/news?q=%3Cscript%3E").code == 400);

@@ -273,18 +273,25 @@ final class Providers {
             boolean ipo = kind.equals("ipo");
             if (finnhubOn()) {
                 java.time.LocalDate d0 = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
-                Map<String, Object> j = map(getJson("fh", "/calendar/" + (ipo ? "ipo" : "earnings") + "?from=" + d0 + "&to=" + d0.plusDays(ipo ? 90 : 30)));
+                List<Object> raw = new ArrayList<>();
+                if (ipo) raw.addAll(list(map(getJson("fh", "/calendar/ipo?from=" + d0 + "&to=" + d0.plusDays(90))).get("ipoCalendar")));
+                else for (int w = 0; w < 2; w++) // week by week: one long range can be cut off before the near dates
+                    raw.addAll(list(map(getJson("fh", "/calendar/earnings?from=" + d0.plusDays(w * 7L) + "&to=" + d0.plusDays(w * 7L + 6))).get("earningsCalendar")));
+                Map<String, String> names = new HashMap<>();
+                for (String[] n : NAMES) names.putIfAbsent(n[1], n[0]);
                 List<Map<String, Object>> items = new ArrayList<>();
-                for (Object o : list(j.get(ipo ? "ipoCalendar" : "earningsCalendar"))) {
+                Set<String> seen = new HashSet<>();
+                for (Object o : raw) {
                     Map<String, Object> m = map(o);
                     String sym = str(m.get("symbol")), date = str(m.get("date"));
-                    if (sym == null || sym.isBlank() || date == null || (!ipo && !US_TICKER.matcher(sym).matches())) continue;
+                    if (sym == null || sym.isBlank() || date == null || (!ipo && !US_TICKER.matcher(sym).matches()) || !seen.add(sym + date)) continue;
                     if (ipo) {
                         String[] pr = String.valueOf(m.getOrDefault("price", "")).split("-");
                         items.add(Json.obj("symbol", sym, "name", str(m.get("name")), "date", date, "low", num(pr[0]), "high", num(pr[pr.length - 1]), "exchange", str(m.get("exchange"))));
-                    } else items.add(Json.obj("symbol", sym, "name", null, "date", date, "estimate", num(m.get("epsEstimate")), "currency", "USD"));
+                    } else items.add(Json.obj("symbol", sym, "name", names.get(sym), "date", date, "estimate", num(m.get("epsEstimate")), "currency", "USD"));
                 }
-                items.sort(Comparator.comparing(m -> (String) m.get("date")));
+                // By date; within a day, well-known large companies first
+                items.sort(Comparator.comparing((Map<String, Object> m) -> (String) m.get("date")).thenComparing(m -> m.get("name") == null ? 1 : 0).thenComparing(m -> (String) m.get("symbol")));
                 return new ArrayList<Object>(items.subList(0, Math.min(400, items.size())));
             }
             String text = avRaw(ipo ? q("function", "IPO_CALENDAR") : q("function", "EARNINGS_CALENDAR", "horizon", "3month"), 15).trim();
