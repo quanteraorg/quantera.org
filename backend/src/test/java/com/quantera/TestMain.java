@@ -74,6 +74,7 @@ public class TestMain {
             upstreamCalls.add("finnhub " + sy + " token=" + tok);
             reply(ex, 200, "application/json", sy.equals("ZZZ") ? "{\"c\":0,\"d\":null,\"dp\":null,\"pc\":0,\"t\":0}" : "{\"c\":226.6,\"d\":0.56,\"dp\":" + (sy.equals("TSLA") ? "-3.1" : sy.equals("NVDA") ? "2.4" : "0.25") + ",\"h\":227,\"l\":224,\"o\":225,\"pc\":226.04,\"t\":1792800000}");
         });
+        fake.createContext("/fh/stock/symbol", ex -> reply(ex, 200, "application/json", "[{\"symbol\":\"AAPL\",\"description\":\"APPLE INC\",\"type\":\"Common Stock\",\"mic\":\"XNAS\"},{\"symbol\":\"SPY\",\"description\":\"SPDR S&P 500 ETF\",\"type\":\"ETP\",\"mic\":\"ARCX\"},{\"symbol\":\"ABCD\",\"description\":\"OTC CO\",\"type\":\"Common Stock\",\"mic\":\"OOTC\"},{\"symbol\":\"XYZW\",\"description\":\"WARRANT\",\"type\":\"Warrant\",\"mic\":\"XNAS\"}]"));
         fake.createContext("/fh/stock/profile2", ex -> reply(ex, 200, "application/json", "{\"name\":\"Apple Inc\",\"country\":\"US\",\"currency\":\"USD\",\"exchange\":\"NASDAQ\",\"finnhubIndustry\":\"Technology\",\"marketCapitalization\":3400000,\"logo\":\"https://x.test/l.png\",\"weburl\":\"https://apple.com\"}"));
         fake.createContext("/fh/stock/metric", ex -> reply(ex, 200, "application/json", "{\"metric\":{\"peTTM\":33.1,\"beta\":1.2,\"52WeekHigh\":350,\"52WeekLow\":200,\"dividendYieldIndicatedAnnual\":0.45,\"revenueGrowthTTMYoy\":6.1,\"netProfitMarginTTM\":24,\"roeTTM\":150}}"));
         fake.createContext("/fh/search", ex -> reply(ex, 200, "application/json", "{\"result\":[{\"description\":\"SHOPIFY INC\",\"symbol\":\"SHOP\",\"type\":\"Common Stock\"},{\"description\":\"SHOPIFY INC\",\"symbol\":\"SHOP.TO\",\"type\":\"Common Stock\"}]}"));
@@ -149,8 +150,14 @@ public class TestMain {
         r = get(p, "/api/markets");
         Map<String, Object> wm = m(m(r.body).get("movers"));
         t("movers from the warm snapshot: 25 per list, ETFs excluded", r.code == 200 && l(wm.get("gainers")).size() == 19 && l(wm.get("losers")).size() == 20 && l(wm.get("active")).size() == 25 && !r.raw.contains("\"SPY\",\"price\":759.97,\"change\":null,\"changePct\":9.9"));
+        t("market cards carry the real index level when available", r.code == 200 && l(m(r.body).get("indices")).stream().anyMatch(x -> "SPY".equals(m(x).get("symbol")) && m(x).get("level") != null) && upstreamCalls.stream().anyMatch(u -> u.startsWith("finnhub %5EGSPC")));
         r = get(p, "/api/snapshot");
-        t("snapshot returns every warm quote in one call", r.code == 200 && d(m(r.body).get("count")) == 1 && "SPY".equals(m(l(m(r.body).get("quotes")).get(0)).get("symbol")));
+        t("snapshot returns every warm quote with its sector", r.code == 200 && d(m(r.body).get("count")) == 1 && "SPY".equals(m(l(m(r.body).get("quotes")).get(0)).get("symbol")) && "ETFs".equals(m(l(m(r.body).get("quotes")).get(0)).get("sector")));
+        r = get(p, "/api/directory?q=app");
+        t("directory: US major-exchange stocks/ETFs only, searchable", r.code == 200 && d(m(r.body).get("listed")) == 2 && d(m(r.body).get("total")) == 1 && "AAPL".equals(m(l(m(r.body).get("items")).get(0)).get("symbol")));
+        r = get(p, "/api/directory?type=etf");
+        t("directory: filter by type", r.code == 200 && d(m(r.body).get("total")) == 1 && "SPY".equals(m(l(m(r.body).get("items")).get(0)).get("symbol")) && d(m(l(m(r.body).get("items")).get(0)).get("price")) == 759.97);
+        t("directory: rejects bad search", get(p, "/api/directory?q=%3Cscript%3E").code == 400);
         Providers.SNAP.clear(); Providers.CACHE.clear();
         t("tagger finds companies by name and exchange ticker, not inside other words", Providers.tag("Apple and Nvidia rally; Intelligence report (NYSE: XOM)", "").equals(List.of("XOM", "AAPL", "NVDA")));
         Providers.CACHE.clear();
@@ -205,7 +212,7 @@ public class TestMain {
         t("markets combines movers, index ETFs and crypto", r.code == 200 && d(m(l(m(m(r.body).get("movers")).get("gainers")).get(0)).get("changePct")) == 25 && d(m(l(m(m(r.body).get("movers")).get("losers")).get(0)).get("changePct")) == -33.3 && l(m(r.body).get("indices")).size() == 4 && d(m(l(m(r.body).get("crypto")).get(0)).get("rate")) == 65000.5);
         r = get(p, "/api/quotes?symbols=AAPL,ZZZ");
         t("quotes batch returns found + lists missing", r.code == 200 && l(m(r.body).get("quotes")).size() == 1 && "ZZZ".equals(l(m(r.body).get("missing")).get(0)));
-        t("quotes rejects more than 8 symbols", get(p, "/api/quotes?symbols=A,B,C,D,E,F,G,H,I").code == 400);
+        t("quotes rejects more than 25 symbols", get(p, "/api/quotes?symbols=A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z").code == 400);
         r = get(p, "/api/calendar?type=earnings");
         t("calendar parses CSV incl. quoted commas and blank estimates", r.code == 200 && "Microsoft".equals(m(l(m(r.body).get("items")).get(0)).get("name")) && "Apple, Inc.".equals(m(l(m(r.body).get("items")).get(1)).get("name")) && m(l(m(r.body).get("items")).get(0)).get("estimate") == null);
         r = get(p, "/api/calendar?type=ipo");

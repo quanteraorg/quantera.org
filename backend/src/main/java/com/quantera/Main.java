@@ -48,7 +48,7 @@ public final class Main {
         ROUTES.put("/api/quotes", new Route(r -> {
             Set<String> list = new LinkedHashSet<>();
             for (String s : r.query().getOrDefault("symbols", "").toUpperCase().split(",")) if (!s.isBlank()) list.add(s.trim());
-            if (list.isEmpty() || list.size() > 8 || list.stream().anyMatch(s -> !SYM.matcher(s).matches())) throw new UpstreamException("Provide 1 to 8 valid symbols", 400);
+            if (list.isEmpty() || list.size() > 25 || list.stream().anyMatch(s -> !SYM.matcher(s).matches())) throw new UpstreamException("Provide 1 to 25 valid symbols", 400);
             List<Throwable> errs = new CopyOnWriteArrayList<>();
             Map<String, CompletableFuture<Optional<Map<String, Object>>>> f = new LinkedHashMap<>();
             for (String s : list) f.put(s, settle(() -> Providers.quote(s, 60_000), errs));
@@ -80,6 +80,13 @@ public final class Main {
             return warm != null ? warm : markets();
         }, 300, 30));
         ROUTES.put("/api/snapshot", new Route(r -> Providers.snapshot(), 60, 30));
+        ROUTES.put("/api/directory", new Route(r -> {
+            String q = r.query().getOrDefault("q", "").trim(), type = r.query().getOrDefault("type", "").trim();
+            if (q.length() > 40 || !q.matches("[\\w .&'-]*") || !type.matches("(?i)(|stock|etf|adr)")) throw new UpstreamException("Bad search", 400);
+            int page = 1;
+            try { page = Math.min(Integer.parseInt(r.query().getOrDefault("page", "1")), 1000); } catch (NumberFormatException ignored) {}
+            return Providers.directory(q, type, page);
+        }, 300, 60));
         ROUTES.put("/api/explain", new Route(r -> {
             if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405);
             return Anthropic.explain(r.body());
@@ -120,6 +127,15 @@ public final class Main {
         Object movers = mv.join().orElse(null);
         List<Object> indices = new ArrayList<>(), crypto = new ArrayList<>();
         ix.forEach(f -> f.join().ifPresent(indices::add));
+        // Real index levels where the data plan allows it (Finnhub index symbols); otherwise the cards show the tracking fund
+        Map<String, String> lvl = Map.of("SPY", "SPX", "QQQ", "NDX", "DIA", "DJI", "IWM", "RUT");
+        if (Providers.finnhubOn()) for (int i = 0; i < indices.size(); i++) {
+            Map<String, Object> e = new LinkedHashMap<>(map(indices.get(i)));
+            String name = lvl.get(String.valueOf(e.get("symbol")));
+            if (name == null) continue;
+            try { Map<String, Object> iq = Providers.indexQuote(name); e.put("level", iq.get("price")); e.put("levelChangePct", iq.get("changePct")); indices.set(i, e); }
+            catch (RuntimeException ignored) {}
+        }
         btc.join().ifPresent(crypto::add); eth.join().ifPresent(crypto::add);
         if (movers == null && indices.isEmpty() && crypto.isEmpty()) throw errs.isEmpty() ? new UpstreamException("Market data provider error") : (RuntimeException) errs.get(0);
         return Json.obj("movers", movers, "indices", indices, "crypto", crypto, "updated", java.time.Instant.now().toString());

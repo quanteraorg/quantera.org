@@ -231,6 +231,68 @@ final class Providers {
                 "SOFI", "DDOG", "NET", "MSTR", "SPOT", "LSCC", "ONTO"));
         UNIVERSE = List.copyOf(u);
     }
+    /** Sector for every warm symbol, so the site can group and filter the market by sector. */
+    static final Map<String, String> SECTOR = new HashMap<>();
+    static {
+        String[][] g = {
+            {"Technology", "AAPL MSFT ORCL CRM ADBE CSCO IBM PLTR INTU NOW PANW CRWD SNOW DDOG NET SHOP APP ADP DELL ANET"},
+            {"Semiconductors", "NVDA AVGO AMD INTC QCOM MU TSM ASML AMAT KLAC LRCX MRVL TXN ARM SMCI LSCC ONTO"},
+            {"Communication", "GOOGL META NFLX DIS CMCSA T VZ SPOT"},
+            {"Consumer", "AMZN TSLA HD COST WMT MCD KO PEP PG NKE SBUX LOW TGT BKNG ABNB BABA F GM RIVN UBER"},
+            {"Financials", "BRK.B JPM V MA BAC GS WFC MS C AXP BLK BX SCHW SPGI PYPL COIN HOOD SOFI MSTR"},
+            {"Healthcare", "LLY UNH JNJ ABBV MRK PFE AMGN BMY GILD ISRG MDT TMO"},
+            {"Energy", "XOM CVX COP NEE"},
+            {"Industrials", "CAT BA GE HON LMT RTX DE ETN UNP UPS LIN"},
+            {"ETFs", "SPY QQQ DIA IWM VOO VTI SMH XLK XLF XLE XLV GLD TLT ARKK"}};
+        for (String[] r : g) for (String s : r[1].split(" ")) SECTOR.put(s, r[0]);
+    }
+
+    /** Index levels, tried through Finnhub's index symbols (may need a paid plan; callers fall back to the tracking ETF). */
+    static final Map<String, String> INDEX_SYM = Map.of("SPX", "^GSPC", "NDX", "^NDX", "DJI", "^DJI", "RUT", "^RUT", "VIX", "^VIX");
+
+    static Map<String, Object> indexQuote(String name) {
+        return CACHE.get("ix" + name, 5 * 60_000L, () -> {
+            Map<String, Object> q = finnhubQuote(INDEX_SYM.get(name));
+            q.put("symbol", name);
+            return q;
+        });
+    }
+
+    /** Every US-listed stock and ETF on the major exchanges (Finnhub symbol list, refreshed daily), searchable and paged. */
+    static List<Map<String, Object>> directoryAll() {
+        return CACHE.get("dir", 24 * 3600_000L, () -> {
+            Set<String> mics = Set.of("XNAS", "XNYS", "ARCX", "BATS", "XASE");
+            List<Map<String, Object>> out = new ArrayList<>();
+            for (Object o : list(getJson("fh", "/stock/symbol?exchange=US"))) {
+                Map<String, Object> m = map(o);
+                String sym = str(m.get("symbol")), type = str(m.get("type")), mic = str(m.get("mic"));
+                if (sym == null || !US_TICKER.matcher(sym).matches() || !mics.contains(mic) || !("Common Stock".equals(type) || "ETP".equals(type) || "ADR".equals(type))) continue;
+                out.add(Json.obj("symbol", sym, "name", str(m.get("description")), "type", "ETP".equals(type) ? "ETF" : "ADR".equals(type) ? "ADR" : "Stock", "sector", SECTOR.get(sym)));
+            }
+            out.sort(Comparator.comparing(m -> (String) m.get("symbol")));
+            return out;
+        });
+    }
+
+    static Map<String, Object> directory(String q, String type, int page) {
+        String ql = q.toLowerCase();
+        List<Map<String, Object>> all = directoryAll(), hits = new ArrayList<>();
+        for (Map<String, Object> m : all) {
+            if (!type.isEmpty() && !type.equalsIgnoreCase(String.valueOf(m.get("type")))) continue;
+            if (!ql.isEmpty() && !String.valueOf(m.get("symbol")).toLowerCase().startsWith(ql) && !String.valueOf(m.get("name")).toLowerCase().contains(ql)) continue;
+            hits.add(m);
+        }
+        if (!ql.isEmpty()) hits.sort(Comparator.comparing((Map<String, Object> m) -> String.valueOf(m.get("symbol")).equalsIgnoreCase(q) ? 0 : String.valueOf(m.get("symbol")).toLowerCase().startsWith(ql) ? 1 : 2).thenComparing(m -> (String) m.get("symbol")));
+        int per = 25, from = Math.max(0, page - 1) * per;
+        List<Object> items = new ArrayList<>();
+        for (Map<String, Object> m : hits.subList(Math.min(from, hits.size()), Math.min(from + per, hits.size()))) {
+            Map<String, Object> x = new LinkedHashMap<>(m), w = SNAP.get(String.valueOf(m.get("symbol")));
+            if (w != null) { x.put("price", w.get("price")); x.put("changePct", w.get("changePct")); }
+            items.add(x);
+        }
+        return Json.obj("total", hits.size(), "listed", all.size(), "page", Math.max(1, page), "perPage", per, "items", items);
+    }
+
     static final Map<String, Map<String, Object>> SNAP = new java.util.concurrent.ConcurrentHashMap<>();
     static final Map<String, Long> SNAP_AT = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -249,7 +311,7 @@ final class Providers {
     /** Every warm quote, newest data first; no upstream calls. */
     static Map<String, Object> snapshot() {
         List<Object> qs = new ArrayList<>();
-        for (String s : UNIVERSE) { Map<String, Object> q = SNAP.get(s); if (q != null) qs.add(q); }
+        for (String s : UNIVERSE) { Map<String, Object> q = SNAP.get(s); if (q != null) { Map<String, Object> x = new LinkedHashMap<>(q); x.put("sector", SECTOR.getOrDefault(s, "Other")); qs.add(x); } }
         return Json.obj("quotes", qs, "count", qs.size(), "universe", UNIVERSE.size(), "updated", java.time.Instant.now().toString());
     }
 
