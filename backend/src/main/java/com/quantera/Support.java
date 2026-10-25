@@ -29,7 +29,7 @@ final class Support {
         private record E(long t, Object v) {}
         static final long STALE_MS = 24 * 3600_000L;
         private final Map<String, E> m = Collections.synchronizedMap(new LinkedHashMap<>() {
-            @Override protected boolean removeEldestEntry(Map.Entry<String, E> e) { return size() > 400; }
+            @Override protected boolean removeEldestEntry(Map.Entry<String, E> e) { return size() > 3000; }
         });
         @SuppressWarnings("unchecked")
         <T> T get(String key, long ttlMs, Supplier<T> fn) {
@@ -46,6 +46,11 @@ final class Support {
             return v;
         }
         void put(String key, Object v) { m.put(key, new E(System.currentTimeMillis(), v)); }
+        /** Cached value regardless of age (null if absent); never calls upstream. */
+        @SuppressWarnings("unchecked")
+        <T> T peek(String key) { E e = m.get(key); return e == null ? null : (T) e.v; }
+        /** Age of a cached value in ms, or Long.MAX_VALUE if absent. */
+        long age(String key) { E e = m.get(key); return e == null ? Long.MAX_VALUE : System.currentTimeMillis() - e.t; }
         void clear() { m.clear(); }
     }
 

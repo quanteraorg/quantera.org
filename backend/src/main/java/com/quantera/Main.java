@@ -36,9 +36,10 @@ public final class Main {
     }
 
     static void routes() {
-        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "lastProviderError", Providers.LAST_ERR), 0, 120));
+        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn(), "marketOpen", Providers.usMarketOpen(), "lastProviderError", Providers.LAST_ERR), 0, 120));
         ROUTES.put("/api/quote", new Route(r -> Providers.quote(symbol(r), 60_000), 60, 60));
         ROUTES.put("/api/history", new Route(r -> Providers.history(symbol(r), "1".equals(r.query().get("full"))), 3600, 60));
+        ROUTES.put("/api/intraday", new Route(r -> Providers.intraday(symbol(r), r.query().getOrDefault("interval", "5min")), 60, 30));
         ROUTES.put("/api/overview", new Route(r -> Providers.overview(symbol(r)), 86400, 60));
         ROUTES.put("/api/search", new Route(r -> {
             String q = r.query().getOrDefault("q", "").trim();
@@ -136,7 +137,8 @@ public final class Main {
             try { Map<String, Object> iq = Providers.indexQuote(name); e.put("level", iq.get("price")); e.put("levelChangePct", iq.get("changePct")); indices.set(i, e); }
             catch (RuntimeException ignored) {}
         }
-        btc.join().ifPresent(crypto::add); eth.join().ifPresent(crypto::add);
+        for (int i = 0; i < indices.size(); i++) { Map<String, Object> e = new LinkedHashMap<>(map(indices.get(i))); e.put("spark", Providers.spark(String.valueOf(e.get("symbol")))); indices.set(i, e); }
+        for (var f : List.of(btc, eth)) f.join().ifPresent(c -> { Map<String, Object> e = new LinkedHashMap<>(map(c)); e.put("spark", Providers.spark(e.get("from") + "-USD")); crypto.add(e); });
         if (movers == null && indices.isEmpty() && crypto.isEmpty()) throw errs.isEmpty() ? new UpstreamException("Market data provider error") : (RuntimeException) errs.get(0);
         return Json.obj("movers", movers, "indices", indices, "crypto", crypto, "updated", java.time.Instant.now().toString());
     }

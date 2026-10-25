@@ -73,12 +73,29 @@ final class Providers {
     static boolean finnhubOn() { return cfg("FINNHUB_API_KEY", null) != null; }
 
     /** Finnhub quote: 60 calls/minute on the free plan, no daily cap; returns the day's change directly. */
+    /** After Finnhub / Twelve Data answer 429, everyone (warmers and visitors) backs off until these times instead of making the limit worse. */
+    static volatile long FH_BLOCKED_UNTIL = 0, TD_BLOCKED_UNTIL = 0;
+    static void fhLimited() { FH_BLOCKED_UNTIL = System.currentTimeMillis() + 30_000; LAST_ERR = java.time.Instant.now().toString().substring(0, 19) + " fh: rate limited (backing off 30s)"; }
+    static void tdLimited() { TD_BLOCKED_UNTIL = System.currentTimeMillis() + 61_000; LAST_ERR = java.time.Instant.now().toString().substring(0, 19) + " td: rate limited (backing off 60s)"; }
+
+    /** True during the US regular session (Mon-Fri 9:25-16:05 New York time). Outside it, quotes barely move, so warmers slow down. */
+    static boolean usMarketOpen() {
+        java.time.ZonedDateTime n = java.time.ZonedDateTime.now(java.time.ZoneId.of("America/New_York"));
+        int d = n.getDayOfWeek().getValue(), m = n.getHour() * 60 + n.getMinute();
+        return d <= 5 && m >= 9 * 60 + 25 && m <= 16 * 60 + 5;
+    }
+
     private static Map<String, Object> finnhubQuote(String s) {
+        if (System.currentTimeMillis() < FH_BLOCKED_UNTIL) {
+            Map<String, Object> w = SNAP.get(s);
+            if (w != null) return w; // serve the warm copy rather than another 429
+            throw new UpstreamException(AV_LIMIT, 429);
+        }
         String u = cfg("FINNHUB_BASE_URL", "https://finnhub.io/api/v1") + "/quote?symbol=" + URLEncoder.encode(s, StandardCharsets.UTF_8) + "&token=" + URLEncoder.encode(cfg("FINNHUB_API_KEY", ""), StandardCharsets.UTF_8);
         HttpResponse<String> r;
         try { r = HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(8)).GET().build(), HttpResponse.BodyHandlers.ofString()); }
         catch (Exception e) { throw new UpstreamException("Market data provider error"); }
-        if (r.statusCode() == 429) throw new UpstreamException(AV_LIMIT, 429);
+        if (r.statusCode() == 429) { fhLimited(); throw new UpstreamException(AV_LIMIT, 429); }
         if (r.statusCode() == 401 || r.statusCode() == 403) throw new UpstreamException("Market data is not configured correctly", 503);
         if (r.statusCode() != 200) throw new UpstreamException("Market data provider error");
         Map<String, Object> j;
@@ -124,6 +141,7 @@ final class Providers {
         String key = URLEncoder.encode(cfg(fh ? "FINNHUB_API_KEY" : "TWELVEDATA_API_KEY", ""), StandardCharsets.UTF_8);
         String u = base + pathAndQuery + (pathAndQuery.contains("?") ? "&" : "?") + (fh ? "token=" : "apikey=") + key;
         String path = pathAndQuery.split("\\?")[0];
+        if (System.currentTimeMillis() < (fh ? FH_BLOCKED_UNTIL : TD_BLOCKED_UNTIL)) throw new UpstreamException(AV_LIMIT, 429);
         HttpResponse<byte[]> r;
         String body;
         try {
@@ -132,13 +150,14 @@ final class Providers {
             if (r.headers().firstValue("Content-Encoding").orElse("").contains("gzip")) b = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(b)).readAllBytes();
             body = new String(b, StandardCharsets.UTF_8);
         } catch (Exception e) { return fail(who + " " + path + ": " + e.getClass().getSimpleName() + (e.getMessage() == null ? "" : " " + e.getMessage())); }
-        if (r.statusCode() == 429) throw new UpstreamException(AV_LIMIT, 429);
+        if (r.statusCode() == 429) { if (fh) fhLimited(); else tdLimited(); throw new UpstreamException(AV_LIMIT, 429); }
         if (r.statusCode() == 401 || r.statusCode() == 403) { LAST_ERR = who + " " + path + ": HTTP " + r.statusCode() + " (not in plan)"; throw new UpstreamException("This data is not included in the current data plan", 402); }
         if (r.statusCode() != 200) return fail(who + " " + path + ": HTTP " + r.statusCode() + " " + body.substring(0, Math.min(120, body.length())));
         Object j;
         try { j = Json.parse(body); } catch (RuntimeException | StackOverflowError e) { return fail(who + " " + path + ": unreadable response (" + body.length() + " bytes)"); }
         if (!fh && "error".equals(map(j).get("status"))) { // Twelve Data reports errors in the body with HTTP 200
             Double code = num(map(j).get("code"));
+            if (code != null && code == 429) tdLimited();
             throw code != null && code == 429 ? new UpstreamException(AV_LIMIT, 429) : code != null && code == 403 ? new UpstreamException("This data is not included in the current data plan", 402) : new UpstreamException("No price history for this symbol", 404);
         }
         return j;
@@ -183,7 +202,57 @@ final class Providers {
         });
     }
 
+    /** Intraday intervals offered by the chart, with bars per regular session (390 minutes) for 20 sessions of history. */
+    static final Map<String, Integer> INTRADAY = Map.of("5min", 78, "15min", 26, "1h", 7, "4h", 2);
+
+    /** Real intraday bars from Twelve Data (regular hours, New York time), oldest first. Short cache: 1 min for 5/15 min bars, 5 min otherwise. */
+    static Map<String, Object> intraday(String s, String interval) {
+        Integer perDay = INTRADAY.get(interval);
+        if (perDay == null) throw new UpstreamException("interval must be one of 5min, 15min, 1h, 4h", 400);
+        if (!twelveOn()) throw new UpstreamException("Intraday charts need a Twelve Data key", 503);
+        long ttl = interval.endsWith("min") ? (usMarketOpen() ? 60_000L : 30 * 60_000L) : (usMarketOpen() ? 5 * 60_000L : 60 * 60_000L);
+        return CACHE.get("i" + s + interval, ttl, () -> {
+            String sym = s.equals("BTC-USD") ? "BTC/USD" : s.equals("ETH-USD") ? "ETH/USD" : s;
+            Map<String, Object> j = map(getJson("td", "/time_series?interval=" + interval + "&outputsize=" + (perDay * 20) + "&timezone=America/New_York&symbol=" + URLEncoder.encode(sym, StandardCharsets.UTF_8)));
+            List<Object> vals = list(j.get("values"));
+            if (vals.isEmpty()) throw new UpstreamException("No intraday data for this symbol", 404);
+            List<Object> bars = new ArrayList<>();
+            for (int i = vals.size() - 1; i >= 0; i--) {
+                Map<String, Object> v = map(vals.get(i));
+                String t = String.valueOf(v.get("datetime")).replace(' ', 'T');
+                if (t.length() == 10) t += "T09:30:00";
+                bars.add(Json.obj("t", t.length() > 19 ? t.substring(0, 19) : t, "o", num(v.get("open")), "h", num(v.get("high")), "l", num(v.get("low")), "c", num(v.get("close")), "v", num(v.get("volume"))));
+            }
+            return Json.obj("symbol", s, "interval", interval, "tz", "America/New_York", "perSession", perDay, "bars", bars, "source", "Twelve Data", "asOf", java.time.Instant.now().toString());
+        });
+    }
+
+    /** Ranks directory rows for a query: exact ticker, ticker prefix, name word prefix, then name contains. */
+    private static List<Object> searchDirectory(List<Map<String, Object>> dir, String text) {
+        String q = text.trim().toLowerCase(), qu = text.trim().toUpperCase();
+        List<Map<String, Object>> hits = new ArrayList<>();
+        Map<Map<String, Object>, Integer> score = new IdentityHashMap<>();
+        for (Map<String, Object> m : dir) {
+            String sym = String.valueOf(m.get("symbol")), name = String.valueOf(m.get("name")).toLowerCase();
+            int sc = sym.equals(qu) ? 0 : sym.startsWith(qu) ? 1 + sym.length() : (" " + name).contains(" " + q) ? 20 : name.contains(q) ? 40 : -1;
+            if (sc < 0) continue;
+            if (SECTOR.containsKey(sym)) sc -= 5; // well-known names first
+            score.put(m, sc); hits.add(m);
+        }
+        hits.sort(Comparator.comparingInt((Map<String, Object> m) -> score.get(m)).thenComparing(m -> String.valueOf(m.get("symbol"))));
+        List<Object> out = new ArrayList<>();
+        for (Map<String, Object> m : hits) {
+            if (out.size() >= 10) break;
+            String type = String.valueOf(m.get("type"));
+            out.add(Json.obj("symbol", m.get("symbol"), "name", m.get("name"), "type", type.equals("Stock") ? "Equity" : type, "region", "United States", "currency", "USD", "exchange", m.get("exchange")));
+        }
+        return out;
+    }
+
     static Map<String, Object> search(String text) {
+        // The full US directory is already in memory once loaded: answer from it and spend no provider quota
+        List<Map<String, Object>> dir = CACHE.peek("dir");
+        if (dir != null && !dir.isEmpty()) return Json.obj("results", searchDirectory(dir, text), "source", "directory");
         return CACHE.get("s" + text.toLowerCase(), 3600_000L, () -> {
             List<Object> out = new ArrayList<>();
             if (finnhubOn()) {
@@ -269,8 +338,11 @@ final class Providers {
     static final Map<String, String> INDEX_SYM = Map.of("SPX", "^GSPC", "NDX", "^NDX", "DJI", "^DJI", "RUT", "^RUT", "VIX", "^VIX");
 
     static Map<String, Object> indexQuote(String name) {
+        if (CACHE.age("ixno" + name) < 6 * 3600_000L) throw new UpstreamException("Index levels are not in the current data plan", 402);
         return CACHE.get("ix" + name, 5 * 60_000L, () -> {
-            Map<String, Object> q = finnhubQuote(INDEX_SYM.get(name));
+            Map<String, Object> q;
+            try { q = new LinkedHashMap<>(finnhubQuote(INDEX_SYM.get(name))); }
+            catch (UpstreamException e) { if (e.code == 404 || e.code == 402 || e.code == 503) CACHE.put("ixno" + name, true); throw e; } // remember "not in plan" so we stop spending 4 calls per refresh
             q.put("symbol", name);
             return q;
         });
@@ -322,23 +394,69 @@ final class Providers {
     static final Map<String, Map<String, Object>> SNAP = new java.util.concurrent.ConcurrentHashMap<>();
     static final Map<String, Long> SNAP_AT = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** Round-robin refresher: one Finnhub quote every 1.5 s (about 40 a minute), leaving room under the 60/minute free limit for visitors. */
+    /** Symbols whose recent closes are kept warm for sparklines (indices, crypto and the large caps that feed the movers board). */
+    static final List<String> SPARK_SET;
+    static {
+        List<String> l = new ArrayList<>(List.of("SPY", "QQQ", "DIA", "IWM", "BTC-USD", "ETH-USD"));
+        l.addAll(LARGE_CAPS);
+        SPARK_SET = List.copyOf(l);
+    }
+
+    /** Last ~30 daily closes for a symbol, from the history cache only (never calls upstream). */
+    static List<Object> spark(String s) {
+        Map<String, Object> h = CACHE.peek("h" + s + "0");
+        if (h == null) h = CACHE.peek("h" + s + "1");
+        if (h == null) return null;
+        List<Object> bars = list(h.get("bars")), out = new ArrayList<>();
+        for (int i = Math.max(0, bars.size() - 30); i < bars.size(); i++) out.add(map(bars.get(i)).get("c"));
+        return out.isEmpty() ? null : out;
+    }
+
+    /**
+     * Round-robin refreshers that keep upstream usage flat however many people visit.
+     * Quotes: one Finnhub call every 1.5 s in session (~40/min of the 60/min free limit), every 6 s outside it (~10/min), none while backing off from a 429.
+     * Sparklines: one Twelve Data daily series every 20 s (~3/min of the 8/min free limit), only for series older than 6 hours.
+     */
     static void startWarmer() {
         if (!finnhubOn()) return;
-        java.util.concurrent.atomic.AtomicInteger i = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger i = new java.util.concurrent.atomic.AtomicInteger(), tick = new java.util.concurrent.atomic.AtomicInteger();
         java.util.concurrent.Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().factory()).scheduleWithFixedDelay(() -> {
+            if (System.currentTimeMillis() < FH_BLOCKED_UNTIL) return;
+            if (!usMarketOpen() && Math.floorMod(tick.getAndIncrement(), 4) != 0 && SNAP.size() >= UNIVERSE.size()) return;
             String s = UNIVERSE.get(Math.floorMod(i.getAndIncrement(), UNIVERSE.size()));
             try { Map<String, Object> q = finnhubQuote(s); SNAP.put(s, q); SNAP_AT.put(s, System.currentTimeMillis()); CACHE.put("q" + s, q); }
             catch (RuntimeException ignored) {}
         }, 0, 1500, java.util.concurrent.TimeUnit.MILLISECONDS);
         System.out.println("Quote warmer on: " + UNIVERSE.size() + " symbols");
+        if (twelveOn()) { // never on Alpha Vantage alone: its 25 calls/day would be gone in an hour
+            java.util.concurrent.atomic.AtomicInteger k = new java.util.concurrent.atomic.AtomicInteger();
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().factory()).scheduleWithFixedDelay(() -> {
+                if (System.currentTimeMillis() < TD_BLOCKED_UNTIL) return;
+                for (int n = 0; n < SPARK_SET.size(); n++) { // next symbol that is missing or stale
+                    String s = SPARK_SET.get(Math.floorMod(k.getAndIncrement(), SPARK_SET.size()));
+                    if (CACHE.age("h" + s + "0") < 6 * 3600_000L) continue;
+                    try { history(s, false); } catch (RuntimeException ignored) {}
+                    return;
+                }
+            }, 3, Math.max(1, Integer.parseInt(cfg("SPARK_WARM_SEC", "20"))), java.util.concurrent.TimeUnit.SECONDS);
+            System.out.println("Sparkline warmer on: " + SPARK_SET.size() + " symbols");
+        }
         Thread.startVirtualThread(() -> { try { System.out.println("Directory loaded: " + directoryAll().size() + " US listings"); } catch (RuntimeException e) { System.out.println("Directory load failed: " + e.getMessage()); } });
+    }
+
+    /** Company name from the in-memory directory (null until it has loaded); no upstream calls. */
+    static String nameOf(String sym) {
+        List<Map<String, Object>> dir = CACHE.peek("dir");
+        if (dir == null) return null;
+        int lo = 0, hi = dir.size() - 1; // the directory is sorted by symbol
+        while (lo <= hi) { int mid = (lo + hi) >>> 1; int c = String.valueOf(dir.get(mid).get("symbol")).compareTo(sym); if (c == 0) return str(dir.get(mid).get("name")); if (c < 0) lo = mid + 1; else hi = mid - 1; }
+        return null;
     }
 
     /** Every warm quote, newest data first; no upstream calls. */
     static Map<String, Object> snapshot() {
         List<Object> qs = new ArrayList<>();
-        for (String s : UNIVERSE) { Map<String, Object> q = SNAP.get(s); if (q != null) { Map<String, Object> x = new LinkedHashMap<>(q); x.put("sector", SECTOR.getOrDefault(s, "Other")); qs.add(x); } }
+        for (String s : UNIVERSE) { Map<String, Object> q = SNAP.get(s); if (q != null) { Map<String, Object> x = new LinkedHashMap<>(q); x.put("sector", SECTOR.getOrDefault(s, "Other")); List<Object> sp = spark(s); if (sp != null) x.put("spark", sp); qs.add(x); } }
         return Json.obj("quotes", qs, "count", qs.size(), "universe", UNIVERSE.size(), "updated", java.time.Instant.now().toString());
     }
 
@@ -362,7 +480,7 @@ final class Providers {
         abs.sort((a, b) -> Double.compare(Math.abs(num(b.get("changePct"))), Math.abs(num(a.get("changePct")))));
         List<Map<String, Object>> losers = new ArrayList<>(by);
         Collections.reverse(losers);
-        java.util.function.Function<List<Map<String, Object>>, List<Object>> top = l -> { List<Object> o = new ArrayList<>(); for (Map<String, Object> q : l) { if (o.size() >= n) break; o.add(Json.obj("symbol", q.get("symbol"), "price", q.get("price"), "change", q.get("change"), "changePct", q.get("changePct"), "volume", null)); } return o; };
+        java.util.function.Function<List<Map<String, Object>>, List<Object>> top = l -> { List<Object> o = new ArrayList<>(); for (Map<String, Object> q : l) { if (o.size() >= n) break; String sy = String.valueOf(q.get("symbol")); o.add(Json.obj("symbol", sy, "name", nameOf(sy), "sector", SECTOR.get(sy), "price", q.get("price"), "change", q.get("change"), "changePct", q.get("changePct"), "volume", null, "spark", spark(sy))); } return o; };
         return Json.obj("updated", java.time.Instant.now().toString(), "universe", label, "count", qs.size(), "gainers", top.apply(by.stream().filter(q -> num(q.get("changePct")) > 0).toList()),
                 "losers", top.apply(losers.stream().filter(q -> num(q.get("changePct")) < 0).toList()), "active", top.apply(abs));
     }
