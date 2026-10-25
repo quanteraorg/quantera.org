@@ -72,8 +72,10 @@ public class TestMain {
             String sy = ""; for (String q : ex.getRequestURI().getRawQuery().split("&")) if (q.startsWith("symbol=")) sy = q.substring(7);
             String tok = ""; for (String q : ex.getRequestURI().getRawQuery().split("&")) if (q.startsWith("token=")) tok = q.substring(6);
             upstreamCalls.add("finnhub " + sy + " token=" + tok);
-            reply(ex, 200, "application/json", sy.equals("ZZZ") ? "{\"c\":0,\"d\":null,\"dp\":null,\"pc\":0,\"t\":0}" : "{\"c\":226.6,\"d\":0.56,\"dp\":0.25,\"h\":227,\"l\":224,\"o\":225,\"pc\":226.04,\"t\":1792800000}");
+            reply(ex, 200, "application/json", sy.equals("ZZZ") ? "{\"c\":0,\"d\":null,\"dp\":null,\"pc\":0,\"t\":0}" : "{\"c\":226.6,\"d\":0.56,\"dp\":" + (sy.equals("TSLA") ? "-3.1" : sy.equals("NVDA") ? "2.4" : "0.25") + ",\"h\":227,\"l\":224,\"o\":225,\"pc\":226.04,\"t\":1792800000}");
         });
+        fake.createContext("/fh/news", ex -> { upstreamCalls.add("finnhub news"); reply(ex, 200, "application/json", "[{\"id\":7001,\"headline\":\"Apple and Nvidia rally as Intelligence report lands\",\"summary\":\"Chip stocks rose.\",\"url\":\"https://x.test/fh1\",\"source\":\"Reuters\",\"datetime\":1792900000,\"related\":\"\"},{\"id\":7002,\"headline\":\"Weekend weather outlook\",\"summary\":\"Sunny.\",\"url\":\"https://x.test/fh2\",\"source\":\"Wire\",\"datetime\":1792900100,\"related\":\"\"}]"); });
+        fake.createContext("/fh/company-news", ex -> { upstreamCalls.add("finnhub company-news " + ex.getRequestURI().getRawQuery().split("&")[0]); reply(ex, 200, "application/json", "[{\"id\":8001,\"headline\":\"Tesla deliveries beat\",\"summary\":\"S\",\"url\":\"https://x.test/fh3\",\"source\":\"CNBC\",\"datetime\":1792900200,\"related\":\"TSLA\"}]"); });
         fake.createContext("/mx/news/uuid/", ex -> reply(ex, 200, "application/json", "{\"uuid\":\"11111111-2222-3333-4444-555555555555\",\"title\":\"Apple rises\",\"description\":\"Desc &amp; more\",\"snippet\":\"S\",\"url\":\"https://x.test/a\",\"source\":\"Src\",\"published_at\":\"2026-10-05T00:00:00Z\",\"entities\":[{\"symbol\":\"AAPL\",\"name\":\"Apple\",\"type\":\"equity\",\"industry\":\"Technology\",\"sentiment_score\":0.4,\"highlights\":[{\"highlight\":\"iPhone demand is <em>strong</em>\",\"sentiment\":0.6}]}]}"));
         fake.createContext("/mx/news/similar/", ex -> reply(ex, 200, "application/json", "{\"data\":[{\"uuid\":\"9\",\"title\":\"Related\",\"source\":\"Src\",\"published_at\":\"2026-10-04T00:00:00Z\",\"url\":\"https://x.test/b\"}]}"));
         fake.createContext("/an/v1/messages", ex -> {
@@ -124,6 +126,17 @@ public class TestMain {
         r = get(p, "/api/news?symbols=AAPL&limit=3");
         Map<String, Object> s0 = m(l(m(l(m(r.body).get("articles")).get(0)).get("symbols")).get(0));
         t("news symbols carry today's move (AAPL +0.25%), US tickers first", r.code == 200 && "AAPL".equals(s0.get("symbol")) && d(s0.get("changePct")) == 0.25);
+        t("tagger finds companies by name and exchange ticker, not inside other words", Providers.tag("Apple and Nvidia rally; Intelligence report (NYSE: XOM)", "").equals(List.of("XOM", "AAPL", "NVDA")));
+        Providers.CACHE.clear();
+        r = get(p, "/api/markets");
+        Map<String, Object> mvs = m(m(r.body).get("movers"));
+        t("movers come from Finnhub quotes of large US companies", r.code == 200 && "NVDA".equals(m(l(mvs.get("gainers")).get(0)).get("symbol")) && "TSLA".equals(m(l(mvs.get("losers")).get(0)).get("symbol")) && "Largest US companies".equals(mvs.get("universe")));
+        Providers.CACHE.clear();
+        r = get(p, "/api/news?limit=10");
+        List<Object> arts = l(m(r.body).get("articles"));
+        t("main feed merges Finnhub stories tagged with stocks, drops untagged ones", r.code == 200 && arts.stream().anyMatch(x -> "fh7001".equals(m(x).get("id")) && l(m(x).get("symbols")).size() == 2) && arts.stream().noneMatch(x -> "fh7002".equals(m(x).get("id"))));
+        r = get(p, "/api/news?symbols=TSLA&limit=6");
+        t("single-stock news adds that company's Finnhub news with its move", r.code == 200 && l(m(r.body).get("articles")).stream().anyMatch(x -> "fh8001".equals(m(x).get("id")) && d(m(l(m(x).get("symbols")).get(0)).get("changePct")) == -3.1));
         System.clearProperty("FINNHUB_API_KEY"); Providers.CACHE.clear();
         t("news bad search text -> 400", get(p, "/api/news?q=%3Cscript%3E").code == 400);
         r = get(p, "/api/markets");

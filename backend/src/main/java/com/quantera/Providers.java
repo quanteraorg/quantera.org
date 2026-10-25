@@ -147,8 +147,29 @@ final class Providers {
         });
     }
 
+    /** Large US companies used for gainers/losers when quotes come from Finnhub (which has no movers endpoint on the free plan). */
+    static final List<String> LARGE_CAPS = List.of("AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "BRK.B", "JPM", "LLY", "V", "UNH", "XOM", "MA", "JNJ",
+            "PG", "HD", "COST", "ABBV", "MRK", "ORCL", "CVX", "KO", "PEP", "BAC", "NFLX", "AMD", "CRM", "ADBE", "WMT", "MCD", "CSCO", "INTC", "DIS", "QCOM",
+            "IBM", "GS", "CAT", "BA", "UBER", "PLTR", "NKE", "PFE", "MU", "WFC");
+
+    private static Map<String, Object> finnhubMovers() {
+        List<Map<String, Object>> qs = Collections.synchronizedList(new ArrayList<>());
+        LARGE_CAPS.parallelStream().forEach(s -> { try { Map<String, Object> q = quote(s, 5 * 60_000L); if (num(q.get("changePct")) != null) qs.add(q); } catch (RuntimeException ignored) {} });
+        if (qs.isEmpty()) throw new UpstreamException("No market movers available", 404);
+        List<Map<String, Object>> by = new ArrayList<>(qs);
+        by.sort((a, b) -> Double.compare(num(b.get("changePct")), num(a.get("changePct"))));
+        List<Map<String, Object>> abs = new ArrayList<>(qs);
+        abs.sort((a, b) -> Double.compare(Math.abs(num(b.get("changePct"))), Math.abs(num(a.get("changePct")))));
+        List<Map<String, Object>> losers = new ArrayList<>(by);
+        Collections.reverse(losers);
+        java.util.function.Function<List<Map<String, Object>>, List<Object>> top = l -> { List<Object> o = new ArrayList<>(); for (Map<String, Object> q : l) { if (o.size() >= 10) break; o.add(Json.obj("symbol", q.get("symbol"), "price", q.get("price"), "change", q.get("change"), "changePct", q.get("changePct"), "volume", null)); } return o; };
+        return Json.obj("updated", java.time.Instant.now().toString(), "universe", "Largest US companies", "gainers", top.apply(by.stream().filter(q -> num(q.get("changePct")) > 0).toList()),
+                "losers", top.apply(losers.stream().filter(q -> num(q.get("changePct")) < 0).toList()), "active", top.apply(abs));
+    }
+
     static Map<String, Object> movers() {
         return CACHE.get("mv", 10 * 60_000L, () -> {
+            if (finnhubOn()) return finnhubMovers();
             Map<String, Object> j = av(q("function", "TOP_GAINERS_LOSERS"));
             if (!j.containsKey("top_gainers")) throw new UpstreamException("No market movers available", 404);
             return Json.obj("updated", str(j.get("last_updated")), "gainers", moverList(j.get("top_gainers")), "losers", moverList(j.get("top_losers")), "active", moverList(j.get("most_actively_traded")));
@@ -294,15 +315,86 @@ final class Providers {
         return out;
     }
 
+    /** Company names (case-sensitive, whole words) used to tag Finnhub headlines with the stocks they mention. */
+    static final String[][] NAMES = {{"Apple", "AAPL"}, {"Microsoft", "MSFT"}, {"Nvidia", "NVDA"}, {"NVIDIA", "NVDA"}, {"Amazon", "AMZN"}, {"Alphabet", "GOOGL"}, {"Google", "GOOGL"}, {"Meta", "META"},
+            {"Facebook", "META"}, {"Tesla", "TSLA"}, {"Broadcom", "AVGO"}, {"Berkshire", "BRK.B"}, {"JPMorgan", "JPM"}, {"Eli Lilly", "LLY"}, {"UnitedHealth", "UNH"}, {"Exxon", "XOM"},
+            {"Mastercard", "MA"}, {"Johnson & Johnson", "JNJ"}, {"Procter", "PG"}, {"Home Depot", "HD"}, {"Costco", "COST"}, {"AbbVie", "ABBV"}, {"Merck", "MRK"}, {"Oracle", "ORCL"},
+            {"Chevron", "CVX"}, {"Coca-Cola", "KO"}, {"PepsiCo", "PEP"}, {"Bank of America", "BAC"}, {"Netflix", "NFLX"}, {"AMD", "AMD"}, {"Salesforce", "CRM"}, {"Adobe", "ADBE"},
+            {"Walmart", "WMT"}, {"McDonald's", "MCD"}, {"Cisco", "CSCO"}, {"Intel", "INTC"}, {"Disney", "DIS"}, {"Qualcomm", "QCOM"}, {"IBM", "IBM"}, {"Goldman", "GS"},
+            {"Caterpillar", "CAT"}, {"Boeing", "BA"}, {"Uber", "UBER"}, {"Palantir", "PLTR"}, {"Nike", "NKE"}, {"Pfizer", "PFE"}, {"Starbucks", "SBUX"}, {"Micron", "MU"},
+            {"Wells Fargo", "WFC"}, {"Morgan Stanley", "MS"}, {"Citigroup", "C"}, {"Verizon", "VZ"}, {"Coinbase", "COIN"}, {"Shopify", "SHOP"}, {"Super Micro", "SMCI"},
+            {"TSMC", "TSM"}, {"Taiwan Semiconductor", "TSM"}, {"Alibaba", "BABA"}, {"Spotify", "SPOT"}, {"Airbnb", "ABNB"}, {"PayPal", "PYPL"}, {"Robinhood", "HOOD"},
+            {"Rivian", "RIVN"}, {"Dell", "DELL"}, {"Applied Materials", "AMAT"}, {"Lockheed", "LMT"}, {"FedEx", "FDX"}, {"Ford", "F"}, {"General Motors", "GM"},
+            {"S&P 500", "SPY"}, {"Nasdaq", "QQQ"}, {"Dow Jones", "DIA"}};
+    static final java.util.regex.Pattern EXCH = java.util.regex.Pattern.compile("\\((?:NASDAQ|NYSE|Nasdaq|NYSE American)\\s*:\\s*([A-Z]{1,5}(?:\\.[A-Z])?)\\)");
+
+    static List<String> tag(String text, String related) {
+        Set<String> out = new LinkedHashSet<>();
+        if (related != null) for (String r : related.split(",")) { r = r.trim().toUpperCase(); if (US_TICKER.matcher(r).matches()) out.add(r); }
+        java.util.regex.Matcher m = EXCH.matcher(text);
+        while (m.find()) out.add(m.group(1));
+        for (String[] n : NAMES) if (java.util.regex.Pattern.compile("(?<![A-Za-z])" + java.util.regex.Pattern.quote(n[0]) + "(?![a-z])").matcher(text).find()) out.add(n[1]);
+        return new ArrayList<>(out).subList(0, Math.min(out.size(), 5));
+    }
+
+    /** Finnhub news: general market headlines, or one company's news (free for US listings). */
+    private static List<Object> finnhubNews(String symbol) {
+        String base = cfg("FINNHUB_BASE_URL", "https://finnhub.io/api/v1"), tok = URLEncoder.encode(cfg("FINNHUB_API_KEY", ""), StandardCharsets.UTF_8);
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
+        String u = symbol == null ? base + "/news?category=general&token=" + tok : base + "/company-news?symbol=" + URLEncoder.encode(symbol, StandardCharsets.UTF_8) + "&from=" + today.minusDays(7) + "&to=" + today + "&token=" + tok;
+        List<Object> out = new ArrayList<>();
+        try {
+            HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(8)).GET().build(), HttpResponse.BodyHandlers.ofString());
+            if (r.statusCode() != 200) return out;
+            for (Object o : list(Json.parse(r.body()))) {
+                Map<String, Object> a = map(o);
+                String title = str(a.get("headline")), url = str(a.get("url"));
+                if (title == null || title.isBlank() || url == null || out.size() >= 25) continue;
+                String sum = str(a.get("summary")) == null ? "" : str(a.get("summary"));
+                List<String> tags = tag(title + " " + sum, str(a.get("related")));
+                if (symbol != null && !tags.contains(symbol)) { tags = new ArrayList<>(tags); tags.add(0, symbol); }
+                List<Object> syms = new ArrayList<>();
+                for (String t : tags.subList(0, Math.min(tags.size(), 5))) syms.add(Json.obj("symbol", t, "name", null, "sentiment", null));
+                Double t = num(a.get("datetime"));
+                Double nid = num(a.get("id"));
+                out.add(Json.obj("id", "fh" + (nid == null ? Math.abs(url.hashCode()) : nid.longValue()), "title", title, "summary", sum.length() > 400 ? sum.substring(0, 400) + "…" : sum, "url", url,
+                        "source", str(a.get("source")), "image", str(a.get("image")), "publishedAt", t == null ? null : java.time.Instant.ofEpochSecond(t.longValue()).toString(), "symbols", syms));
+            }
+        } catch (Exception ignored) {} // extra coverage only; never fail the feed because of it
+        return out;
+    }
+
+    /** Merge feeds newest first, dropping duplicate headlines. */
+    static List<Object> merge(List<Object> a, List<Object> b, int limit) {
+        Map<String, Object> seen = new LinkedHashMap<>();
+        List<Object> all = new ArrayList<>(a);
+        all.addAll(b);
+        all.sort((x, y) -> String.valueOf(map(y).get("publishedAt")).compareTo(String.valueOf(map(x).get("publishedAt"))));
+        for (Object o : all) { String k = String.valueOf(map(o).get("title")).toLowerCase().replaceAll("[^a-z0-9]", ""); if (!seen.containsKey(k)) seen.put(k, o); }
+        List<Object> out = new ArrayList<>(seen.values());
+        return out.subList(0, Math.min(out.size(), limit));
+    }
+
     static List<Object> news(String symbols, String text, int limit) {
-        List<Object> base = CACHE.get("n" + symbols + "|" + text + "|" + limit, 15 * 60_000L, () -> {
-            String q = "language=en&filter_entities=true&limit=" + Math.min(Math.max(limit, 1), 10);
-            if (!symbols.isEmpty()) return newsFetch(q + "&symbols=" + URLEncoder.encode(symbols, StandardCharsets.UTF_8));
-            q += "&countries=us&must_have_entities=true";
-            if (!text.isEmpty()) return newsFetch(q + "&search=" + URLEncoder.encode(text, StandardCharsets.UTF_8));
-            // Default feed: important US market news from major outlets, falling back to any US source
-            List<Object> top = newsFetch(q + "&domains=" + TOP_US_SOURCES);
-            return top.isEmpty() ? newsFetch(q) : top;
+        int lim = Math.min(Math.max(limit, 1), 10);
+        List<Object> base = CACHE.get("n" + symbols + "|" + text + "|" + lim, 15 * 60_000L, () -> {
+            String q = "language=en&filter_entities=true&limit=" + lim;
+            List<Object> mx = new ArrayList<>();
+            RuntimeException err = null;
+            try {
+                if (!symbols.isEmpty()) mx = newsFetch(q + "&symbols=" + URLEncoder.encode(symbols, StandardCharsets.UTF_8));
+                else {
+                    q += "&countries=us&must_have_entities=true";
+                    if (!text.isEmpty()) mx = newsFetch(q + "&search=" + URLEncoder.encode(text, StandardCharsets.UTF_8));
+                    else { mx = newsFetch(q + "&domains=" + TOP_US_SOURCES); if (mx.isEmpty()) mx = newsFetch(q); } // important US news from major outlets first
+                }
+            } catch (RuntimeException e) { err = e; }
+            if (!finnhubOn() || !text.isEmpty() || symbols.contains(",")) { if (err != null) throw err; return mx; }
+            // Finnhub adds volume: general market news for the main feed, or the company's own news for one ticker
+            List<Object> fh = finnhubNews(symbols.isEmpty() ? null : symbols);
+            if (mx.isEmpty() && fh.isEmpty() && err != null) throw err;
+            if (symbols.isEmpty()) fh = fh.stream().filter(o -> !list(map(o).get("symbols")).isEmpty()).toList(); // main feed: only stories tied to companies
+            return merge(mx, fh, lim);
         });
         return withMoves(base);
     }
@@ -313,7 +405,7 @@ final class Providers {
         Set<String> want = new LinkedHashSet<>();
         for (Object a : articles) for (Object s : list(map(a).get("symbols"))) { String sym = str(map(s).get("symbol")); if (sym != null && US_TICKER.matcher(sym).matches() && want.size() < 20) want.add(sym); }
         Map<String, Map<String, Object>> q = new java.util.concurrent.ConcurrentHashMap<>();
-        want.parallelStream().forEach(s -> { try { q.put(s, quote(s, 60_000)); } catch (RuntimeException ignored) {} });
+        want.parallelStream().forEach(s -> { try { q.put(s, quote(s, 5 * 60_000L)); } catch (RuntimeException ignored) {} });
         List<Object> out = new ArrayList<>();
         for (Object a : articles) {
             Map<String, Object> copy = new LinkedHashMap<>(map(a));
