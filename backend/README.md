@@ -4,7 +4,7 @@ Serves live market data, news, calendars, the waitlist and the Claude-powered AI
 Keys stay on this server. The browser never sees them.
 
 ## Run locally
-    ./test.sh                                   # 82 checks against fake providers (no keys needed)
+    ./test.sh                                   # 99 checks against fake providers (no keys needed)
     ./build.sh
     ALPHAVANTAGE_API_KEY=... MARKETAUX_API_TOKEN=... ANTHROPIC_API_KEY=... java -cp out com.quantera.Main
     curl localhost:8080/api/health
@@ -13,7 +13,7 @@ To run the website and API together on one origin (mock data when no keys are se
     STATIC_DIR=../frontend/public java -cp out com.quantera.Main   # then open http://localhost:8080
 
 ## Endpoints
-GET /api/health · /api/markets · /api/quote?symbol= · /api/quotes?symbols=A,B · /api/history?symbol=&full=1 · /api/intraday?symbol=&interval=5min|15min|1h|4h (20 sessions, New York time, Twelve Data) · /api/overview?symbol= · /api/search?q= · /api/news?symbols= or ?q= · /api/calendar?type=earnings|ipo · POST /api/ai {"messages":[{"role","content"}]} · POST /api/waitlist {"email","interest","source"} · POST /api/events {"name"} · GET /api/article?id=<uuid> (story, per-company passages, related stories) · GET /api/snapshot (every warm quote with sector, ~125 symbols) · GET /api/directory?q=&type=stock|etf|adr&page= (every US-listed stock/ETF/ADR) · POST /api/explain {"lens","title","summary","symbols"} (AI explanations: tldr, eli5, matters, sides, five_w, numbers, questions)
+GET /api/health · /api/markets · /api/quote?symbol= · /api/quotes?symbols=A,B · /api/history?symbol=&full=1 · /api/intraday?symbol=&interval=5min|15min|1h|4h (20 sessions, New York time, Twelve Data) · /api/overview?symbol= · /api/search?q= (US first, then every other country) · GET /api/world (44 countries by region with live index levels) · /api/world/country?c=in&kind=stocks|etfs|indexes&sector=&sort=cap|gainers|losers|active&page= · /api/news?symbols= or ?q= · /api/calendar?type=earnings|ipo · POST /api/ai {"messages":[{"role","content"}]} · POST /api/waitlist {"email","interest","source"} · POST /api/events {"name"} · GET /api/article?id=<uuid> (story, per-company passages, related stories) · GET /api/snapshot (every warm quote with sector, ~125 symbols) · GET /api/directory?q=&type=stock|etf|adr&page= (every US-listed stock/ETF/ADR) · POST /api/explain {"lens","title","summary","symbols"} (AI explanations: tldr, eli5, matters, sides, five_w, numbers, questions)
 
 ## Waitlist and usage events (Supabase)
 1. Create a free project at supabase.com and run this in its SQL editor:
@@ -39,6 +39,12 @@ Alpha Vantage: Finnhub serves quotes, movers, company profiles, search, calendar
 ## AI provider (Gemini free tier now, Claude later)
 Set GEMINI_API_KEY (free from aistudio.google.com) to run the AI chat and story explanations on Gemini. To move to Claude,
 set a working ANTHROPIC_API_KEY and AI_PROVIDER=anthropic (or remove GEMINI_API_KEY). /api/health reports "aiProvider".
+
+## Global markets (Yahoo Finance, no key)
+Index levels (S&P 500, FTSE 100, Nikkei 225…), every country's stocks and ETFs (by sector, paged), non-US quotes, charts, intraday bars,
+profiles and worldwide search come from Yahoo Finance's public endpoints. Symbols use Yahoo's suffixes (7203.T, RELIANCE.NS, SHEL.L, ^GSPC).
+Prices outside the US are delayed about 15 minutes. It is unofficial and unlicensed: fine for a prototype, but before a public or commercial
+launch move to a licensed feed (e.g. EODHD). Set YAHOO_ENABLED=0 to turn it off; /api/health reports "global" and "lastGlobalError".
 
 ## Rate-limit safety (free plans)
 - Finnhub (60/min): the quote warmer uses ~40/min in session and ~10/min outside it. Any 429 makes every caller back off for 30 s and serve the warm snapshot instead.
@@ -66,8 +72,9 @@ Note: Vercel itself does not run long-lived Java servers, which is why the API i
 - Gemini.java     the same chat tools and explanations on Google Gemini
 - Store.java      waitlist and usage events in Supabase (REST, service key server-side only)
 - Support.java    config, cache, rate limiter, helpers
+- Yahoo.java      global markets: index levels, country stock/ETF lists, non-US quotes, charts, profiles, search
 - Json.java       small JSON reader/writer
-- src/test/.../TestMain.java  the 82 checks
+- src/test/.../TestMain.java  the 99 checks
 
 ## Honest limits
 - Cache and rate limiter live in memory per instance. Use Redis if you run several instances.

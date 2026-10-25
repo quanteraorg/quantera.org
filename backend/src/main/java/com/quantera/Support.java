@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 final class Support {
     private Support() {}
 
-    static final Pattern SYM = Pattern.compile("^[A-Za-z0-9.\\-]{1,12}$");
+    static final Pattern SYM = Pattern.compile("^\\^?[A-Za-z0-9.=\\-]{1,20}$"); // also ^GSPC, RELIANCE.NS, EURUSD=X
 
     /** System property wins over environment variable (lets tests inject values). */
     static String cfg(String key, String def) {

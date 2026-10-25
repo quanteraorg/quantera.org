@@ -108,10 +108,14 @@ final class Providers {
     }
 
     static Map<String, Object> quote(String s, long ttlMs) {
+        if (Yahoo.on() && Yahoo.isGlobal(s)) return Yahoo.quote(s); // indexes and non-US listings
         return CACHE.get("q" + s, ttlMs, () -> {
             if (finnhubOn()) {
                 try { return finnhubQuote(s); }
-                catch (UpstreamException e) { if (e.code == 404 || cfg("ALPHAVANTAGE_API_KEY", null) == null) throw e; } // fall back to Alpha Vantage on provider trouble
+                catch (UpstreamException e) {
+                    if (Yahoo.on() && e.code != 429) try { return Yahoo.quote(s); } catch (UpstreamException ignored) {}
+                    if (e.code == 404 || cfg("ALPHAVANTAGE_API_KEY", null) == null) throw e;
+                } // fall back to Yahoo, then Alpha Vantage, on provider trouble
             }
             Map<String, Object> j = map(av(q("function", "GLOBAL_QUOTE", "symbol", s)).get("Global Quote"));
             if (num(j.get("05. price")) == null) throw new UpstreamException("Symbol not found", 404);
@@ -179,9 +183,13 @@ final class Providers {
 
     static Map<String, Object> history(String s, boolean full) {
         return CACHE.get("h" + s + (full ? 1 : 0), 6 * 3600_000L, () -> {
+            if (Yahoo.on() && (Yahoo.isGlobal(s) || (!twelveOn() && cfg("ALPHAVANTAGE_API_KEY", null) == null))) return Yahoo.history(s, full);
             if (twelveOn()) {
                 try { return twelveHistory(s, full); }
-                catch (UpstreamException e) { if (e.code == 404 || cfg("ALPHAVANTAGE_API_KEY", null) == null) throw e; }
+                catch (UpstreamException e) {
+                    if (Yahoo.on() && e.code != 429) try { return Yahoo.history(s, full); } catch (UpstreamException ignored) {} // symbols outside the Twelve Data plan
+                    if (e.code == 404 || cfg("ALPHAVANTAGE_API_KEY", null) == null) throw e;
+                }
             }
             Map<String, Object> j;
             try { j = av(q("function", "TIME_SERIES_DAILY", "symbol", s, "outputsize", full ? "full" : "compact")); }
@@ -209,6 +217,7 @@ final class Providers {
     static Map<String, Object> intraday(String s, String interval) {
         Integer perDay = INTRADAY.get(interval);
         if (perDay == null) throw new UpstreamException("interval must be one of 5min, 15min, 1h, 4h", 400);
+        if (Yahoo.on() && (Yahoo.isGlobal(s) || !twelveOn())) return CACHE.get("yi" + s + interval, 60_000L, () -> Yahoo.intraday(s, interval));
         if (!twelveOn()) throw new UpstreamException("Intraday charts need a Twelve Data key", 503);
         long ttl = interval.endsWith("min") ? (usMarketOpen() ? 60_000L : 30 * 60_000L) : (usMarketOpen() ? 5 * 60_000L : 60 * 60_000L);
         return CACHE.get("i" + s + interval, ttl, () -> {
@@ -250,6 +259,23 @@ final class Providers {
     }
 
     static Map<String, Object> search(String text) {
+        Map<String, Object> us;
+        try { us = searchUs(text); }
+        catch (UpstreamException e) { if (!Yahoo.on()) throw e; us = Json.obj("results", List.of(), "source", null); }
+        if (!Yahoo.on()) return us;
+        try { // add listings from every other country after the US matches
+            List<Object> out = new ArrayList<>(list(us.get("results")));
+            Set<String> seen = new HashSet<>();
+            for (Object o : out) seen.add(String.valueOf(map(o).get("symbol")));
+            List<Object> world = new ArrayList<>();
+            for (Object o : Yahoo.search(text)) if (seen.add(String.valueOf(map(o).get("symbol"))) && Yahoo.isGlobal(String.valueOf(map(o).get("symbol")))) world.add(o);
+            while (out.size() > 6 && out.size() + world.size() > 14) out.remove(out.size() - 1);
+            out.addAll(world.subList(0, Math.min(world.size(), 14 - out.size())));
+            return Json.obj("results", out, "source", (us.get("source") == null ? "provider" : us.get("source")) + "+yahoo");
+        } catch (UpstreamException e) { return us; }
+    }
+
+    static Map<String, Object> searchUs(String text) {
         // The full US directory is already in memory once loaded: answer from it and spend no provider quota
         List<Map<String, Object>> dir = CACHE.peek("dir");
         if (dir != null && !dir.isEmpty()) return Json.obj("results", searchDirectory(dir, text), "source", "directory");
@@ -292,7 +318,11 @@ final class Providers {
 
     static Map<String, Object> overview(String s) {
         return CACHE.get("o" + s, 24 * 3600_000L, () -> {
-            if (finnhubOn()) return finnhubOverview(s);
+            if (Yahoo.on() && (Yahoo.isGlobal(s) || (!finnhubOn() && cfg("ALPHAVANTAGE_API_KEY", null) == null))) return Yahoo.overview(s);
+            if (finnhubOn()) {
+                try { return finnhubOverview(s); }
+                catch (UpstreamException e) { if (Yahoo.on() && e.code == 404) return Yahoo.overview(s); throw e; }
+            }
             Map<String, Object> j = av(q("function", "OVERVIEW", "symbol", s));
             if (str(j.get("Symbol")) == null) throw new UpstreamException("No company data for this symbol", 404);
             return Json.obj("symbol", str(j.get("Symbol")), "name", str(j.get("Name")), "type", str(j.get("AssetType")), "sector", str(j.get("Sector")), "industry", str(j.get("Industry")),
@@ -341,6 +371,8 @@ final class Providers {
         if (CACHE.age("ixno" + name) < 6 * 3600_000L) throw new UpstreamException("Index levels are not in the current data plan", 402);
         return CACHE.get("ix" + name, 5 * 60_000L, () -> {
             Map<String, Object> q;
+            if (Yahoo.on()) try { q = new LinkedHashMap<>(Yahoo.quote(INDEX_SYM.get(name))); q.put("symbol", name); return q; } catch (UpstreamException ignored) {}
+            if (!finnhubOn()) throw new UpstreamException("Index levels are unavailable right now");
             try { q = new LinkedHashMap<>(finnhubQuote(INDEX_SYM.get(name))); }
             catch (UpstreamException e) { if (e.code == 404 || e.code == 402 || e.code == 503) CACHE.put("ixno" + name, true); throw e; } // remember "not in plan" so we stop spending 4 calls per refresh
             q.put("symbol", name);

@@ -109,9 +109,30 @@ public class TestMain {
             if (table.equals("waitlist")) { String email = String.valueOf(m(l(Json.parse(body)).get(0)).get("email")); reply(ex, 201, "application/json", joined.add(email) ? body : "[]"); }
             else reply(ex, 201, "application/json", body);
         });
+        // Yahoo Finance (global markets): cookie, crumb that must be refreshed once, batch quotes, charts, screener, search
+        java.util.concurrent.atomic.AtomicInteger crumbs = new java.util.concurrent.atomic.AtomicInteger();
+        fake.createContext("/yc", ex -> { ex.getResponseHeaders().add("Set-Cookie", "A3=yt; Path=/"); reply(ex, 404, "text/plain", "no"); });
+        fake.createContext("/yh/v1/test/getcrumb", ex -> reply(ex, 200, "text/plain", "crumb" + crumbs.incrementAndGet()));
+        fake.createContext("/yh/v7/finance/quote", ex -> { String q = ex.getRequestURI().getRawQuery(); upstreamCalls.add("yahoo quote " + q);
+            if (q.contains("crumb=crumb1")) { reply(ex, 401, "application/json", "{}"); return; }
+            List<Object> res = new ArrayList<>();
+            for (String sy : java.net.URLDecoder.decode(q.replaceAll(".*symbols=([^&]*).*", "$1"), StandardCharsets.UTF_8).split(","))
+                if (!sy.equals("NOPE.L")) res.add(Json.obj("symbol", sy, "longName", "Name " + sy, "regularMarketPrice", sy.equals("^GSPC") ? 7623.68 : 100.5, "regularMarketChange", -39.75, "regularMarketChangePercent", -0.519, "currency", sy.endsWith(".NS") ? "INR" : "USD", "fullExchangeName", "X", "quoteType", sy.startsWith("^") ? "INDEX" : "EQUITY", "regularMarketTime", 1792787901));
+            reply(ex, 200, "application/json", Json.write(Json.obj("quoteResponse", Json.obj("result", res)))); });
+        fake.createContext("/yh/v8/finance/chart/", ex -> { String q = ex.getRequestURI().getRawQuery(); upstreamCalls.add("yahoo chart " + ex.getRequestURI().getPath() + "?" + q);
+            boolean intra = q.contains("interval=60m");
+            long t0 = 1792731600L; // 2026-10-23 03:30 UTC = 09:00 IST
+            List<Object> ts = new ArrayList<>(), c = new ArrayList<>();
+            for (int i = 0; i < 6; i++) { ts.add(intra ? t0 + i * 3600L : t0 - (5 - i) * 86400L); c.add(1000.0 + i); }
+            reply(ex, 200, "application/json", Json.write(Json.obj("chart", Json.obj("result", List.of(Json.obj("meta", Json.obj("currency", "INR", "gmtoffset", 19800, "exchangeTimezoneName", "Asia/Kolkata", "fullExchangeName", "NSE"), "timestamp", ts,
+                "indicators", Json.obj("quote", List.of(Json.obj("open", c, "high", c, "low", c, "close", c, "volume", c))))))))); });
+        fake.createContext("/yh/v1/finance/screener", ex -> { String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8); upstreamCalls.add("yahoo screener " + body);
+            reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"total\":209,\"quotes\":[{\"symbol\":\"INFY.NS\",\"longName\":\"Infosys Limited\",\"regularMarketPrice\":1153.8,\"regularMarketChangePercent\":0.4,\"currency\":\"INR\",\"quoteType\":\"EQUITY\"}]}]}}"); });
+        fake.createContext("/yh/v1/finance/search", ex -> { upstreamCalls.add("yahoo search"); reply(ex, 200, "application/json", "{\"quotes\":[{\"symbol\":\"AAPL\",\"quoteType\":\"EQUITY\",\"longname\":\"Apple Inc.\"},{\"symbol\":\"APC.DE\",\"quoteType\":\"EQUITY\",\"longname\":\"Apple Inc.\",\"exchDisp\":\"XETRA\"},{\"symbol\":\"X1\",\"quoteType\":\"OPTION\"}]}"); });
         fake.start();
         String base = "http://127.0.0.1:" + fake.getAddress().getPort();
         System.setProperty("AV_BASE_URL", base + "/av"); System.setProperty("MARKETAUX_BASE_URL", base + "/mx"); System.setProperty("FINNHUB_BASE_URL", base + "/fh"); System.setProperty("TWELVEDATA_BASE_URL", base + "/td"); System.setProperty("GEMINI_BASE_URL", base + "/gm"); System.setProperty("ANTHROPIC_BASE_URL", base + "/an");
+        System.setProperty("YAHOO_ENABLED", "0"); System.setProperty("YAHOO_BASE_URL", base + "/yh"); System.setProperty("YAHOO_COOKIE_URL", base + "/yc");
         System.setProperty("ALPHAVANTAGE_API_KEY", "av-test"); System.setProperty("MARKETAUX_API_TOKEN", "mx-test"); System.setProperty("ANTHROPIC_API_KEY", "an-test");
         HttpServer app = Main.start(0);
         int p = app.getAddress().getPort();
@@ -290,6 +311,30 @@ public class TestMain {
         t("per-IP rate limit kicks in", last == 429);
         t("Json round trip keeps quotes, newlines and unicode", Json.write(Json.parse("{\"a\":\"x\\\"y\\n\\u00e9\",\"b\":[1,2.5,null,true]}")).equals("{\"a\":\"x\\\"y\\né\",\"b\":[1,2.5,null,true]}"));
         System.setProperty("ANTHROPIC_API_KEY", ""); System.clearProperty("ANTHROPIC_API_KEY");
+        // ---- global markets (Yahoo)
+        t("global data off -> /api/world 503", get(p, "/api/world").code == 503);
+        System.setProperty("YAHOO_ENABLED", "1"); Providers.CACHE.clear();
+        r = get(p, "/api/quote?symbol=%5EGSPC");
+        t("index level from Yahoo, stale crumb refreshed once", r.code == 200 && d(m(r.body).get("price")) == 7623.68 && upstreamCalls.stream().anyMatch(u -> u.startsWith("yahoo quote") && u.contains("crumb=crumb2")));
+        r = get(p, "/api/world");
+        t("world: regions, countries and index levels in one quote call", r.code == 200 && l(m(r.body).get("regions")).size() == 4 && Json.write(r.body).contains("\"Nifty 50\"") && d(m(l(m(l(m(l(m(r.body).get("regions")).get(0)).get("countries")).get(0)).get("indexes")).get(0)).get("price")) == 7623.68
+            && upstreamCalls.stream().filter(u -> u.startsWith("yahoo quote") && u.contains("NSEI")).count() == 1);
+        r = get(p, "/api/world/country?c=in&kind=stocks&sector=Technology");
+        t("country stocks: screener by region, main exchange and sector", r.code == 200 && "INFY.NS".equals(m(l(m(r.body).get("items")).get(0)).get("symbol")) && d(m(r.body).get("total")) == 209
+            && upstreamCalls.stream().anyMatch(u -> u.startsWith("yahoo screener") && u.contains("[\"region\",\"in\"]") && u.contains("[\"exchange\",\"NSI\"]") && u.contains("[\"sector\",\"Technology\"]")));
+        t("country request validated", get(p, "/api/world/country?c=in&sector=Hacking").code == 400 && get(p, "/api/world/country?c=zz").code == 404);
+        r = get(p, "/api/world/country?c=gb&kind=indexes");
+        t("country indexes carry names and levels", r.code == 200 && "FTSE 100".equals(m(l(m(r.body).get("items")).get(0)).get("name")) && d(m(l(m(r.body).get("items")).get(0)).get("price")) == 100.5);
+        r = get(p, "/api/history?symbol=RELIANCE.NS");
+        t("non-US history from Yahoo in exchange-local dates", r.code == 200 && "2026-10-23".equals(m(l(m(r.body).get("bars")).get(5)).get("t")) && "INR".equals(m(r.body).get("currency")) && upstreamCalls.stream().noneMatch(u -> u.contains("twelvedata") && u.contains("RELIANCE")));
+        r = get(p, "/api/intraday?symbol=RELIANCE.NS&interval=4h");
+        t("4h bars built from hourly bars within a day", r.code == 200 && l(m(r.body).get("bars")).size() == 2 && "2026-10-23T10:30:00".equals(m(l(m(r.body).get("bars")).get(0)).get("t")) && d(m(l(m(r.body).get("bars")).get(0)).get("c")) == 1003.0);
+        r = get(p, "/api/quotes?symbols=RELIANCE.NS,NOPE.L");
+        t("mixed quotes: global batch, unknown listed as missing", r.code == 200 && l(m(r.body).get("quotes")).size() == 1 && l(m(r.body).get("missing")).contains("NOPE.L"));
+        r = get(p, "/api/search?q=apple");
+        t("search adds other countries' listings after US matches", r.code == 200 && !Yahoo.isGlobal(String.valueOf(m(l(m(r.body).get("results")).get(0)).get("symbol"))) && Json.write(r.body).contains("APC.DE") && !Json.write(r.body).contains("X1"));
+        t("Yahoo suffix rule keeps US class shares local", Yahoo.isGlobal("7203.T") && Yahoo.isGlobal("^N225") && !Yahoo.isGlobal("BRK.B") && !Yahoo.isGlobal("AAPL"));
+        System.setProperty("YAHOO_ENABLED", "0");
         System.out.println("\n" + pass + " passed, " + fail + " failed");
         app.stop(0); fake.stop(0);
         System.exit(fail == 0 ? 0 : 1);

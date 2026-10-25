@@ -1,5 +1,5 @@
 #!/bin/sh
-# Compile everything and run the 82 checks against fake provider servers (no keys, no internet)
+# Compile everything and run the 99 checks against fake provider servers (no keys, no internet)
 set -e
 rm -rf out && mkdir out
 javac -d out $(find src -name "*.java")

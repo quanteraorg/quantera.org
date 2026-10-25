@@ -36,7 +36,7 @@ public final class Main {
     }
 
     static void routes() {
-        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn(), "marketOpen", Providers.usMarketOpen(), "lastProviderError", Providers.LAST_ERR), 0, 120));
+        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn() || Yahoo.on(), "marketOpen", Providers.usMarketOpen(), "global", Yahoo.on(), "lastProviderError", Providers.LAST_ERR, "lastGlobalError", Yahoo.LAST_ERR), 0, 120));
         ROUTES.put("/api/quote", new Route(r -> Providers.quote(symbol(r), 60_000), 60, 60));
         ROUTES.put("/api/history", new Route(r -> Providers.history(symbol(r), "1".equals(r.query().get("full"))), 3600, 60));
         ROUTES.put("/api/intraday", new Route(r -> Providers.intraday(symbol(r), r.query().getOrDefault("interval", "5min")), 60, 30));
@@ -50,6 +50,8 @@ public final class Main {
             Set<String> list = new LinkedHashSet<>();
             for (String s : r.query().getOrDefault("symbols", "").toUpperCase().split(",")) if (!s.isBlank()) list.add(s.trim());
             if (list.isEmpty() || list.size() > 25 || list.stream().anyMatch(s -> !SYM.matcher(s).matches())) throw new UpstreamException("Provide 1 to 25 valid symbols", 400);
+            List<String> global = list.stream().filter(Yahoo::isGlobal).toList();
+            if (Yahoo.on() && !global.isEmpty()) try { Yahoo.quotes(global); } catch (UpstreamException ignored) {} // one batch call warms them all
             List<Throwable> errs = new CopyOnWriteArrayList<>();
             Map<String, CompletableFuture<Optional<Map<String, Object>>>> f = new LinkedHashMap<>();
             for (String s : list) f.put(s, settle(() -> Providers.quote(s, 60_000), errs));
@@ -80,6 +82,14 @@ public final class Main {
             Map<String, Object> warm = MARKETS;
             return warm != null ? warm : markets();
         }, 300, 30));
+        ROUTES.put("/api/world", new Route(r -> Yahoo.world(), 60, 30));
+        ROUTES.put("/api/world/country", new Route(r -> {
+            String c = r.query().getOrDefault("c", "").toLowerCase(), kind = r.query().getOrDefault("kind", "stocks"), sector = r.query().getOrDefault("sector", ""), sort = r.query().getOrDefault("sort", "cap");
+            if (!c.matches("[a-z]{2}") || !kind.matches("stocks|etfs|indexes") || !(sector.isEmpty() || Yahoo.SECTORS.contains(sector)) || !sort.matches("cap|gainers|losers|active")) throw new UpstreamException("Bad request", 400);
+            int page = 1;
+            try { page = Math.max(1, Math.min(Integer.parseInt(r.query().getOrDefault("page", "1")), 400)); } catch (NumberFormatException ignored) {}
+            return Yahoo.country(c, kind, sector, page, sort);
+        }, 120, 60));
         ROUTES.put("/api/snapshot", new Route(r -> Providers.snapshot(), 60, 30));
         ROUTES.put("/api/directory", new Route(r -> {
             String q = r.query().getOrDefault("q", "").trim(), type = r.query().getOrDefault("type", "").trim();
@@ -130,17 +140,30 @@ public final class Main {
         ix.forEach(f -> f.join().ifPresent(indices::add));
         // Real index levels where the data plan allows it (Finnhub index symbols); otherwise the cards show the tracking fund
         Map<String, String> lvl = Map.of("SPY", "SPX", "QQQ", "NDX", "DIA", "DJI", "IWM", "RUT");
-        if (Providers.finnhubOn()) for (int i = 0; i < indices.size(); i++) {
+        if (Providers.finnhubOn() || Yahoo.on()) for (int i = 0; i < indices.size(); i++) {
             Map<String, Object> e = new LinkedHashMap<>(map(indices.get(i)));
             String name = lvl.get(String.valueOf(e.get("symbol")));
             if (name == null) continue;
-            try { Map<String, Object> iq = Providers.indexQuote(name); e.put("level", iq.get("price")); e.put("levelChangePct", iq.get("changePct")); indices.set(i, e); }
+            try { Map<String, Object> iq = Providers.indexQuote(name); e.put("level", iq.get("price")); e.put("levelChange", iq.get("change")); e.put("levelChangePct", iq.get("changePct")); e.put("levelSymbol", Providers.INDEX_SYM.get(name)); indices.set(i, e); }
             catch (RuntimeException ignored) {}
+            if (e.get("level") != null && Yahoo.on()) try { // the index's own 30-day line rather than its fund's
+                List<Object> bars = list(Providers.history(Providers.INDEX_SYM.get(name), false).get("bars")), sp = new ArrayList<>();
+                for (int k = Math.max(0, bars.size() - 30); k < bars.size(); k++) sp.add(map(bars.get(k)).get("c"));
+                e.put("levelSpark", sp);
+            } catch (RuntimeException ignored) {}
         }
+        List<Object> world = new ArrayList<>();
+        if (Yahoo.on()) try {
+            String[][] w = {{"^FTSE", "FTSE 100"}, {"^GDAXI", "DAX"}, {"^FCHI", "CAC 40"}, {"^STOXX50E", "Euro Stoxx 50"}, {"^N225", "Nikkei 225"}, {"^HSI", "Hang Seng"}, {"000001.SS", "Shanghai"}, {"^NSEI", "Nifty 50"}, {"^KS11", "KOSPI"}, {"^AXJO", "ASX 200"}, {"^GSPTSE", "TSX"}, {"^BVSP", "Ibovespa"}};
+            List<String> syms = new ArrayList<>();
+            for (String[] x : w) syms.add(x[0]);
+            Map<String, Map<String, Object>> q = Yahoo.quotes(syms);
+            for (String[] x : w) if (q.containsKey(x[0])) { Map<String, Object> e = new LinkedHashMap<>(q.get(x[0])); e.put("name", x[1]); world.add(e); }
+        } catch (RuntimeException ignored) {}
         for (int i = 0; i < indices.size(); i++) { Map<String, Object> e = new LinkedHashMap<>(map(indices.get(i))); e.put("spark", Providers.spark(String.valueOf(e.get("symbol")))); indices.set(i, e); }
         for (var f : List.of(btc, eth)) f.join().ifPresent(c -> { Map<String, Object> e = new LinkedHashMap<>(map(c)); e.put("spark", Providers.spark(e.get("from") + "-USD")); crypto.add(e); });
         if (movers == null && indices.isEmpty() && crypto.isEmpty()) throw errs.isEmpty() ? new UpstreamException("Market data provider error") : (RuntimeException) errs.get(0);
-        return Json.obj("movers", movers, "indices", indices, "crypto", crypto, "updated", java.time.Instant.now().toString());
+        return Json.obj("movers", movers, "indices", indices, "world", world, "crypto", crypto, "updated", java.time.Instant.now().toString());
     }
 
     /** Refreshes markets on a fixed schedule so upstream usage stays flat however many visitors arrive. Off unless MARKET_REFRESH_SEC is set (60 or more). */
