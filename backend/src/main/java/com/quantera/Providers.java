@@ -17,7 +17,7 @@ final class Providers {
     static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     static final Cache CACHE = new Cache();
 
-    static boolean marketOn() { return cfg("ALPHAVANTAGE_API_KEY", null) != null; }
+    static boolean marketOn() { return cfg("ALPHAVANTAGE_API_KEY", null) != null || cfg("FINNHUB_API_KEY", null) != null; }
     static boolean newsOn() { return cfg("MARKETAUX_API_TOKEN", null) != null; }
     static boolean aiOn() { return cfg("ANTHROPIC_API_KEY", null) != null; }
 
@@ -70,8 +70,32 @@ final class Providers {
         return m;
     }
 
+    static boolean finnhubOn() { return cfg("FINNHUB_API_KEY", null) != null; }
+
+    /** Finnhub quote: 60 calls/minute on the free plan, no daily cap; returns the day's change directly. */
+    private static Map<String, Object> finnhubQuote(String s) {
+        String u = cfg("FINNHUB_BASE_URL", "https://finnhub.io/api/v1") + "/quote?symbol=" + URLEncoder.encode(s, StandardCharsets.UTF_8) + "&token=" + URLEncoder.encode(cfg("FINNHUB_API_KEY", ""), StandardCharsets.UTF_8);
+        HttpResponse<String> r;
+        try { r = HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(8)).GET().build(), HttpResponse.BodyHandlers.ofString()); }
+        catch (Exception e) { throw new UpstreamException("Market data provider error"); }
+        if (r.statusCode() == 429) throw new UpstreamException(AV_LIMIT, 429);
+        if (r.statusCode() == 401 || r.statusCode() == 403) throw new UpstreamException("Market data is not configured correctly", 503);
+        if (r.statusCode() != 200) throw new UpstreamException("Market data provider error");
+        Map<String, Object> j;
+        try { j = map(Json.parse(r.body())); } catch (IllegalArgumentException e) { throw new UpstreamException("Market data provider error"); }
+        Double c = num(j.get("c"));
+        if (c == null || c == 0) throw new UpstreamException("Symbol not found", 404);
+        Double t = num(j.get("t"));
+        return Json.obj("symbol", s, "price", c, "change", num(j.get("d")), "changePct", num(j.get("dp")), "volume", null, "prevClose", num(j.get("pc")),
+                "asOf", t == null ? null : java.time.Instant.ofEpochSecond(t.longValue()).toString().substring(0, 10), "source", "Finnhub");
+    }
+
     static Map<String, Object> quote(String s, long ttlMs) {
         return CACHE.get("q" + s, ttlMs, () -> {
+            if (finnhubOn()) {
+                try { return finnhubQuote(s); }
+                catch (UpstreamException e) { if (e.code == 404 || cfg("ALPHAVANTAGE_API_KEY", null) == null) throw e; } // fall back to Alpha Vantage on provider trouble
+            }
             Map<String, Object> j = map(av(q("function", "GLOBAL_QUOTE", "symbol", s)).get("Global Quote"));
             if (num(j.get("05. price")) == null) throw new UpstreamException("Symbol not found", 404);
             return Json.obj("symbol", s, "price", num(j.get("05. price")), "change", num(j.get("09. change")), "changePct", num(j.get("10. change percent")),
@@ -243,34 +267,65 @@ final class Providers {
         });
     }
 
-    static List<Object> news(String symbols, String text, int limit) {
-        return CACHE.get("n" + symbols + "|" + text + "|" + limit, 15 * 60_000L, () -> {
-            String key = cfg("MARKETAUX_API_TOKEN", null);
-            if (key == null) throw new UpstreamException("News is not configured", 503);
-            StringBuilder u = new StringBuilder(cfg("MARKETAUX_BASE_URL", "https://api.marketaux.com/v1")).append("/news/all?language=en&filter_entities=true&limit=").append(Math.min(Math.max(limit, 1), 10));
-            if (!symbols.isEmpty()) u.append("&symbols=").append(URLEncoder.encode(symbols, StandardCharsets.UTF_8));
-            if (!text.isEmpty()) u.append("&search=").append(URLEncoder.encode(text, StandardCharsets.UTF_8));
-            u.append("&api_token=").append(URLEncoder.encode(key, StandardCharsets.UTF_8));
-            HttpResponse<String> r;
-            try { r = HTTP.send(HttpRequest.newBuilder(URI.create(u.toString())).timeout(Duration.ofSeconds(10)).GET().build(), HttpResponse.BodyHandlers.ofString()); }
-            catch (Exception e) { throw new UpstreamException("News provider error"); }
-            if (r.statusCode() == 402 || r.statusCode() == 429) throw new UpstreamException("News rate limit reached. Try again later.", 429);
-            if (r.statusCode() != 200) throw new UpstreamException("News provider error");
-            List<Object> out = new ArrayList<>();
-            try {
-                for (Object o : list(map(Json.parse(r.body())).get("data"))) {
-                    Map<String, Object> a = map(o);
-                    List<Object> syms = new ArrayList<>();
-                    for (Object e : list(a.get("entities"))) {
-                        Map<String, Object> en = map(e);
-                        if (str(en.get("symbol")) == null || syms.size() >= 5) continue;
-                        syms.add(Json.obj("symbol", str(en.get("symbol")), "name", str(en.get("name")), "sentiment", num(en.get("sentiment_score"))));
-                    }
-                    String snippet = str(a.get("snippet")) != null ? str(a.get("snippet")) : str(a.get("description"));
-                    out.add(Json.obj("id", str(a.get("uuid")), "title", str(a.get("title")), "summary", snippet == null ? "" : snippet, "url", str(a.get("url")), "source", str(a.get("source")), "publishedAt", str(a.get("published_at")), "symbols", syms));
+    /** Major US financial outlets, preferred for the default (no search) feed. */
+    static final String TOP_US_SOURCES = "reuters.com,bloomberg.com,cnbc.com,wsj.com,marketwatch.com,finance.yahoo.com,barrons.com,ft.com,apnews.com,investors.com,businessinsider.com,forbes.com,nasdaq.com,fool.com";
+    static final java.util.regex.Pattern US_TICKER = java.util.regex.Pattern.compile("^[A-Z]{1,5}(\\.[A-Z])?$");
+
+    private static List<Object> newsFetch(String query) {
+        HttpResponse<String> r = mx("/news/all?" + query);
+        List<Object> out = new ArrayList<>();
+        try {
+            for (Object o : list(map(Json.parse(r.body())).get("data"))) {
+                Map<String, Object> a = map(o);
+                List<Object> us = new ArrayList<>(), other = new ArrayList<>();
+                for (Object e : list(a.get("entities"))) {
+                    Map<String, Object> en = map(e);
+                    String sym = str(en.get("symbol"));
+                    if (sym == null) continue;
+                    Map<String, Object> x = Json.obj("symbol", sym, "name", str(en.get("name")), "sentiment", num(en.get("sentiment_score")));
+                    // US listings first (plain tickers like AAPL or BRK.B); foreign listings (DIA.AS, RELIANCE.NS) after
+                    (US_TICKER.matcher(sym).matches() && (en.get("country") == null || "us".equalsIgnoreCase(str(en.get("country")))) ? us : other).add(x);
                 }
-            } catch (IllegalArgumentException e) { throw new UpstreamException("News provider error"); }
-            return out;
+                us.addAll(other);
+                String snippet = str(a.get("snippet")) != null ? str(a.get("snippet")) : str(a.get("description"));
+                out.add(Json.obj("id", str(a.get("uuid")), "title", str(a.get("title")), "summary", snippet == null ? "" : snippet, "url", str(a.get("url")), "source", str(a.get("source")), "publishedAt", str(a.get("published_at")), "symbols", us.subList(0, Math.min(us.size(), 6))));
+            }
+        } catch (IllegalArgumentException e) { throw new UpstreamException("News provider error"); }
+        return out;
+    }
+
+    static List<Object> news(String symbols, String text, int limit) {
+        List<Object> base = CACHE.get("n" + symbols + "|" + text + "|" + limit, 15 * 60_000L, () -> {
+            String q = "language=en&filter_entities=true&limit=" + Math.min(Math.max(limit, 1), 10);
+            if (!symbols.isEmpty()) return newsFetch(q + "&symbols=" + URLEncoder.encode(symbols, StandardCharsets.UTF_8));
+            q += "&countries=us&must_have_entities=true";
+            if (!text.isEmpty()) return newsFetch(q + "&search=" + URLEncoder.encode(text, StandardCharsets.UTF_8));
+            // Default feed: important US market news from major outlets, falling back to any US source
+            List<Object> top = newsFetch(q + "&domains=" + TOP_US_SOURCES);
+            return top.isEmpty() ? newsFetch(q) : top;
         });
+        return withMoves(base);
+    }
+
+    /** Adds today's price move to each tagged US stock ("AAPL +0.25%"). Only with Finnhub, so news never spends the small Alpha Vantage quota. */
+    static List<Object> withMoves(List<Object> articles) {
+        if (!finnhubOn()) return articles;
+        Set<String> want = new LinkedHashSet<>();
+        for (Object a : articles) for (Object s : list(map(a).get("symbols"))) { String sym = str(map(s).get("symbol")); if (sym != null && US_TICKER.matcher(sym).matches() && want.size() < 20) want.add(sym); }
+        Map<String, Map<String, Object>> q = new java.util.concurrent.ConcurrentHashMap<>();
+        want.parallelStream().forEach(s -> { try { q.put(s, quote(s, 60_000)); } catch (RuntimeException ignored) {} });
+        List<Object> out = new ArrayList<>();
+        for (Object a : articles) {
+            Map<String, Object> copy = new LinkedHashMap<>(map(a));
+            List<Object> syms = new ArrayList<>();
+            for (Object s : list(copy.get("symbols"))) {
+                Map<String, Object> x = new LinkedHashMap<>(map(s)), qq = q.get(str(x.get("symbol")));
+                if (qq != null) { x.put("price", qq.get("price")); x.put("changePct", qq.get("changePct")); }
+                syms.add(x);
+            }
+            copy.put("symbols", syms);
+            out.add(copy);
+        }
+        return out;
     }
 }

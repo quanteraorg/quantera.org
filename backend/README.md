@@ -4,7 +4,7 @@ Serves live market data, news, calendars, the waitlist and the Claude-powered AI
 Keys stay on this server. The browser never sees them.
 
 ## Run locally
-    ./test.sh                                   # 51 checks against fake providers (no keys needed)
+    ./test.sh                                   # 55 checks against fake providers (no keys needed)
     ./build.sh
     ALPHAVANTAGE_API_KEY=... MARKETAUX_API_TOKEN=... ANTHROPIC_API_KEY=... java -cp out com.quantera.Main
     curl localhost:8080/api/health
@@ -27,6 +27,11 @@ GET /api/health · /api/markets · /api/quote?symbol= · /api/quotes?symbols=A,B
 2. Set SUPABASE_URL (Project Settings -> API -> Project URL) and SUPABASE_SERVICE_KEY (the service_role key) on the server.
 3. /api/health then reports "storage":true. Without them, /api/waitlist answers 503 and events are dropped.
 
+## Live quotes (Finnhub, recommended)
+Set FINNHUB_API_KEY (free at finnhub.io: 60 calls/minute, no daily cap). Quotes, the markets board and the
+"AAPL +0.25%" moves on news headlines then come from Finnhub; Alpha Vantage (25 calls/day free) is only used for
+charts and company profiles.
+
 ## Scheduled market refresh
 Set MARKET_REFRESH_SEC (60 or more, e.g. 300) to rebuild /api/markets in the background on a fixed schedule.
 Upstream calls then stay flat however many visitors arrive. Leave it unset on a free Alpha Vantage key:
@@ -47,7 +52,7 @@ Note: Vercel itself does not run long-lived Java servers, which is why the API i
 - Store.java      waitlist and usage events in Supabase (REST, service key server-side only)
 - Support.java    config, cache, rate limiter, helpers
 - Json.java       small JSON reader/writer
-- src/test/.../TestMain.java  the 51 checks
+- src/test/.../TestMain.java  the 55 checks
 
 ## Honest limits
 - Cache and rate limiter live in memory per instance. Use Redis if you run several instances.

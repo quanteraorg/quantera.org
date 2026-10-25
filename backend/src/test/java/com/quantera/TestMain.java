@@ -68,6 +68,12 @@ public class TestMain {
             upstreamCalls.add(ex.getRequestURI().toString());
             reply(ex, 200, "application/json", "{\"data\":[{\"uuid\":\"1\",\"title\":\"T\",\"snippet\":\"S\",\"url\":\"https://x.test\",\"source\":\"Src\",\"published_at\":\"2026-10-05T00:00:00Z\",\"entities\":[{\"symbol\":\"AAPL\",\"name\":\"Apple\",\"sentiment_score\":0.3},{\"symbol\":null,\"name\":\"x\"}]}]}");
         });
+        fake.createContext("/fh/quote", ex -> {
+            String sy = ""; for (String q : ex.getRequestURI().getRawQuery().split("&")) if (q.startsWith("symbol=")) sy = q.substring(7);
+            String tok = ""; for (String q : ex.getRequestURI().getRawQuery().split("&")) if (q.startsWith("token=")) tok = q.substring(6);
+            upstreamCalls.add("finnhub " + sy + " token=" + tok);
+            reply(ex, 200, "application/json", sy.equals("ZZZ") ? "{\"c\":0,\"d\":null,\"dp\":null,\"pc\":0,\"t\":0}" : "{\"c\":226.6,\"d\":0.56,\"dp\":0.25,\"h\":227,\"l\":224,\"o\":225,\"pc\":226.04,\"t\":1792800000}");
+        });
         fake.createContext("/mx/news/uuid/", ex -> reply(ex, 200, "application/json", "{\"uuid\":\"11111111-2222-3333-4444-555555555555\",\"title\":\"Apple rises\",\"description\":\"Desc &amp; more\",\"snippet\":\"S\",\"url\":\"https://x.test/a\",\"source\":\"Src\",\"published_at\":\"2026-10-05T00:00:00Z\",\"entities\":[{\"symbol\":\"AAPL\",\"name\":\"Apple\",\"type\":\"equity\",\"industry\":\"Technology\",\"sentiment_score\":0.4,\"highlights\":[{\"highlight\":\"iPhone demand is <em>strong</em>\",\"sentiment\":0.6}]}]}"));
         fake.createContext("/mx/news/similar/", ex -> reply(ex, 200, "application/json", "{\"data\":[{\"uuid\":\"9\",\"title\":\"Related\",\"source\":\"Src\",\"published_at\":\"2026-10-04T00:00:00Z\",\"url\":\"https://x.test/b\"}]}"));
         fake.createContext("/an/v1/messages", ex -> {
@@ -85,7 +91,7 @@ public class TestMain {
         });
         fake.start();
         String base = "http://127.0.0.1:" + fake.getAddress().getPort();
-        System.setProperty("AV_BASE_URL", base + "/av"); System.setProperty("MARKETAUX_BASE_URL", base + "/mx"); System.setProperty("ANTHROPIC_BASE_URL", base + "/an");
+        System.setProperty("AV_BASE_URL", base + "/av"); System.setProperty("MARKETAUX_BASE_URL", base + "/mx"); System.setProperty("FINNHUB_BASE_URL", base + "/fh"); System.setProperty("ANTHROPIC_BASE_URL", base + "/an");
         System.setProperty("ALPHAVANTAGE_API_KEY", "av-test"); System.setProperty("MARKETAUX_API_TOKEN", "mx-test"); System.setProperty("ANTHROPIC_API_KEY", "an-test");
         HttpServer app = Main.start(0);
         int p = app.getAddress().getPort();
@@ -108,7 +114,17 @@ public class TestMain {
         t("news normalised, entities without symbol dropped", l(m(l(m(r.body).get("articles")).get(0)).get("symbols")).size() == 1 && d(m(l(m(l(m(r.body).get("articles")).get(0)).get("symbols")).get(0)).get("sentiment")) == 0.3);
         t("bad news symbols -> 400", get(p, "/api/news?symbols=a%3Bb").code == 400);
         get(p, "/api/news?q=interest%20rates");
-        t("news keyword search sent as search param", upstreamCalls.stream().anyMatch(u -> u.contains("search=interest")));
+        t("news keyword search sent as search param", upstreamCalls.stream().anyMatch(u -> u.contains("search=interest") && u.contains("countries=us")));
+        get(p, "/api/news?limit=5");
+        t("default news feed: US, tagged companies, major outlets", upstreamCalls.stream().anyMatch(u -> u.contains("countries=us") && u.contains("must_have_entities=true") && u.contains("domains=reuters.com")));
+        Providers.CACHE.clear(); System.setProperty("FINNHUB_API_KEY", "fh-test");
+        r = get(p, "/api/quote?symbol=AAPL");
+        t("Finnhub quote normalised with day change, key kept server-side", r.code == 200 && d(m(r.body).get("changePct")) == 0.25 && "Finnhub".equals(m(r.body).get("source")) && !r.raw.contains("fh-test") && upstreamCalls.stream().anyMatch(u -> u.startsWith("finnhub AAPL token=fh-test")));
+        t("Finnhub unknown symbol -> 404", get(p, "/api/quote?symbol=ZZZ").code == 404);
+        r = get(p, "/api/news?symbols=AAPL&limit=3");
+        Map<String, Object> s0 = m(l(m(l(m(r.body).get("articles")).get(0)).get("symbols")).get(0));
+        t("news symbols carry today's move (AAPL +0.25%), US tickers first", r.code == 200 && "AAPL".equals(s0.get("symbol")) && d(s0.get("changePct")) == 0.25);
+        System.clearProperty("FINNHUB_API_KEY"); Providers.CACHE.clear();
         t("news bad search text -> 400", get(p, "/api/news?q=%3Cscript%3E").code == 400);
         r = get(p, "/api/markets");
         t("markets combines movers, index ETFs and crypto", r.code == 200 && d(m(l(m(m(r.body).get("movers")).get("gainers")).get(0)).get("changePct")) == 25 && d(m(l(m(m(r.body).get("movers")).get("losers")).get(0)).get("changePct")) == -33.3 && l(m(r.body).get("indices")).size() == 4 && d(m(l(m(r.body).get("crypto")).get(0)).get("rate")) == 65000.5);
