@@ -36,7 +36,7 @@ public final class Main {
     }
 
     static void routes() {
-        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage"), 0, 120));
+        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider()), 0, 120));
         ROUTES.put("/api/quote", new Route(r -> Providers.quote(symbol(r), 60_000), 60, 60));
         ROUTES.put("/api/history", new Route(r -> Providers.history(symbol(r), "1".equals(r.query().get("full"))), 3600, 60));
         ROUTES.put("/api/overview", new Route(r -> Providers.overview(symbol(r)), 86400, 60));
@@ -102,7 +102,7 @@ public final class Main {
                 if (!("user".equals(role) || "assistant".equals(role)) || !(content instanceof String c) || c.isBlank() || c.length() > 2000) throw new UpstreamException("Invalid messages", 400);
                 msgs.add(Json.obj("role", role, "content", c));
             }
-            return Anthropic.chat(msgs);
+            return Anthropic.useGemini() ? Gemini.chat(msgs) : Anthropic.chat(msgs);
         }, 0, 12));
     }
 

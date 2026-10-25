@@ -19,7 +19,7 @@ final class Providers {
 
     static boolean marketOn() { return cfg("ALPHAVANTAGE_API_KEY", null) != null || cfg("FINNHUB_API_KEY", null) != null; }
     static boolean newsOn() { return cfg("MARKETAUX_API_TOKEN", null) != null; }
-    static boolean aiOn() { return cfg("ANTHROPIC_API_KEY", null) != null; }
+    static boolean aiOn() { return cfg("ANTHROPIC_API_KEY", null) != null || cfg("GEMINI_API_KEY", null) != null; }
 
     /** After Alpha Vantage reports a rate limit, skip calling it until this time (calls made while blocked can still count against the quota). */
     static volatile long AV_BLOCKED_UNTIL = 0;
@@ -292,7 +292,7 @@ final class Providers {
                 }
                 // By date; within a day, well-known large companies first
                 items.sort(Comparator.comparing((Map<String, Object> m) -> (String) m.get("date")).thenComparing(m -> m.get("name") == null ? 1 : 0).thenComparing(m -> (String) m.get("symbol")));
-                return new ArrayList<Object>(items.subList(0, Math.min(400, items.size())));
+                return new ArrayList<Object>(items.subList(0, Math.min(1500, items.size())));
             }
             String text = avRaw(ipo ? q("function", "IPO_CALENDAR") : q("function", "EARNINGS_CALENDAR", "horizon", "3month"), 15).trim();
             if (text.startsWith("{")) {
@@ -310,7 +310,7 @@ final class Providers {
                         : Json.obj("symbol", sym, "name", cell(r, h, "name"), "date", date, "estimate", num(cell(r, h, "estimate")), "currency", cell(r, h, "currency")));
             }
             items.sort(Comparator.comparing(m -> (String) m.get("date")));
-            return new ArrayList<Object>(items.subList(0, Math.min(400, items.size())));
+            return new ArrayList<Object>(items.subList(0, Math.min(1500, items.size())));
         });
     }
 

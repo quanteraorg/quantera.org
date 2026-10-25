@@ -93,15 +93,23 @@ final class Anthropic {
             + "never invent facts, figures, quotes or events, and if the story does not say something, say it is not in the story. Plain English, short sentences. "
             + "Format with '- ' bullets and **bold** labels only. Keep it under 170 words. This is education, not investment advice.";
 
+    /** Which AI answers: AI_PROVIDER=anthropic|gemini wins; otherwise Gemini when its key is set, else Claude. */
+    static boolean useGemini() {
+        String p = cfg("AI_PROVIDER", "").toLowerCase();
+        return p.equals("gemini") || (!p.equals("anthropic") && Gemini.on());
+    }
+
+    static String provider() { return useGemini() ? "gemini" : "anthropic"; }
+
     static Map<String, Object> explain(Object body) {
         String key = cfg("ANTHROPIC_API_KEY", null);
-        if (key == null) throw new UpstreamException("The AI is not configured", 503);
+        if (!useGemini() && key == null) throw new UpstreamException("The AI is not configured", 503);
         Map<String, Object> b = map(body);
         String lens = String.valueOf(b.getOrDefault("lens", "")), title = String.valueOf(b.getOrDefault("title", "")).trim(), summary = String.valueOf(b.getOrDefault("summary", "")).trim();
         if (!LENSES.containsKey(lens) || title.isEmpty() || title.length() > 300 || summary.length() > 2000) throw new UpstreamException("Invalid request", 400);
         List<String> syms = new ArrayList<>();
         for (Object o : list(b.get("symbols"))) { String s = String.valueOf(o).toUpperCase(); if (SYM.matcher(s).matches() && syms.size() < 8) syms.add(s); }
-        return Providers.CACHE.get("x" + lens + "|" + title.hashCode() + "|" + summary.hashCode() + "|" + syms, 6 * 3600_000L, () -> {
+        return Providers.CACHE.get("x" + provider() + lens + "|" + title.hashCode() + "|" + summary.hashCode() + "|" + syms, 6 * 3600_000L, () -> {
             StringBuilder moves = new StringBuilder();
             for (String s : syms) {
                 try { Map<String, Object> q = Providers.quote(s, 5 * 60_000L); Double c = num(q.get("changePct")); if (c != null) moves.append(s).append(' ').append(c >= 0 ? "+" : "").append(String.format("%.2f", c)).append("% today; "); }
@@ -109,6 +117,7 @@ final class Anthropic {
             }
             String prompt = "Headline: " + title + "\nSummary: " + (summary.isEmpty() ? "(none)" : summary) + "\nCompanies tagged: " + (syms.isEmpty() ? "none" : String.join(", ", syms))
                     + "\nToday's price moves: " + (moves.length() == 0 ? "not available" : moves) + "\n\nTask: " + LENSES.get(lens);
+            if (useGemini()) return Json.obj("lens", lens, "text", Gemini.complete(EXPLAIN_SYSTEM, prompt, 600));
             String req = Json.write(Json.obj("model", cfg("ANTHROPIC_MODEL", "claude-sonnet-4-6"), "max_tokens", 450, "system", EXPLAIN_SYSTEM, "messages", List.of(Json.obj("role", "user", "content", prompt))));
             HttpResponse<String> r;
             try {

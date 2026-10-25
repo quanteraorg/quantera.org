@@ -4,7 +4,7 @@ Serves live market data, news, calendars, the waitlist and the Claude-powered AI
 Keys stay on this server. The browser never sees them.
 
 ## Run locally
-    ./test.sh                                   # 71 checks against fake providers (no keys needed)
+    ./test.sh                                   # 76 checks against fake providers (no keys needed)
     ./build.sh
     ALPHAVANTAGE_API_KEY=... MARKETAUX_API_TOKEN=... ANTHROPIC_API_KEY=... java -cp out com.quantera.Main
     curl localhost:8080/api/health
@@ -36,6 +36,10 @@ charts and company profiles.
 Set TWELVEDATA_API_KEY (free at twelvedata.com: 800 calls/day). With Finnhub + Twelve Data set, nothing depends on
 Alpha Vantage: Finnhub serves quotes, movers, company profiles, search, calendars, crypto and news; Twelve Data serves charts.
 
+## AI provider (Gemini free tier now, Claude later)
+Set GEMINI_API_KEY (free from aistudio.google.com) to run the AI chat and story explanations on Gemini. To move to Claude,
+set a working ANTHROPIC_API_KEY and AI_PROVIDER=anthropic (or remove GEMINI_API_KEY). /api/health reports "aiProvider".
+
 ## Scheduled market refresh
 Set MARKET_REFRESH_SEC (60 or more, e.g. 300) to rebuild /api/markets in the background on a fixed schedule.
 Upstream calls then stay flat however many visitors arrive. Leave it unset on a free Alpha Vantage key:
@@ -52,11 +56,12 @@ Note: Vercel itself does not run long-lived Java servers, which is why the API i
 ## Source map
 - Main.java       server, routes, validation, rate limiting, CORS, security headers, markets refresh, local static files
 - Providers.java  Alpha Vantage + Marketaux clients, normalisation, caching, CSV parsing
-- Anthropic.java  Claude chat with server-side tools (quote, history stats, company, search, news)
+- Anthropic.java  Claude chat with server-side tools (quote, history stats, company, search, news), story explanations, provider switch
+- Gemini.java     the same chat tools and explanations on Google Gemini
 - Store.java      waitlist and usage events in Supabase (REST, service key server-side only)
 - Support.java    config, cache, rate limiter, helpers
 - Json.java       small JSON reader/writer
-- src/test/.../TestMain.java  the 71 checks
+- src/test/.../TestMain.java  the 76 checks
 
 ## Honest limits
 - Cache and rate limiter live in memory per instance. Use Redis if you run several instances.
