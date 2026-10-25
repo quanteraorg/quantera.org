@@ -106,6 +106,16 @@ final class Providers {
     static boolean twelveOn() { return cfg("TWELVEDATA_API_KEY", null) != null; }
 
     /** GET a JSON document from Finnhub ("fh") or Twelve Data ("td"); maps provider errors to friendly ones. */
+    /** Last data-provider failure, shown in /api/health for diagnosis (never contains keys: URLs are not included). */
+    static volatile String LAST_ERR = null;
+
+    private static Object fail(String why) {
+        why = why.replaceAll("(token|apikey|api_token)=[^&\s]+", "$1=***");
+        LAST_ERR = java.time.Instant.now().toString().substring(0, 19) + " " + why;
+        System.out.println("Provider error: " + why);
+        throw new UpstreamException("Market data provider error");
+    }
+
     static Object getJson(String who, String pathAndQuery) { return getJson(who, pathAndQuery, 10); }
 
     static Object getJson(String who, String pathAndQuery, int timeoutSec) {
@@ -114,14 +124,19 @@ final class Providers {
         String key = URLEncoder.encode(cfg(fh ? "FINNHUB_API_KEY" : "TWELVEDATA_API_KEY", ""), StandardCharsets.UTF_8);
         String u = base + pathAndQuery + (pathAndQuery.contains("?") ? "&" : "?") + (fh ? "token=" : "apikey=") + key;
         String path = pathAndQuery.split("\\?")[0];
-        HttpResponse<String> r;
-        try { r = HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(timeoutSec)).GET().build(), HttpResponse.BodyHandlers.ofString()); }
-        catch (Exception e) { System.out.println(who + " " + path + " failed: " + e.getClass().getSimpleName()); throw new UpstreamException("Market data provider error"); }
+        HttpResponse<byte[]> r;
+        String body;
+        try {
+            r = HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(timeoutSec)).header("Accept-Encoding", "gzip").GET().build(), HttpResponse.BodyHandlers.ofByteArray());
+            byte[] b = r.body();
+            if (r.headers().firstValue("Content-Encoding").orElse("").contains("gzip")) b = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(b)).readAllBytes();
+            body = new String(b, StandardCharsets.UTF_8);
+        } catch (Exception e) { return fail(who + " " + path + ": " + e.getClass().getSimpleName() + (e.getMessage() == null ? "" : " " + e.getMessage())); }
         if (r.statusCode() == 429) throw new UpstreamException(AV_LIMIT, 429);
-        if (r.statusCode() == 401 || r.statusCode() == 403) throw new UpstreamException("This data is not included in the current data plan", 402);
-        if (r.statusCode() != 200) { System.out.println(who + " " + path + " HTTP " + r.statusCode()); throw new UpstreamException("Market data provider error"); }
+        if (r.statusCode() == 401 || r.statusCode() == 403) { LAST_ERR = who + " " + path + ": HTTP " + r.statusCode() + " (not in plan)"; throw new UpstreamException("This data is not included in the current data plan", 402); }
+        if (r.statusCode() != 200) return fail(who + " " + path + ": HTTP " + r.statusCode() + " " + body.substring(0, Math.min(120, body.length())));
         Object j;
-        try { j = Json.parse(r.body()); } catch (IllegalArgumentException e) { throw new UpstreamException("Market data provider error"); }
+        try { j = Json.parse(body); } catch (RuntimeException | StackOverflowError e) { return fail(who + " " + path + ": unreadable response (" + body.length() + " bytes)"); }
         if (!fh && "error".equals(map(j).get("status"))) { // Twelve Data reports errors in the body with HTTP 200
             Double code = num(map(j).get("code"));
             throw code != null && code == 429 ? new UpstreamException(AV_LIMIT, 429) : code != null && code == 403 ? new UpstreamException("This data is not included in the current data plan", 402) : new UpstreamException("No price history for this symbol", 404);
@@ -264,14 +279,22 @@ final class Providers {
     /** Every US-listed stock and ETF on the major exchanges (Finnhub symbol list, refreshed daily), searchable and paged. */
     static List<Map<String, Object>> directoryAll() {
         return CACHE.get("dir", 24 * 3600_000L, () -> {
-            Set<String> mics = Set.of("XNAS", "XNYS", "ARCX", "BATS", "XASE");
             List<Map<String, Object>> out = new ArrayList<>();
-            for (Object o : list(getJson("fh", "/stock/symbol?exchange=US", 90))) { // a large list (tens of thousands of symbols): allow time to download
+            Set<String> seen = new HashSet<>();
+            int ok = 0;
+            // One exchange at a time keeps each download small; a failed exchange doesn't sink the rest
+            for (String mic : List.of("XNAS", "XNYS", "ARCX", "BATS", "XASE")) {
+                List<Object> rows;
+                try { rows = list(getJson("fh", "/stock/symbol?exchange=US&mic=" + mic, 60)); ok++; } catch (UpstreamException e) { continue; }
+                for (Object o : rows) {
                 Map<String, Object> m = map(o);
-                String sym = str(m.get("symbol")), type = str(m.get("type")), mic = str(m.get("mic"));
-                if (sym == null || !US_TICKER.matcher(sym).matches() || !mics.contains(mic) || !("Common Stock".equals(type) || "ETP".equals(type) || "ADR".equals(type))) continue;
-                out.add(Json.obj("symbol", sym, "name", str(m.get("description")), "type", "ETP".equals(type) ? "ETF" : "ADR".equals(type) ? "ADR" : "Stock", "sector", SECTOR.get(sym)));
+                if (!seen.add(String.valueOf(m.get("symbol")))) continue;
+                String sym = str(m.get("symbol")), type = str(m.get("type"));
+                if (sym == null || !US_TICKER.matcher(sym).matches() || !("Common Stock".equals(type) || "ETP".equals(type) || "ADR".equals(type))) continue;
+                out.add(Json.obj("symbol", sym, "name", str(m.get("description")), "type", "ETP".equals(type) ? "ETF" : "ADR".equals(type) ? "ADR" : "Stock", "sector", SECTOR.get(sym), "exchange", mic));
+                }
             }
+            if (ok == 0) throw new UpstreamException("The stock directory is unavailable right now");
             out.sort(Comparator.comparing(m -> (String) m.get("symbol")));
             return out;
         });
