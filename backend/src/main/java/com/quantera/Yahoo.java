@@ -28,19 +28,46 @@ final class Yahoo {
     static volatile String LAST_ERR;
 
     /** Yahoo wants a session cookie plus a matching "crumb" for quote, screener and profile calls. Refreshed every 6 hours or on a 401. */
+    static volatile long CRUMB_FAIL_UNTIL;
+
+    private static HttpResponse<String> plainGet(String url) throws Exception {
+        return HTTP.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8)).header("User-Agent", UA)
+                .header("Accept", "text/html,application/json,*/*").header("Accept-Language", "en-US,en;q=0.9").GET().build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    private static boolean goodCrumb(HttpResponse<String> r) {
+        String c = r.body() == null ? "" : r.body().trim();
+        return r.statusCode() == 200 && !c.isEmpty() && c.length() <= 40 && !c.startsWith("{") && !c.startsWith("<");
+    }
+
+    /**
+     * Yahoo wants a session cookie plus a matching "crumb" for its quote, screener and profile calls (refreshed every 6 hours or on a 401).
+     * Some server networks are refused, so several ways are tried; after a refusal callers use the crumb-free endpoints for 15 minutes.
+     */
     static synchronized String crumb(boolean refresh) {
         if (!refresh && CRUMB != null && System.currentTimeMillis() - CRUMB_AT < 6 * 3600_000L) return CRUMB;
-        try {
-            HTTP.send(HttpRequest.newBuilder(URI.create(cfg("YAHOO_COOKIE_URL", "https://fc.yahoo.com"))).timeout(Duration.ofSeconds(8)).header("User-Agent", UA).GET().build(), HttpResponse.BodyHandlers.discarding());
-        } catch (Exception ignored) {} // fc.yahoo.com answers 404 but still sets the cookie
-        try {
-            HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(base() + "/v1/test/getcrumb")).timeout(Duration.ofSeconds(8)).header("User-Agent", UA).GET().build(), HttpResponse.BodyHandlers.ofString());
-            String c = r.body() == null ? "" : r.body().trim();
-            if (r.statusCode() != 200 || c.isEmpty() || c.length() > 40 || c.startsWith("{") || c.startsWith("<")) throw new UpstreamException("Global market data is unavailable right now");
-            CRUMB = c; CRUMB_AT = System.currentTimeMillis();
-            return c;
-        } catch (UpstreamException e) { LAST_ERR = "yahoo crumb: refused"; throw e; }
-        catch (Exception e) { LAST_ERR = "yahoo crumb: " + e.getClass().getSimpleName(); throw new UpstreamException("Global market data is unavailable right now"); }
+        if (System.currentTimeMillis() < CRUMB_FAIL_UNTIL) throw new UpstreamException("Global market data is unavailable right now");
+        StringBuilder why = new StringBuilder();
+        String q2 = base().replace("query1.", "query2.");
+        String[][] steps = {{cfg("YAHOO_COOKIE_URL", "https://fc.yahoo.com"), base() + "/v1/test/getcrumb"}, {null, q2 + "/v1/test/getcrumb"},
+                {cfg("YAHOO_PAGE_URL", "https://finance.yahoo.com/quote/%5EGSPC/"), base() + "/v1/test/getcrumb"}};
+        for (String[] st : steps) {
+            try {
+                if (st[0] != null) {
+                    HttpResponse<String> p = plainGet(st[0]); // sets the session cookie (fc.yahoo.com answers 404 but still sets it)
+                    why.append(st[0].contains("fc.") ? "fc=" : "page=").append(p.statusCode()).append(' ');
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"crumb\":\"([^\"]{4,40})\"").matcher(p.body() == null ? "" : p.body());
+                    if (m.find()) { CRUMB = m.group(1).replace("\\u002F", "/"); CRUMB_AT = System.currentTimeMillis(); return CRUMB; }
+                }
+                HttpResponse<String> r = plainGet(st[1]);
+                if (goodCrumb(r)) { CRUMB = r.body().trim(); CRUMB_AT = System.currentTimeMillis(); return CRUMB; }
+                String b = r.body() == null ? "" : r.body().replaceAll("\\s+", " ");
+                why.append(st[1].contains("query2") ? "q2=" : "q1=").append(r.statusCode()).append(b.isEmpty() ? "" : ":" + b.substring(0, Math.min(40, b.length()))).append(' ');
+            } catch (Exception e) { why.append(e.getClass().getSimpleName()).append(' '); }
+        }
+        CRUMB_FAIL_UNTIL = System.currentTimeMillis() + 15 * 60_000L;
+        LAST_ERR = "yahoo crumb refused (" + why.toString().trim() + "); using crumb-free endpoints";
+        throw new UpstreamException("Global market data is unavailable right now");
     }
 
     /** GET (body == null) or POST JSON to Yahoo, adding the crumb when needed and retrying once with a fresh one. */
@@ -95,6 +122,7 @@ final class Yahoo {
                     CACHE.put("yq" + s, q); out.put(s, q);
                 }
             } catch (UpstreamException e) {
+                if (e.code != 429) try { out.putAll(sparkQuotes(part)); continue; } catch (UpstreamException e2) { e = e2; } // crumb refused: crumb-free prices
                 for (String s : part) { Map<String, Object> c = CACHE.peek("yq" + s); if (c != null) out.put(s, c); } // stale beats nothing
                 err = e;
             }
@@ -103,9 +131,72 @@ final class Yahoo {
         return out;
     }
 
+    /** Country of a Yahoo symbol from its suffix (for the currency when the crumb-free endpoints leave it out). */
+    static final Map<String, String> SUFFIX_CCY = Map.ofEntries(Map.entry("T", "JPY"), Map.entry("NS", "INR"), Map.entry("BO", "INR"), Map.entry("L", "GBp"), Map.entry("DE", "EUR"), Map.entry("F", "EUR"),
+            Map.entry("PA", "EUR"), Map.entry("AS", "EUR"), Map.entry("BR", "EUR"), Map.entry("MI", "EUR"), Map.entry("MC", "EUR"), Map.entry("LS", "EUR"), Map.entry("HE", "EUR"), Map.entry("IR", "EUR"),
+            Map.entry("VI", "EUR"), Map.entry("SW", "CHF"), Map.entry("ST", "SEK"), Map.entry("OL", "NOK"), Map.entry("CO", "DKK"), Map.entry("WA", "PLN"), Map.entry("HK", "HKD"), Map.entry("SS", "CNY"),
+            Map.entry("SZ", "CNY"), Map.entry("KS", "KRW"), Map.entry("KQ", "KRW"), Map.entry("TW", "TWD"), Map.entry("TWO", "TWD"), Map.entry("AX", "AUD"), Map.entry("NZ", "NZD"), Map.entry("SI", "SGD"),
+            Map.entry("JK", "IDR"), Map.entry("KL", "MYR"), Map.entry("BK", "THB"), Map.entry("PS", "PHP"), Map.entry("TO", "CAD"), Map.entry("V", "CAD"), Map.entry("NE", "CAD"), Map.entry("SA", "BRL"),
+            Map.entry("MX", "MXN"), Map.entry("BA", "ARS"), Map.entry("SN", "CLP"), Map.entry("SR", "SAR"), Map.entry("TA", "ILA"), Map.entry("JO", "ZAc"), Map.entry("IS", "TRY"), Map.entry("CA", "EGP"),
+            Map.entry("QA", "QAR"), Map.entry("KW", "KWF"), Map.entry("AE", "AED"));
+    static String ccyOf(String s) {
+        for (Country c : COUNTRIES) for (String[] ix : c.indexes()) if (ix[0].equals(s)) return c.currency();
+        int d = s.lastIndexOf('.');
+        return d > 0 ? SUFFIX_CCY.get(s.substring(d + 1)) : "USD";
+    }
+
+    /** Prices without the crumb: Yahoo's spark endpoint, up to 20 symbols per call. */
+    static Map<String, Map<String, Object>> sparkQuotes(List<String> symbols) {
+        Map<String, Map<String, Object>> out = new LinkedHashMap<>();
+        UpstreamException err = null;
+        for (int i = 0; i < symbols.size(); i += 20) {
+            List<String> part = symbols.subList(i, Math.min(symbols.size(), i + 20));
+            try {
+                Map<String, Object> j = call("/v8/finance/spark?symbols=" + enc(String.join(",", part)) + "&range=1d&interval=1d", null, false);
+                for (String s : part) {
+                    Map<String, Object> x = map(j.get(s));
+                    List<Object> cl = list(x.get("close"));
+                    Double p = num(x.get("fulldayPrice")) != null ? num(x.get("fulldayPrice")) : cl.isEmpty() ? null : num(cl.get(cl.size() - 1));
+                    if (p == null) continue;
+                    Double prev = num(x.get("chartPreviousClose")), ch = num(x.get("fulldayChange")) != null ? num(x.get("fulldayChange")) : prev == null ? null : p - prev;
+                    Double pct = num(x.get("fulldayChangePercent")) != null ? num(x.get("fulldayChangePercent")) : prev == null || prev == 0 ? null : (p / prev - 1) * 100;
+                    List<Object> ts = list(x.get("timestamp"));
+                    Map<String, Object> q = Json.obj("symbol", s, "name", null, "price", p, "change", ch, "changePct", pct, "volume", null, "prevClose", prev, "currency", ccyOf(s),
+                            "exchange", null, "type", s.startsWith("^") ? "INDEX" : null, "marketState", null, "marketCap", null,
+                            "asOf", ts.isEmpty() ? null : Instant.ofEpochSecond(num(ts.get(ts.size() - 1)).longValue()).toString(), "source", "Yahoo Finance (delayed)");
+                    CACHE.put("yq" + s, q); out.put(s, q);
+                }
+            } catch (UpstreamException e) { err = e; }
+        }
+        if (out.isEmpty() && err != null) throw err;
+        return out;
+    }
+
     static Map<String, Object> quote(String s) {
-        Map<String, Object> q = quotes(List.of(s)).get(s);
+        Map<String, Object> q;
+        try { q = quotes(List.of(s)).get(s); }
+        catch (UpstreamException e) { if (e.code == 429) throw e; q = null; }
+        if (q == null || q.get("name") == null) try { q = chartQuote(s); } catch (UpstreamException e) { if (q == null) throw e; } // single symbol: the chart's header has name and currency
         if (q == null) throw new UpstreamException("Symbol not found", 404);
+        return q;
+    }
+
+    /** One symbol's quote from the chart endpoint's header (no crumb needed). */
+    static Map<String, Object> chartQuote(String s) {
+        Map<String, Object> c = CACHE.age("yc" + s) < 60_000 ? CACHE.peek("yc" + s) : null;
+        if (c != null) return c;
+        Map<String, Object> meta = map(map(list(map(call("/v8/finance/chart/" + enc(s) + "?range=5d&interval=1d", null, false).get("chart")).get("result")).stream().findFirst().orElse(null)).get("meta"));
+        Double p = num(meta.get("regularMarketPrice")), prev = num(meta.get("chartPreviousClose")) == null ? num(meta.get("previousClose")) : num(meta.get("previousClose")) != null ? num(meta.get("previousClose")) : num(meta.get("chartPreviousClose"));
+        if (p == null) throw new UpstreamException("Symbol not found", 404);
+        Double pct = num(meta.get("regularMarketChangePercent")), ch = num(meta.get("regularMarketChange"));
+        if (pct == null && prev != null && prev != 0) pct = (p / prev - 1) * 100;
+        if (ch == null && prev != null) ch = p - prev;
+        Double t = num(meta.get("regularMarketTime"));
+        String name = str(meta.get("longName")) != null ? str(meta.get("longName")) : str(meta.get("shortName"));
+        Map<String, Object> q = Json.obj("symbol", s, "name", name, "price", p, "change", ch, "changePct", pct, "volume", num(meta.get("regularMarketVolume")), "prevClose", prev,
+                "currency", str(meta.get("currency")), "exchange", str(meta.get("fullExchangeName")), "type", str(meta.get("instrumentType")), "marketState", null, "marketCap", null,
+                "high52", num(meta.get("fiftyTwoWeekHigh")), "low52", num(meta.get("fiftyTwoWeekLow")), "asOf", t == null ? null : Instant.ofEpochSecond(t.longValue()).toString(), "source", "Yahoo Finance (delayed)");
+        CACHE.put("yc" + s, q); CACHE.put("yq" + s, q);
         return q;
     }
 
@@ -161,7 +252,15 @@ final class Yahoo {
 
     /** Company or fund profile in the same units as Providers.overview (dollars and fractions). */
     static Map<String, Object> overview(String s) {
-        Map<String, Object> r = map(list(map(call("/v10/finance/quoteSummary/" + enc(s) + "?modules=price,summaryProfile,summaryDetail,defaultKeyStatistics,financialData", null, true).get("quoteSummary")).get("result")).stream().findFirst().orElse(null));
+        Map<String, Object> r;
+        try { r = map(list(map(call("/v10/finance/quoteSummary/" + enc(s) + "?modules=price,summaryProfile,summaryDetail,defaultKeyStatistics,financialData", null, true).get("quoteSummary")).get("result")).stream().findFirst().orElse(null)); }
+        catch (UpstreamException e) {
+            if (e.code == 404 || e.code == 429) throw e;
+            Map<String, Object> q = chartQuote(s); // crumb refused: the basics from the chart header
+            return Json.obj("symbol", s, "name", q.get("name"), "type", "EQUITY".equals(q.get("type")) ? "Common Stock" : q.get("type"), "sector", null, "industry", null, "country", null,
+                    "currency", q.get("currency"), "exchange", q.get("exchange"), "marketCap", null, "pe", null, "beta", null, "dividendYield", null, "high52", q.get("high52"), "low52", q.get("low52"),
+                    "revenueGrowthYoY", null, "profitMargin", null, "roe", null, "description", null, "source", "Yahoo Finance");
+        }
         if (r.isEmpty()) throw new UpstreamException("No company data for this symbol", 404);
         Map<String, Object> p = map(r.get("price")), sp = map(r.get("summaryProfile")), sd = map(r.get("summaryDetail")), ks = map(r.get("defaultKeyStatistics")), fd = map(r.get("financialData"));
         String type = str(p.get("quoteType"));
@@ -273,6 +372,63 @@ final class Yahoo {
 
     static final int PER_PAGE = 25;
 
+    /** Twelve Data exchange (MIC) to Yahoo symbol suffix, for the main exchange(s) of each country. */
+    static final Map<String, String> MIC_SUFFIX = Map.ofEntries(Map.entry("XNAS", ""), Map.entry("XNGS", ""), Map.entry("XNMS", ""), Map.entry("XNCM", ""), Map.entry("XNYS", ""), Map.entry("ARCX", ""),
+            Map.entry("BATS", ""), Map.entry("XASE", ""), Map.entry("XTSE", "TO"), Map.entry("BVMF", "SA"), Map.entry("XMEX", "MX"), Map.entry("XBUE", "BA"), Map.entry("XSGO", "SN"), Map.entry("XLON", "L"),
+            Map.entry("XETR", "DE"), Map.entry("XPAR", "PA"), Map.entry("XAMS", "AS"), Map.entry("XSWX", "SW"), Map.entry("XMAD", "MC"), Map.entry("XMIL", "MI"), Map.entry("XSTO", "ST"), Map.entry("XOSL", "OL"),
+            Map.entry("XCSE", "CO"), Map.entry("XHEL", "HE"), Map.entry("XBRU", "BR"), Map.entry("XDUB", "IR"), Map.entry("XWAR", "WA"), Map.entry("XLIS", "LS"), Map.entry("XWBO", "VI"), Map.entry("XJPX", "T"),
+            Map.entry("XSHG", "SS"), Map.entry("XSHE", "SZ"), Map.entry("XHKG", "HK"), Map.entry("XNSE", "NS"), Map.entry("XKRX", "KS"), Map.entry("XKOS", "KQ"), Map.entry("XTAI", "TW"), Map.entry("XASX", "AX"),
+            Map.entry("XNZE", "NZ"), Map.entry("XSES", "SI"), Map.entry("XIDX", "JK"), Map.entry("XKLS", "KL"), Map.entry("XBKK", "BK"), Map.entry("XSAU", "SR"), Map.entry("DSMD", "QA"), Map.entry("XKUW", "KW"),
+            Map.entry("XTAE", "TA"), Map.entry("XIST", "IS"), Map.entry("XJSE", "JO"), Map.entry("XCAI", "CA"));
+
+    static String yahooSymbol(String sym, String mic) {
+        String sfx = MIC_SUFFIX.get(mic);
+        if (sfx == null || sym == null || sym.isBlank()) return null;
+        if (sfx.isEmpty()) return sym;
+        String b = sym.trim().replace(' ', '-').replace('.', '-');
+        if (sfx.equals("HK") && b.matches("[0-9]{1,3}")) b = "0".repeat(4 - b.length()) + b;
+        String y = b + "." + sfx;
+        return SYM.matcher(y).matches() ? y : null;
+    }
+
+    /** Every listed stock or ETF on a country's main exchanges (Twelve Data reference list, refreshed daily), sorted by name. */
+    static List<Map<String, Object>> listing(Country c, boolean etf) {
+        return CACHE.get("tdl" + c.code() + etf, 24 * 3600_000L, () -> {
+            List<Map<String, Object>> out = new ArrayList<>();
+            Set<String> seen = new HashSet<>();
+            for (Object o : list(map(Providers.getJson("td", (etf ? "/etfs" : "/stocks") + "?country=" + enc(c.name()), 30)).get("data"))) {
+                Map<String, Object> m = map(o);
+                if (!etf && !"Common Stock".equals(str(m.get("type")))) continue;
+                String y = yahooSymbol(str(m.get("symbol")), str(m.get("mic_code")));
+                if (y == null || !seen.add(y)) continue;
+                out.add(Json.obj("symbol", y, "name", str(m.get("name")), "currency", str(m.get("currency"))));
+            }
+            out.sort(Comparator.comparing(m -> String.valueOf(m.get("name")).toLowerCase()));
+            if (out.isEmpty()) throw new UpstreamException("No listings for this market yet", 404);
+            return out;
+        });
+    }
+
+    /** A page of a country's listings with crumb-free prices (used when Yahoo's screener is refused). A to Z; no sector or ranking data. */
+    static Map<String, Object> basicPage(Country c, String kind, int page) {
+        List<Map<String, Object>> all = listing(c, kind.equals("etfs"));
+        int from = Math.min(all.size(), (page - 1) * PER_PAGE), to = Math.min(all.size(), from + PER_PAGE);
+        List<Map<String, Object>> rows = all.subList(from, to);
+        List<String> syms = new ArrayList<>();
+        for (Map<String, Object> m : rows) syms.add(String.valueOf(m.get("symbol")));
+        Map<String, Map<String, Object>> q;
+        try { q = sparkQuotes(syms); } catch (UpstreamException e) { q = Map.of(); }
+        List<Object> items = new ArrayList<>();
+        for (Map<String, Object> m : rows) {
+            Map<String, Object> x = new LinkedHashMap<>(q.getOrDefault(String.valueOf(m.get("symbol")), Json.obj("symbol", m.get("symbol"))));
+            x.put("name", m.get("name"));
+            if (m.get("currency") != null) x.put("currency", m.get("currency"));
+            items.add(x);
+        }
+        return Json.obj("country", c.code(), "name", c.name(), "kind", kind, "mode", "basic", "items", items, "total", all.size(), "page", page, "perPage", PER_PAGE, "source", "Twelve Data listings, Yahoo Finance prices (delayed)");
+    }
+
+
     /** One country's indexes, or a page of its stocks or ETFs (largest first, optionally one sector), with prices. */
     static Map<String, Object> country(String code, String kind, String sector, int page, String sort) {
         Country c = BY_CODE.get(code);
@@ -298,7 +454,9 @@ final class Yahoo {
             if (sort.equals("losers")) ops.add(Json.obj("operator", "lt", "operands", List.of("percentchange", 0)));
             String body = Json.write(Json.obj("size", PER_PAGE, "offset", (page - 1) * PER_PAGE, "sortField", sortField, "sortType", sort.equals("losers") ? "ASC" : "DESC",
                     "quoteType", etf ? "ETF" : "EQUITY", "query", Json.obj("operator", "AND", "operands", ops), "userId", "", "userIdType", "guid"));
-            Map<String, Object> r = map(list(map(call("/v1/finance/screener?lang=en-US&region=US", body, true).get("finance")).get("result")).stream().findFirst().orElse(null));
+            Map<String, Object> r;
+            try { r = map(list(map(call("/v1/finance/screener?lang=en-US&region=US", body, true).get("finance")).get("result")).stream().findFirst().orElse(null)); }
+            catch (UpstreamException e) { if (e.code == 429 || !Providers.twelveOn()) throw e; return basicPage(c, kind, page); } // crumb refused: full listings, prices without ranking
             List<Object> items = new ArrayList<>();
             for (Object o : list(r.get("quotes"))) { Map<String, Object> q = norm(map(o)); if (q.get("price") != null) { CACHE.put("yq" + q.get("symbol"), q); items.add(q); } }
             Double total = num(r.get("total"));
