@@ -82,6 +82,10 @@ final class Anthropic {
 
     /** Ways to explain a news story (like Particle's lenses). Each answer must stay inside the story's own text. */
     static final Map<String, String> LENSES = Map.of(
+            "impact", "Write three short sections with these bold headings. **What happened**: 2 to 3 sentences on the concrete facts of the story. "
+                    + "**How it's moving the stock**: for each company, give its move from \"Today's price moves\" (if listed), say whether this news plausibly explains it and why "
+                    + "(sales, costs, competition, regulation, demand, or just market mood), and say plainly when the move is more likely the whole market or sector. "
+                    + "**What to watch next**: 2 bullets. At most 190 words.",
             "tldr", "Give a TL;DR in exactly 3 short bullets: what happened, why it happened, what could happen next.",
             "eli5", "Explain it like the reader is 12: plain words, one everyday analogy, at most 110 words.",
             "matters", "Explain why it matters for investors: which listed companies or sectors could be affected, in which direction and why, and what to watch next. 3 to 5 bullets.",
