@@ -79,6 +79,7 @@ public final class Main {
             Map<String, Object> warm = MARKETS;
             return warm != null ? warm : markets();
         }, 300, 30));
+        ROUTES.put("/api/snapshot", new Route(r -> Providers.snapshot(), 60, 30));
         ROUTES.put("/api/explain", new Route(r -> {
             if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405);
             return Anthropic.explain(r.body());
@@ -220,5 +221,6 @@ public final class Main {
         start(port);
         System.out.println("Quantera API listening on :" + port + " (market=" + Providers.marketOn() + ", news=" + Providers.newsOn() + ", ai=" + Providers.aiOn() + ", storage=" + Store.on() + ")");
         startRefresh();
+        Providers.startWarmer();
     }
 }

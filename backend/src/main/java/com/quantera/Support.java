@@ -45,6 +45,7 @@ final class Support {
             m.put(key, new E(now, v));
             return v;
         }
+        void put(String key, Object v) { m.put(key, new E(System.currentTimeMillis(), v)); }
         void clear() { m.clear(); }
     }
 

@@ -143,6 +143,15 @@ public class TestMain {
         r = get(p, "/api/news?symbols=AAPL&limit=3");
         Map<String, Object> s0 = m(l(m(l(m(r.body).get("articles")).get(0)).get("symbols")).get(0));
         t("news symbols carry today's move (AAPL +0.25%), US tickers first", r.code == 200 && "AAPL".equals(s0.get("symbol")) && d(s0.get("changePct")) == 0.25);
+        for (int k = 0; k < 40; k++) { String s = "S" + (char) ('A' + k / 26) + (char) ('A' + k % 26); Providers.SNAP.put(s, Json.obj("symbol", s, "price", 10.0 + k, "changePct", (double) (k - 20), "change", 0.1)); }
+        Providers.SNAP.put("SPY", Json.obj("symbol", "SPY", "price", 759.97, "changePct", 9.9));
+        Providers.CACHE.clear();
+        r = get(p, "/api/markets");
+        Map<String, Object> wm = m(m(r.body).get("movers"));
+        t("movers from the warm snapshot: 25 per list, ETFs excluded", r.code == 200 && l(wm.get("gainers")).size() == 19 && l(wm.get("losers")).size() == 20 && l(wm.get("active")).size() == 25 && !r.raw.contains("\"SPY\",\"price\":759.97,\"change\":null,\"changePct\":9.9"));
+        r = get(p, "/api/snapshot");
+        t("snapshot returns every warm quote in one call", r.code == 200 && d(m(r.body).get("count")) == 1 && "SPY".equals(m(l(m(r.body).get("quotes")).get(0)).get("symbol")));
+        Providers.SNAP.clear(); Providers.CACHE.clear();
         t("tagger finds companies by name and exchange ticker, not inside other words", Providers.tag("Apple and Nvidia rally; Intelligence report (NYSE: XOM)", "").equals(List.of("XOM", "AAPL", "NVDA")));
         Providers.CACHE.clear();
         r = get(p, "/api/markets");

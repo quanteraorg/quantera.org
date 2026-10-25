@@ -220,9 +220,52 @@ final class Providers {
             "PG", "HD", "COST", "ABBV", "MRK", "ORCL", "CVX", "KO", "PEP", "BAC", "NFLX", "AMD", "CRM", "ADBE", "WMT", "MCD", "CSCO", "INTC", "DIS", "QCOM",
             "IBM", "GS", "CAT", "BA", "UBER", "PLTR", "NKE", "PFE", "MU", "WFC");
 
+    /** Stocks and ETFs kept warm in the background (about 120), so the whole site can show live prices without spending quota per visitor. */
+    static final List<String> UNIVERSE;
+    static {
+        Set<String> u = new LinkedHashSet<>(LARGE_CAPS);
+        u.addAll(List.of("SPY", "QQQ", "DIA", "IWM", "VOO", "VTI", "SMH", "XLK", "XLF", "XLE", "XLV", "GLD", "TLT", "ARKK",
+                "ASML", "TSM", "BABA", "ADP", "AMAT", "AMGN", "ANET", "APP", "ARM", "AXP", "BKNG", "BLK", "BMY", "BX", "C", "CMCSA", "COIN", "COP", "CRWD",
+                "DE", "DELL", "ETN", "F", "GE", "GILD", "GM", "HON", "INTU", "ISRG", "KLAC", "LIN", "LMT", "LOW", "LRCX", "MDT", "MRVL", "MS", "NEE", "NOW",
+                "PANW", "PYPL", "RTX", "SBUX", "SCHW", "SHOP", "SMCI", "SNOW", "SPGI", "T", "TGT", "TMO", "TXN", "UNP", "UPS", "VZ", "ABNB", "HOOD", "RIVN",
+                "SOFI", "DDOG", "NET", "MSTR", "SPOT", "LSCC", "ONTO"));
+        UNIVERSE = List.copyOf(u);
+    }
+    static final Map<String, Map<String, Object>> SNAP = new java.util.concurrent.ConcurrentHashMap<>();
+    static final Map<String, Long> SNAP_AT = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Round-robin refresher: one Finnhub quote every 1.5 s (about 40 a minute), leaving room under the 60/minute free limit for visitors. */
+    static void startWarmer() {
+        if (!finnhubOn()) return;
+        java.util.concurrent.atomic.AtomicInteger i = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().factory()).scheduleWithFixedDelay(() -> {
+            String s = UNIVERSE.get(Math.floorMod(i.getAndIncrement(), UNIVERSE.size()));
+            try { Map<String, Object> q = finnhubQuote(s); SNAP.put(s, q); SNAP_AT.put(s, System.currentTimeMillis()); CACHE.put("q" + s, q); }
+            catch (RuntimeException ignored) {}
+        }, 0, 1500, java.util.concurrent.TimeUnit.MILLISECONDS);
+        System.out.println("Quote warmer on: " + UNIVERSE.size() + " symbols");
+    }
+
+    /** Every warm quote, newest data first; no upstream calls. */
+    static Map<String, Object> snapshot() {
+        List<Object> qs = new ArrayList<>();
+        for (String s : UNIVERSE) { Map<String, Object> q = SNAP.get(s); if (q != null) qs.add(q); }
+        return Json.obj("quotes", qs, "count", qs.size(), "universe", UNIVERSE.size(), "updated", java.time.Instant.now().toString());
+    }
+
     private static Map<String, Object> finnhubMovers() {
+        if (SNAP.size() >= 30) { // the warm snapshot covers far more names at no extra cost
+            List<Map<String, Object>> qs = new ArrayList<>();
+            for (Map<String, Object> q : SNAP.values()) if (num(q.get("changePct")) != null && !Set.of("SPY", "QQQ", "DIA", "IWM", "VOO", "VTI", "SMH", "XLK", "XLF", "XLE", "XLV", "GLD", "TLT", "ARKK").contains(String.valueOf(q.get("symbol")))) qs.add(q);
+            return rank(qs, 25, "Largest US companies");
+        }
         List<Map<String, Object>> qs = Collections.synchronizedList(new ArrayList<>());
         LARGE_CAPS.parallelStream().forEach(s -> { try { Map<String, Object> q = quote(s, 5 * 60_000L); if (num(q.get("changePct")) != null) qs.add(q); } catch (RuntimeException ignored) {} });
+        return rank(qs, 10, "Largest US companies");
+    }
+
+    /** Gainers, losers and biggest moves (either direction) from a set of quotes. */
+    static Map<String, Object> rank(List<Map<String, Object>> qs, int n, String label) {
         if (qs.isEmpty()) throw new UpstreamException("No market movers available", 404);
         List<Map<String, Object>> by = new ArrayList<>(qs);
         by.sort((a, b) -> Double.compare(num(b.get("changePct")), num(a.get("changePct"))));
@@ -230,13 +273,13 @@ final class Providers {
         abs.sort((a, b) -> Double.compare(Math.abs(num(b.get("changePct"))), Math.abs(num(a.get("changePct")))));
         List<Map<String, Object>> losers = new ArrayList<>(by);
         Collections.reverse(losers);
-        java.util.function.Function<List<Map<String, Object>>, List<Object>> top = l -> { List<Object> o = new ArrayList<>(); for (Map<String, Object> q : l) { if (o.size() >= 10) break; o.add(Json.obj("symbol", q.get("symbol"), "price", q.get("price"), "change", q.get("change"), "changePct", q.get("changePct"), "volume", null)); } return o; };
-        return Json.obj("updated", java.time.Instant.now().toString(), "universe", "Largest US companies", "gainers", top.apply(by.stream().filter(q -> num(q.get("changePct")) > 0).toList()),
+        java.util.function.Function<List<Map<String, Object>>, List<Object>> top = l -> { List<Object> o = new ArrayList<>(); for (Map<String, Object> q : l) { if (o.size() >= n) break; o.add(Json.obj("symbol", q.get("symbol"), "price", q.get("price"), "change", q.get("change"), "changePct", q.get("changePct"), "volume", null)); } return o; };
+        return Json.obj("updated", java.time.Instant.now().toString(), "universe", label, "count", qs.size(), "gainers", top.apply(by.stream().filter(q -> num(q.get("changePct")) > 0).toList()),
                 "losers", top.apply(losers.stream().filter(q -> num(q.get("changePct")) < 0).toList()), "active", top.apply(abs));
     }
 
     static Map<String, Object> movers() {
-        return CACHE.get("mv", 10 * 60_000L, () -> {
+        return CACHE.get("mv", SNAP.size() >= 30 ? 120_000L : 10 * 60_000L, () -> {
             if (finnhubOn()) return finnhubMovers();
             Map<String, Object> j = av(q("function", "TOP_GAINERS_LOSERS"));
             if (!j.containsKey("top_gainers")) throw new UpstreamException("No market movers available", 404);
