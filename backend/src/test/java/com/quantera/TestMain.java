@@ -112,7 +112,15 @@ public class TestMain {
         // Yahoo Finance (global markets): cookie, crumb that must be refreshed once, batch quotes, charts, screener, search
         java.util.concurrent.atomic.AtomicInteger crumbs = new java.util.concurrent.atomic.AtomicInteger();
         fake.createContext("/yc", ex -> { ex.getResponseHeaders().add("Set-Cookie", "A3=yt; Path=/"); reply(ex, 404, "text/plain", "no"); });
-        fake.createContext("/yh/v1/test/getcrumb", ex -> reply(ex, 200, "text/plain", "crumb" + crumbs.incrementAndGet()));
+        java.util.concurrent.atomic.AtomicBoolean crumbBlocked = new java.util.concurrent.atomic.AtomicBoolean();
+        fake.createContext("/yh/v1/test/getcrumb", ex -> { if (crumbBlocked.get()) reply(ex, 429, "text/plain", "Too Many Requests"); else reply(ex, 200, "text/plain", "crumb" + crumbs.incrementAndGet()); });
+        fake.createContext("/yp", ex -> reply(ex, 200, "text/html", "<html>no crumb here</html>"));
+        fake.createContext("/yh/v8/finance/spark", ex -> { String q = java.net.URLDecoder.decode(ex.getRequestURI().getRawQuery(), StandardCharsets.UTF_8); upstreamCalls.add("yahoo spark " + q);
+            Map<String, Object> o = new LinkedHashMap<>();
+            for (String sy : q.replaceAll(".*symbols=([^&]*).*", "$1").split(",")) o.put(sy, Json.obj("symbol", sy, "fulldayPrice", 3105.0, "fulldayChange", 21.0, "fulldayChangePercent", 0.681, "chartPreviousClose", 3084.0, "timestamp", List.of(1792713600), "close", List.of(3105.0)));
+            reply(ex, 200, "application/json", Json.write(o)); });
+        fake.createContext("/td/stocks", ex -> { upstreamCalls.add("twelvedata stocks " + ex.getRequestURI().getRawQuery());
+            reply(ex, 200, "application/json", "{\"data\":[{\"symbol\":\"7203\",\"name\":\"Toyota Motor Corporation\",\"currency\":\"JPY\",\"mic_code\":\"XJPX\",\"type\":\"Common Stock\"},{\"symbol\":\"1301\",\"name\":\"Kyokuyo Co., Ltd.\",\"currency\":\"JPY\",\"mic_code\":\"XJPX\",\"type\":\"Common Stock\"},{\"symbol\":\"9999\",\"name\":\"Some Pref\",\"currency\":\"JPY\",\"mic_code\":\"XJPX\",\"type\":\"Preferred Stock\"},{\"symbol\":\"700\",\"name\":\"Tencent\",\"currency\":\"HKD\",\"mic_code\":\"XHKG\",\"type\":\"Common Stock\"}]}"); });
         fake.createContext("/yh/v7/finance/quote", ex -> { String q = ex.getRequestURI().getRawQuery(); upstreamCalls.add("yahoo quote " + q);
             if (q.contains("crumb=crumb1")) { reply(ex, 401, "application/json", "{}"); return; }
             List<Object> res = new ArrayList<>();
@@ -132,7 +140,7 @@ public class TestMain {
         fake.start();
         String base = "http://127.0.0.1:" + fake.getAddress().getPort();
         System.setProperty("AV_BASE_URL", base + "/av"); System.setProperty("MARKETAUX_BASE_URL", base + "/mx"); System.setProperty("FINNHUB_BASE_URL", base + "/fh"); System.setProperty("TWELVEDATA_BASE_URL", base + "/td"); System.setProperty("GEMINI_BASE_URL", base + "/gm"); System.setProperty("ANTHROPIC_BASE_URL", base + "/an");
-        System.setProperty("YAHOO_ENABLED", "0"); System.setProperty("YAHOO_BASE_URL", base + "/yh"); System.setProperty("YAHOO_COOKIE_URL", base + "/yc");
+        System.setProperty("YAHOO_ENABLED", "0"); System.setProperty("YAHOO_BASE_URL", base + "/yh"); System.setProperty("YAHOO_COOKIE_URL", base + "/yc"); System.setProperty("YAHOO_PAGE_URL", base + "/yp");
         System.setProperty("ALPHAVANTAGE_API_KEY", "av-test"); System.setProperty("MARKETAUX_API_TOKEN", "mx-test"); System.setProperty("ANTHROPIC_API_KEY", "an-test");
         HttpServer app = Main.start(0);
         int p = app.getAddress().getPort();
@@ -334,6 +342,17 @@ public class TestMain {
         r = get(p, "/api/search?q=apple");
         t("search adds other countries' listings after US matches", r.code == 200 && !Yahoo.isGlobal(String.valueOf(m(l(m(r.body).get("results")).get(0)).get("symbol"))) && Json.write(r.body).contains("APC.DE") && !Json.write(r.body).contains("X1"));
         t("Yahoo suffix rule keeps US class shares local", Yahoo.isGlobal("7203.T") && Yahoo.isGlobal("^N225") && !Yahoo.isGlobal("BRK.B") && !Yahoo.isGlobal("AAPL"));
+        // ---- Yahoo refuses the crumb (as it does on some server networks): crumb-free prices and Twelve Data listings
+        crumbBlocked.set(true); Yahoo.CRUMB = null; Yahoo.CRUMB_FAIL_UNTIL = 0; Providers.CACHE.clear(); System.setProperty("TWELVEDATA_API_KEY", "td-test");
+        r = get(p, "/api/world");
+        t("crumb refused: world index levels still served (spark), reason logged", r.code == 200 && Json.write(r.body).contains("3105") && String.valueOf(Yahoo.LAST_ERR).contains("q1=429") && upstreamCalls.stream().anyMatch(u -> u.startsWith("yahoo spark")));
+        r = get(p, "/api/world/country?c=jp&kind=stocks");
+        t("crumb refused: country list from Twelve Data with Yahoo symbols and prices, A to Z", r.code == 200 && "basic".equals(m(r.body).get("mode")) && d(m(r.body).get("total")) == 3
+            && "1301.T".equals(m(l(m(r.body).get("items")).get(0)).get("symbol")) && d(m(l(m(r.body).get("items")).get(1)).get("price")) == 3105.0 && Json.write(r.body).contains("0700.HK") && !Json.write(r.body).contains("9999"));
+        int crumbTries = (int) upstreamCalls.stream().filter(u -> u.startsWith("yahoo quote")).count();
+        get(p, "/api/quotes?symbols=SHEL.L,7203.T");
+        t("crumb refused: no new crumb attempts for 15 minutes", upstreamCalls.stream().filter(u -> u.startsWith("yahoo quote")).count() == crumbTries);
+        crumbBlocked.set(false); Yahoo.CRUMB_FAIL_UNTIL = 0; System.clearProperty("TWELVEDATA_API_KEY");
         System.setProperty("YAHOO_ENABLED", "0");
         System.out.println("\n" + pass + " passed, " + fail + " failed");
         app.stop(0); fake.stop(0);
