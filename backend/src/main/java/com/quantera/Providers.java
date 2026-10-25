@@ -106,17 +106,20 @@ final class Providers {
     static boolean twelveOn() { return cfg("TWELVEDATA_API_KEY", null) != null; }
 
     /** GET a JSON document from Finnhub ("fh") or Twelve Data ("td"); maps provider errors to friendly ones. */
-    static Object getJson(String who, String pathAndQuery) {
+    static Object getJson(String who, String pathAndQuery) { return getJson(who, pathAndQuery, 10); }
+
+    static Object getJson(String who, String pathAndQuery, int timeoutSec) {
         boolean fh = who.equals("fh");
         String base = fh ? cfg("FINNHUB_BASE_URL", "https://finnhub.io/api/v1") : cfg("TWELVEDATA_BASE_URL", "https://api.twelvedata.com");
         String key = URLEncoder.encode(cfg(fh ? "FINNHUB_API_KEY" : "TWELVEDATA_API_KEY", ""), StandardCharsets.UTF_8);
         String u = base + pathAndQuery + (pathAndQuery.contains("?") ? "&" : "?") + (fh ? "token=" : "apikey=") + key;
+        String path = pathAndQuery.split("\\?")[0];
         HttpResponse<String> r;
-        try { r = HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(10)).GET().build(), HttpResponse.BodyHandlers.ofString()); }
-        catch (Exception e) { throw new UpstreamException("Market data provider error"); }
+        try { r = HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(timeoutSec)).GET().build(), HttpResponse.BodyHandlers.ofString()); }
+        catch (Exception e) { System.out.println(who + " " + path + " failed: " + e.getClass().getSimpleName()); throw new UpstreamException("Market data provider error"); }
         if (r.statusCode() == 429) throw new UpstreamException(AV_LIMIT, 429);
         if (r.statusCode() == 401 || r.statusCode() == 403) throw new UpstreamException("This data is not included in the current data plan", 402);
-        if (r.statusCode() != 200) throw new UpstreamException("Market data provider error");
+        if (r.statusCode() != 200) { System.out.println(who + " " + path + " HTTP " + r.statusCode()); throw new UpstreamException("Market data provider error"); }
         Object j;
         try { j = Json.parse(r.body()); } catch (IllegalArgumentException e) { throw new UpstreamException("Market data provider error"); }
         if (!fh && "error".equals(map(j).get("status"))) { // Twelve Data reports errors in the body with HTTP 200
@@ -263,7 +266,7 @@ final class Providers {
         return CACHE.get("dir", 24 * 3600_000L, () -> {
             Set<String> mics = Set.of("XNAS", "XNYS", "ARCX", "BATS", "XASE");
             List<Map<String, Object>> out = new ArrayList<>();
-            for (Object o : list(getJson("fh", "/stock/symbol?exchange=US"))) {
+            for (Object o : list(getJson("fh", "/stock/symbol?exchange=US", 90))) { // a large list (tens of thousands of symbols): allow time to download
                 Map<String, Object> m = map(o);
                 String sym = str(m.get("symbol")), type = str(m.get("type")), mic = str(m.get("mic"));
                 if (sym == null || !US_TICKER.matcher(sym).matches() || !mics.contains(mic) || !("Common Stock".equals(type) || "ETP".equals(type) || "ADR".equals(type))) continue;
@@ -306,6 +309,7 @@ final class Providers {
             catch (RuntimeException ignored) {}
         }, 0, 1500, java.util.concurrent.TimeUnit.MILLISECONDS);
         System.out.println("Quote warmer on: " + UNIVERSE.size() + " symbols");
+        Thread.startVirtualThread(() -> { try { System.out.println("Directory loaded: " + directoryAll().size() + " US listings"); } catch (RuntimeException e) { System.out.println("Directory load failed: " + e.getMessage()); } });
     }
 
     /** Every warm quote, newest data first; no upstream calls. */
