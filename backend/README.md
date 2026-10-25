@@ -13,7 +13,7 @@ To run the website and API together on one origin (mock data when no keys are se
     STATIC_DIR=../frontend/public java -cp out com.quantera.Main   # then open http://localhost:8080
 
 ## Endpoints
-GET /api/health · /api/markets · /api/quote?symbol= · /api/quotes?symbols=A,B · /api/history?symbol=&full=1 · /api/overview?symbol= · /api/search?q= · /api/news?symbols= or ?q= · /api/calendar?type=earnings|ipo · POST /api/ai {"messages":[{"role","content"}]} · POST /api/waitlist {"email","interest","source"} · POST /api/events {"name"} · GET /api/article?id=<uuid> (story, per-company passages, related stories) · GET /api/snapshot (every warm quote with sector, ~125 symbols) · GET /api/directory?q=&type=stock|etf|adr&page= (every US-listed stock/ETF/ADR) · POST /api/explain {"lens","title","summary","symbols"} (AI explanations: tldr, eli5, matters, sides, five_w, numbers, questions)
+GET /api/health · /api/markets · /api/quote?symbol= · /api/quotes?symbols=A,B · /api/history?symbol=&full=1 · /api/intraday?symbol=&interval=5min|15min|1h|4h (20 sessions, New York time, Twelve Data) · /api/overview?symbol= · /api/search?q= · /api/news?symbols= or ?q= · /api/calendar?type=earnings|ipo · POST /api/ai {"messages":[{"role","content"}]} · POST /api/waitlist {"email","interest","source"} · POST /api/events {"name"} · GET /api/article?id=<uuid> (story, per-company passages, related stories) · GET /api/snapshot (every warm quote with sector, ~125 symbols) · GET /api/directory?q=&type=stock|etf|adr&page= (every US-listed stock/ETF/ADR) · POST /api/explain {"lens","title","summary","symbols"} (AI explanations: tldr, eli5, matters, sides, five_w, numbers, questions)
 
 ## Waitlist and usage events (Supabase)
 1. Create a free project at supabase.com and run this in its SQL editor:
@@ -39,6 +39,12 @@ Alpha Vantage: Finnhub serves quotes, movers, company profiles, search, calendar
 ## AI provider (Gemini free tier now, Claude later)
 Set GEMINI_API_KEY (free from aistudio.google.com) to run the AI chat and story explanations on Gemini. To move to Claude,
 set a working ANTHROPIC_API_KEY and AI_PROVIDER=anthropic (or remove GEMINI_API_KEY). /api/health reports "aiProvider".
+
+## Rate-limit safety (free plans)
+- Finnhub (60/min): the quote warmer uses ~40/min in session and ~10/min outside it. Any 429 makes every caller back off for 30 s and serve the warm snapshot instead.
+- Twelve Data (8/min, 800/day): a sparkline warmer refreshes one daily series every SPARK_WARM_SEC (default 20 s) for ~52 symbols, only when older than 6 h (~210 calls/day). Any 429 backs everything off for 60 s.
+- Search is answered from the in-memory US directory once it has loaded, so typing in the search box costs no quota.
+- Index levels (^GSPC etc.) that the plan does not include are remembered for 6 h instead of being retried on every markets refresh.
 
 ## Scheduled market refresh
 Set MARKET_REFRESH_SEC (60 or more, e.g. 300) to rebuild /api/markets in the background on a fixed schedule.
