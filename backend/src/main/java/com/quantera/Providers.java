@@ -552,10 +552,11 @@ final class Providers {
     static List<Object> calendar(String kind) {
         return CACHE.get("c" + kind, 12 * 3600_000L, () -> {
             boolean ipo = kind.equals("ipo");
+            if (ipo && Yahoo.on()) try { List<Object> y = Yahoo.ipos(); if (!y.isEmpty()) return y; } catch (RuntimeException ignored) {}
             if (finnhubOn()) {
                 java.time.LocalDate d0 = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
                 List<Object> raw = new ArrayList<>();
-                if (ipo) raw.addAll(list(map(getJson("fh", "/calendar/ipo?from=" + d0 + "&to=" + d0.plusDays(90))).get("ipoCalendar")));
+                if (ipo) raw.addAll(list(map(getJson("fh", "/calendar/ipo?from=" + d0.minusDays(60) + "&to=" + d0.plusDays(90))).get("ipoCalendar")));
                 else for (int w = 0; w < 2; w++) // week by week: one long range can be cut off before the near dates
                     raw.addAll(list(map(getJson("fh", "/calendar/earnings?from=" + d0.plusDays(w * 7L) + "&to=" + d0.plusDays(w * 7L + 6))).get("earningsCalendar")));
                 Map<String, String> names = new HashMap<>();
@@ -716,10 +717,12 @@ final class Providers {
     }
 
     /** Finnhub news: general market headlines, or one company's news (free for US listings). */
-    private static List<Object> finnhubNews(String symbol) {
+    private static List<Object> finnhubNews(String symbol) { return finnhubNews(symbol, "general"); }
+
+    private static List<Object> finnhubNews(String symbol, String category) {
         String base = cfg("FINNHUB_BASE_URL", "https://finnhub.io/api/v1"), tok = URLEncoder.encode(cfg("FINNHUB_API_KEY", ""), StandardCharsets.UTF_8);
         java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
-        String u = symbol == null ? base + "/news?category=general&token=" + tok : base + "/company-news?symbol=" + URLEncoder.encode(symbol, StandardCharsets.UTF_8) + "&from=" + today.minusDays(7) + "&to=" + today + "&token=" + tok;
+        String u = symbol == null ? base + "/news?category=" + category + "&token=" + tok : base + "/company-news?symbol=" + URLEncoder.encode(symbol, StandardCharsets.UTF_8) + "&from=" + today.minusDays(7) + "&to=" + today + "&token=" + tok;
         List<Object> out = new ArrayList<>();
         try {
             HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(8)).GET().build(), HttpResponse.BodyHandlers.ofString());
@@ -727,7 +730,7 @@ final class Providers {
             for (Object o : list(Json.parse(r.body()))) {
                 Map<String, Object> a = map(o);
                 String title = str(a.get("headline")), url = str(a.get("url"));
-                if (title == null || title.isBlank() || url == null || out.size() >= 25) continue;
+                if (title == null || title.isBlank() || url == null || out.size() >= 100) continue;
                 String sum = str(a.get("summary")) == null ? "" : str(a.get("summary"));
                 List<String> tags = tag(title + " " + sum, str(a.get("related")));
                 if (symbol != null && !tags.contains(symbol)) { tags = new ArrayList<>(tags); tags.add(0, symbol); }
@@ -754,7 +757,7 @@ final class Providers {
     }
 
     static List<Object> news(String symbols, String text, int limit) {
-        int lim = Math.min(Math.max(limit, 1), 10);
+        int lim = Math.min(Math.max(limit, 1), 60);
         List<Object> base = CACHE.get("n" + symbols + "|" + text + "|" + lim, 15 * 60_000L, () -> {
             String q = "language=en&filter_entities=true&limit=" + lim;
             List<Object> mx = new ArrayList<>();
@@ -767,12 +770,19 @@ final class Providers {
                     else { mx = newsFetch(q + "&domains=" + TOP_US_SOURCES); if (mx.isEmpty()) mx = newsFetch(q); } // important US news from major outlets first
                 }
             } catch (RuntimeException e) { err = e; }
-            if (!finnhubOn() || !text.isEmpty() || symbols.contains(",")) { if (err != null) throw err; return mx; }
-            // Finnhub adds volume: general market news for the main feed, or the company's own news for one ticker
-            List<Object> fh = finnhubNews(symbols.isEmpty() ? null : symbols);
-            if (mx.isEmpty() && fh.isEmpty() && err != null) throw err;
-            if (symbols.isEmpty()) fh = fh.stream().filter(o -> !list(map(o).get("symbols")).isEmpty()).toList(); // main feed: only stories tied to companies
-            return merge(mx, fh, lim);
+            // More volume: Finnhub's market and company feeds, and Yahoo Finance news (also covers non-US companies and topics)
+            List<Object> more = new ArrayList<>();
+            String first = symbols.isEmpty() ? null : symbols.split(",")[0];
+            if (finnhubOn() && text.isEmpty() && (first == null || (!symbols.contains(",") && !Yahoo.isGlobal(first)))) {
+                more.addAll(finnhubNews(first));
+                if (first == null) more.addAll(finnhubNews(null, "merger"));
+            }
+            if (Yahoo.on()) {
+                List<String> qs = !text.isEmpty() ? List.of(text) : first != null ? Arrays.asList(symbols.split(",")).subList(0, Math.min(3, symbols.split(",").length)) : List.of("stock market", "economy", "earnings", "Wall Street");
+                for (String q2 : qs) try { more.addAll(Yahoo.news(q2)); } catch (RuntimeException ignored) {}
+            }
+            if (mx.isEmpty() && more.isEmpty() && err != null) throw err;
+            return merge(mx, more, lim);
         });
         return withMoves(base);
     }

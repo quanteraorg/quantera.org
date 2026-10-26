@@ -372,6 +372,58 @@ final class Yahoo {
 
     static final int PER_PAGE = 25;
 
+    /** Yahoo Finance news for a company, ticker or topic (no crumb needed), in the same shape as the other news feeds. */
+    static List<Object> news(String q) {
+        return CACHE.get("yn" + q.toLowerCase(), 10 * 60_000L, () -> {
+            List<Object> out = new ArrayList<>();
+            for (Object o : list(call("/v1/finance/search?q=" + enc(q) + "&quotesCount=0&newsCount=25&enableFuzzyQuery=false", null, false).get("news"))) {
+                Map<String, Object> a = map(o);
+                String title = str(a.get("title")), url = str(a.get("link")), id = str(a.get("uuid"));
+                if (title == null || url == null || !"STORY".equals(str(a.get("type")))) continue;
+                List<Object> syms = new ArrayList<>();
+                for (Object t : list(a.get("relatedTickers"))) if (syms.size() < 5 && t != null && SYM.matcher(String.valueOf(t)).matches()) syms.add(Json.obj("symbol", String.valueOf(t), "name", null, "sentiment", null));
+                List<Object> res = list(map(a.get("thumbnail")).get("resolutions"));
+                Double t = num(a.get("providerPublishTime"));
+                out.add(Json.obj("id", "yh-" + (id == null ? Math.abs(url.hashCode()) : id), "title", title, "summary", "", "url", url, "source", str(a.get("publisher")),
+                        "image", res.isEmpty() ? null : str(map(res.get(0)).get("url")), "publishedAt", t == null ? null : Instant.ofEpochSecond(t.longValue()).toString(), "symbols", syms));
+            }
+            return out;
+        });
+    }
+
+    /** IPOs worldwide from 60 days ago to 120 days ahead: company, ticker, exchange, date, price range or final price, shares, status. */
+    static List<Object> ipos() {
+        return CACHE.get("yipo", 6 * 3600_000L, () -> {
+            LocalDate d0 = LocalDate.now(ZoneOffset.UTC);
+            List<Object> out = new ArrayList<>();
+            Set<String> seen = new HashSet<>();
+            for (int off = 0; off < 1000; off += 250) { // Yahoo serves at most 250 rows per call
+            String body = Json.write(Json.obj("sortType", "ASC", "entityIdType", "ipo_info", "sortField", "startdatetime",
+                    "includeFields", List.of("ticker", "companyshortname", "exchange_short_name", "startdatetime", "pricefrom", "priceto", "offerprice", "currencyname", "shares", "dealtype"),
+                    "size", 250, "offset", off, "query", Json.obj("operator", "and", "operands", List.of(Json.obj("operator", "gte", "operands", List.of("startdatetime", d0.minusDays(60).toString())),
+                            Json.obj("operator", "lte", "operands", List.of("startdatetime", d0.plusDays(120).toString()))))));
+            Map<String, Object> r = map(list(map(call("/v1/finance/visualization?lang=en-US&region=US", body, true).get("finance")).get("result")).stream().findFirst().orElse(null));
+            Map<String, Object> doc = map(list(r.get("documents")).stream().findFirst().orElse(null));
+            List<String> cols = new ArrayList<>();
+            for (Object c : list(doc.get("columns"))) cols.add(str(map(c).get("id")));
+            List<Object> rows = list(doc.get("rows"));
+            for (Object row : rows) {
+                List<Object> v = list(row);
+                java.util.function.Function<String, Object> g = k -> { int i = cols.indexOf(k); return i < 0 || i >= v.size() ? null : v.get(i); };
+                String sym = str(g.apply("ticker")), date = str(g.apply("startdatetime"));
+                if (sym == null || date == null || !seen.add(sym + date.substring(0, Math.min(10, date.length())))) continue;
+                Double offer = num(g.apply("offerprice")), shares = num(g.apply("shares"));
+                out.add(Json.obj("symbol", sym, "name", str(g.apply("companyshortname")), "date", date.substring(0, Math.min(10, date.length())), "low", num(g.apply("pricefrom")), "high", num(g.apply("priceto")),
+                        "price", offer, "currency", str(g.apply("currencyname")), "shares", shares, "status", str(g.apply("dealtype")), "exchange", str(g.apply("exchange_short_name")),
+                        "dealSize", offer != null && shares != null ? offer * shares : null));
+            }
+            Double total = num(r.get("total"));
+            if (rows.size() < 250 || total == null || off + 250 >= total) break;
+            }
+            return out;
+        });
+    }
+
     /** Commodities, currencies, government bond yields and crypto shown alongside the countries. */
     static final String[][][] ASSETS = {
         {{"Commodities"}, {"GC=F", "Gold", "USD per troy ounce"}, {"SI=F", "Silver", "USD per troy ounce"}, {"PL=F", "Platinum", "USD per troy ounce"}, {"PA=F", "Palladium", "USD per troy ounce"},

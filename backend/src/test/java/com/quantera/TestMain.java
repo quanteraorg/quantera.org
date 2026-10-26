@@ -136,7 +136,9 @@ public class TestMain {
                 "indicators", Json.obj("quote", List.of(Json.obj("open", c, "high", c, "low", c, "close", c, "volume", c))))))))); });
         fake.createContext("/yh/v1/finance/screener", ex -> { String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8); upstreamCalls.add("yahoo screener " + body);
             reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"total\":209,\"quotes\":[{\"symbol\":\"INFY.NS\",\"longName\":\"Infosys Limited\",\"regularMarketPrice\":1153.8,\"regularMarketChangePercent\":0.4,\"currency\":\"INR\",\"quoteType\":\"EQUITY\"}]}]}}"); });
-        fake.createContext("/yh/v1/finance/search", ex -> { upstreamCalls.add("yahoo search"); reply(ex, 200, "application/json", "{\"quotes\":[{\"symbol\":\"AAPL\",\"quoteType\":\"EQUITY\",\"longname\":\"Apple Inc.\"},{\"symbol\":\"APC.DE\",\"quoteType\":\"EQUITY\",\"longname\":\"Apple Inc.\",\"exchDisp\":\"XETRA\"},{\"symbol\":\"X1\",\"quoteType\":\"OPTION\"}]}"); });
+        fake.createContext("/yh/v1/finance/search", ex -> { upstreamCalls.add("yahoo search"); reply(ex, 200, "application/json", "{\"quotes\":[{\"symbol\":\"AAPL\",\"quoteType\":\"EQUITY\",\"longname\":\"Apple Inc.\"},{\"symbol\":\"APC.DE\",\"quoteType\":\"EQUITY\",\"longname\":\"Apple Inc.\",\"exchDisp\":\"XETRA\"},{\"symbol\":\"X1\",\"quoteType\":\"OPTION\"}],\"news\":[{\"uuid\":\"abc-1\",\"title\":\"Toyota raises its outlook\",\"publisher\":\"Reuters\",\"link\":\"https://x.test/y1\",\"providerPublishTime\":1792950000,\"type\":\"STORY\",\"relatedTickers\":[\"7203.T\",\"TM\"]},{\"uuid\":\"abc-2\",\"title\":\"A video\",\"link\":\"https://x.test/y2\",\"type\":\"VIDEO\"}]}"); });
+        fake.createContext("/yh/v1/finance/visualization", ex -> { upstreamCalls.add("yahoo ipo " + new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"documents\":[{\"columns\":[{\"id\":\"ticker\"},{\"id\":\"companyshortname\"},{\"id\":\"exchange_short_name\"},{\"id\":\"startdatetime\"},{\"id\":\"pricefrom\"},{\"id\":\"priceto\"},{\"id\":\"offerprice\"},{\"id\":\"currencyname\"},{\"id\":\"shares\"},{\"id\":\"dealtype\"}],\"rows\":[[\"NEWCO\",\"NewCo Inc\",\"NASDAQ\",\"2026-11-03T00:00:00.000Z\",18,20,null,\"USD\",10000000,\"EXPECTED\"],[\"9999.HK\",\"Asia Co\",\"HKSE\",\"2026-10-01T00:00:00.000Z\",null,null,12.5,\"HKD\",2000000,\"PRICED\"]]}]}]}}"); });
         fake.start();
         String base = "http://127.0.0.1:" + fake.getAddress().getPort();
         System.setProperty("AV_BASE_URL", base + "/av"); System.setProperty("MARKETAUX_BASE_URL", base + "/mx"); System.setProperty("FINNHUB_BASE_URL", base + "/fh"); System.setProperty("TWELVEDATA_BASE_URL", base + "/td"); System.setProperty("GEMINI_BASE_URL", base + "/gm"); System.setProperty("ANTHROPIC_BASE_URL", base + "/an");
@@ -196,7 +198,7 @@ public class TestMain {
         Providers.CACHE.clear();
         r = get(p, "/api/news?limit=10");
         List<Object> arts = l(m(r.body).get("articles"));
-        t("main feed merges Finnhub stories tagged with stocks, drops untagged ones", r.code == 200 && arts.stream().anyMatch(x -> "fh7001".equals(m(x).get("id")) && l(m(x).get("symbols")).size() == 2) && arts.stream().noneMatch(x -> "fh7002".equals(m(x).get("id"))));
+        t("main feed merges Finnhub market stories (tagged ones carry their stocks) and asks for merger news too", r.code == 200 && arts.stream().anyMatch(x -> "fh7001".equals(m(x).get("id")) && l(m(x).get("symbols")).size() == 2) && arts.stream().anyMatch(x -> "fh7002".equals(m(x).get("id"))) && upstreamCalls.stream().filter(u -> u.equals("finnhub news")).count() >= 2);
         r = get(p, "/api/news?symbols=TSLA&limit=6");
         t("single-stock news adds that company's Finnhub news with its move", r.code == 200 && l(m(r.body).get("articles")).stream().anyMatch(x -> "fh8001".equals(m(x).get("id")) && d(m(l(m(x).get("symbols")).get(0)).get("changePct")) == -3.1));
         r = get(p, "/api/overview?symbol=AAPL");
@@ -353,6 +355,10 @@ public class TestMain {
         get(p, "/api/quotes?symbols=SHEL.L,7203.T");
         t("crumb refused: no new crumb attempts for 15 minutes", upstreamCalls.stream().filter(u -> u.startsWith("yahoo quote")).count() == crumbTries);
         crumbBlocked.set(false); Yahoo.CRUMB_FAIL_UNTIL = 0; System.clearProperty("TWELVEDATA_API_KEY");
+        r = get(p, "/api/news?symbols=7203.T&limit=30");
+        t("news for a non-US company comes from Yahoo, videos skipped", r.code == 200 && Json.write(r.body).contains("Toyota raises its outlook") && Json.write(r.body).contains("yh-abc-1") && !Json.write(r.body).contains("A video"));
+        r = get(p, "/api/calendar?type=ipo");
+        t("IPO calendar from Yahoo: worldwide, with status and deal size", r.code == 200 && Json.write(r.body).contains("NewCo Inc") && Json.write(r.body).contains("\"status\":\"PRICED\"") && Json.write(r.body).contains("\"dealSize\":25000000"));
         System.setProperty("YAHOO_ENABLED", "0");
         System.out.println("\n" + pass + " passed, " + fail + " failed");
         app.stop(0); fake.stop(0);
