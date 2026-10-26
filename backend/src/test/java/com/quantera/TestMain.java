@@ -117,7 +117,7 @@ public class TestMain {
         fake.createContext("/secdata/api/xbrl/companyfacts/", ex -> reply(ex, 200, "application/json", "{\"facts\":{\"us-gaap\":{"
             + "\"Revenues\":{\"units\":{\"USD\":[{\"end\":\"2023-09-30\",\"val\":383000000000,\"frame\":\"CY2023\"},{\"end\":\"2024-09-28\",\"val\":391000000000,\"frame\":\"CY2024\"},{\"end\":\"2024-12-28\",\"val\":124000000000,\"frame\":\"CY2024Q4\"},{\"end\":\"2024-09-28\",\"val\":1}]}},"
             + "\"NetIncomeLoss\":{\"units\":{\"USD\":[{\"end\":\"2024-09-28\",\"val\":93700000000,\"frame\":\"CY2024\"}]}},"
-            + "\"EarningsPerShareDiluted\":{\"units\":{\"USD/shares\":[{\"end\":\"2024-09-28\",\"val\":6.08,\"frame\":\"CY2024\"}]}},"
+            + "\"EarningsPerShareDiluted\":{\"units\":{\"USD/shares\":[{\"end\":\"2024-09-28\",\"val\":6.08,\"frame\":\"CY2024\"},{\"start\":\"2022-10-01\",\"end\":\"2023-09-30\",\"val\":12.4,\"frame\":\"CY2023\",\"filed\":\"2023-11-03\"},{\"start\":\"2022-10-01\",\"end\":\"2023-09-30\",\"val\":6.2,\"filed\":\"2024-11-01\"}]}},"
             + "\"NetCashProvidedByUsedInOperatingActivities\":{\"units\":{\"USD\":[{\"end\":\"2024-09-28\",\"val\":118000000000,\"frame\":\"CY2024\"}]}},"
             + "\"PaymentsToAcquirePropertyPlantAndEquipment\":{\"units\":{\"USD\":[{\"end\":\"2024-09-28\",\"val\":9400000000,\"frame\":\"CY2024\"}]}},"
             + "\"Assets\":{\"units\":{\"USD\":[{\"end\":\"2024-12-28\",\"val\":344000000000,\"frame\":\"CY2024Q4I\"}]}}}}}"));
@@ -422,6 +422,10 @@ public class TestMain {
         Map<String, Object> fy = m(l(m(r.body).get("annual")).get(1));
         t("financials: yearly revenue, profit, EPS and free cash flow from XBRL frames; latest balance sheet", r.code == 200 && "2024".equals(fy.get("year")) && d(fy.get("revenue")) == 391e9 && d(fy.get("eps")) == 6.08 && d(fy.get("freeCashFlow")) == 118e9 - 9.4e9
             && d(m(m(r.body).get("balance")).get("assets")) == 344e9 && l(m(r.body).get("quarterly")).size() == 1);
+        t("financials: per-share figures use the latest restated filing (e.g. after a stock split)", d(m(l(m(r.body).get("annual")).get(0)).get("eps")) == 6.2);
+        List<Object> sp = new ArrayList<>(List.of(Json.obj("eps", 3.85, "netIncome", 9.75e9), Json.obj("eps", 0.17, "netIncome", 4.37e9), Json.obj("eps", 1.19, "netIncome", 29.8e9), Json.obj("eps", -0.5, "netIncome", -1e9)));
+        Sec.splitAdjust(sp);
+        t("financials: EPS before an unrestated 10-for-1 split is adjusted; later years untouched", d(m(sp.get(0)).get("eps")) == 0.39 && d(m(sp.get(1)).get("eps")) == 0.17 && d(m(sp.get(2)).get("eps")) == 1.19);
         t("filings: companies that don't file with the SEC -> 404", get(p, "/api/filings?symbol=7203.T").code == 404);
         // ---- background price alerts (Web Push)
         java.security.KeyPairGenerator kg = java.security.KeyPairGenerator.getInstance("EC"); kg.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
