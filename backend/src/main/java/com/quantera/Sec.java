@@ -85,16 +85,30 @@ final class Sec {
 
     static final String[] REVENUE = {"Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax", "SalesRevenueNet", "RevenueFromContractWithCustomerIncludingAssessedTax", "SalesRevenueGoodsNet"};
 
-    /** Values of one concept by frame (CY2024 = a calendar-aligned year, CY2024Q1 = a quarter, ...I = a point in time). */
+    /**
+     * Values of one concept by frame (CY2024 = a calendar-aligned year, CY2024Q1 = a quarter, ...I = a point in time).
+     * The SEC tags a frame on the filing that first reported the period, so each frame takes the value from the most recent
+     * filing for that same period instead: later reports restate older years, e.g. per-share figures after a stock split.
+     */
     private static Map<String, double[]> frames(Map<String, Object> facts, String tag, String unit) {
+        List<Object> all = list(map(map(map(facts.get(tag)).get("units"))).get(unit));
+        Map<String, Object[]> latest = new HashMap<>(); // period "start|end" -> {filed, value}
+        for (Object o : all) {
+            Map<String, Object> x = map(o);
+            Double v = num(x.get("val"));
+            String p = str(x.get("start")) + "|" + str(x.get("end")), filed = Objects.toString(str(x.get("filed")), "");
+            Object[] cur = latest.get(p);
+            if (v != null && (cur == null || filed.compareTo((String) cur[0]) > 0)) latest.put(p, new Object[]{filed, v});
+        }
         Map<String, double[]> out = new TreeMap<>();
-        for (Object o : list(map(map(map(facts.get(tag)).get("units"))).get(unit))) {
+        for (Object o : all) {
             Map<String, Object> x = map(o);
             String fr = str(x.get("frame"));
             Double v = num(x.get("val"));
             if (fr == null || v == null) continue;
+            Object[] l = latest.get(str(x.get("start")) + "|" + str(x.get("end")));
             String end = str(x.get("end"));
-            out.put(fr, new double[]{v, end == null ? 0 : LocalDate.parse(end).toEpochDay()});
+            out.put(fr, new double[]{l == null ? v : (Double) l[1], end == null ? 0 : LocalDate.parse(end).toEpochDay()});
         }
         return out;
     }
@@ -136,6 +150,8 @@ final class Sec {
             List<Object> quarterly = new ArrayList<>();
             for (String q : qs.subList(Math.max(0, qs.size() - 8), qs.size()))
                 quarterly.add(Json.obj("quarter", q.substring(2), "end", LocalDate.ofEpochDay((long) rev.get(q)[1]).toString(), "revenue", at(rev, q), "netIncome", at(ni, q), "eps", at(eps, q)));
+            splitAdjust(annual);
+            splitAdjust(quarterly);
             // latest balance-sheet snapshot (instant frames end in "I")
             Map<String, double[]> cash = best2(g, "CashAndCashEquivalentsAtCarryingValue", "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"), assets = best2(g, "Assets"), liab = best2(g, "Liabilities"),
                     eq = best2(g, "StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"), debt = best2(g, "LongTermDebt", "LongTermDebtNoncurrent");
@@ -144,6 +160,26 @@ final class Sec {
             return Json.obj("symbol", symbol, "name", str(map(get(cfg("SEC_DATA_URL", "https://data.sec.gov") + "/submissions/CIK" + pad(c) + ".json", 20)).get("name")),
                     "annual", annual, "quarterly", quarterly, "balance", bs, "currency", "USD", "source", "SEC EDGAR (XBRL)");
         });
+    }
+
+    static final double[] SPLITS = {2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 30, 40, 50};
+
+    /**
+     * Restates older EPS for stock splits that no later filing covers (e.g. NVIDIA FY2022 after the 2024 10-for-1 split).
+     * A split shows up as the implied share count (net income / EPS) jumping by a common split ratio between periods; rows are oldest first.
+     */
+    @SuppressWarnings("unchecked")
+    static void splitAdjust(List<Object> rows) {
+        double factor = 1, newer = 0;
+        for (int i = rows.size() - 1; i >= 0; i--) {
+            Map<String, Object> r = (Map<String, Object>) rows.get(i);
+            Double eps = num(r.get("eps")), ni = num(r.get("netIncome"));
+            if (eps == null || ni == null || Math.abs(eps) < 1e-9 || ni / eps <= 0) continue;
+            double shares = ni / eps * factor;
+            if (newer > 0) for (double f : SPLITS) if (Math.abs(newer / shares / f - 1) < 0.15) { factor *= f; shares *= f; break; }
+            if (factor != 1) r.put("eps", Math.round(eps / factor * 100) / 100.0);
+            newer = shares;
+        }
     }
 
     private static Map<String, double[]> best2(Map<String, Object> g, String... tags) {
