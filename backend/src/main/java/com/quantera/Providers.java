@@ -757,18 +757,21 @@ final class Providers {
     }
 
     static List<Object> news(String symbols, String text, int limit) {
-        int lim = Math.min(Math.max(limit, 1), 60);
-        List<Object> base = CACHE.get("n" + symbols + "|" + text + "|" + lim, 15 * 60_000L, () -> {
+        int lim = Math.min(Math.max(limit, 1), 300);
+        List<Object> base = CACHE.get("n" + symbols + "|" + text + "|" + lim, 60_000L, () -> {
             String q = "language=en&filter_entities=true&limit=" + lim;
             List<Object> mx = new ArrayList<>();
             RuntimeException err = null;
+            final String q0 = q;
             try {
-                if (!symbols.isEmpty()) mx = newsFetch(q + "&symbols=" + URLEncoder.encode(symbols, StandardCharsets.UTF_8));
-                else {
-                    q += "&countries=us&must_have_entities=true";
-                    if (!text.isEmpty()) mx = newsFetch(q + "&search=" + URLEncoder.encode(text, StandardCharsets.UTF_8));
-                    else { mx = newsFetch(q + "&domains=" + TOP_US_SOURCES); if (mx.isEmpty()) mx = newsFetch(q); } // important US news from major outlets first
-                }
+                mx = CACHE.get("nmx" + symbols + "|" + text, 20 * 60_000L, () -> { // Marketaux's free plan allows 100 calls a day
+                    String qq = q0;
+                    if (!symbols.isEmpty()) return newsFetch(qq + "&symbols=" + URLEncoder.encode(symbols, StandardCharsets.UTF_8));
+                    qq += "&countries=us&must_have_entities=true";
+                    if (!text.isEmpty()) return newsFetch(qq + "&search=" + URLEncoder.encode(text, StandardCharsets.UTF_8));
+                    List<Object> top = newsFetch(qq + "&domains=" + TOP_US_SOURCES); // important US news from major outlets first
+                    return top.isEmpty() ? newsFetch(qq) : top;
+                });
             } catch (RuntimeException e) { err = e; }
             // More volume: Finnhub's market and company feeds, and Yahoo Finance news (also covers non-US companies and topics)
             List<Object> more = new ArrayList<>();
@@ -778,7 +781,8 @@ final class Providers {
                 if (first == null) more.addAll(finnhubNews(null, "merger"));
             }
             if (Yahoo.on()) {
-                List<String> qs = !text.isEmpty() ? List.of(text) : first != null ? Arrays.asList(symbols.split(",")).subList(0, Math.min(3, symbols.split(",").length)) : List.of("stock market", "economy", "earnings", "Wall Street");
+                List<String> qs = !text.isEmpty() ? List.of(text) : first != null ? Arrays.asList(symbols.split(",")).subList(0, Math.min(3, symbols.split(",").length))
+                        : List.of("stock market", "Wall Street", "economy", "earnings", "Federal Reserve", "inflation", "oil prices", "gold price", "technology stocks", "AI stocks", "bank stocks", "IPO", "mergers acquisitions", "crypto", "European stocks", "Asian markets", "China economy", "trade tariffs");
                 for (String q2 : qs) try { more.addAll(Yahoo.news(q2)); } catch (RuntimeException ignored) {}
             }
             if (mx.isEmpty() && more.isEmpty() && err != null) throw err;
