@@ -374,9 +374,11 @@ final class Yahoo {
 
     /** Yahoo Finance news for a company, ticker or topic (no crumb needed), in the same shape as the other news feeds. */
     static List<Object> news(String q) {
-        return CACHE.get("yn" + q.toLowerCase(), 10 * 60_000L, () -> {
+        return CACHE.get("yn" + q.toLowerCase(), 3 * 60_000L, () -> {
             List<Object> out = new ArrayList<>();
-            for (Object o : list(call("/v1/finance/search?q=" + enc(q) + "&quotesCount=0&newsCount=25&enableFuzzyQuery=false", null, false).get("news"))) {
+            List<Object> raw = list(call("/v1/finance/search?q=" + enc(q) + "&quotesCount=0&newsCount=50&enableFuzzyQuery=false", null, false).get("news"));
+            if (raw.isEmpty()) raw = list(call("/v1/finance/search?q=" + enc(q) + "&quotesCount=0&newsCount=25&enableFuzzyQuery=false", null, false).get("news")); // larger requests are sometimes refused
+            for (Object o : raw) {
                 Map<String, Object> a = map(o);
                 String title = str(a.get("title")), url = str(a.get("link")), id = str(a.get("uuid"));
                 if (title == null || url == null || !"STORY".equals(str(a.get("type")))) continue;

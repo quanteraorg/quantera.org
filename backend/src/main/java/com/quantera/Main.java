@@ -66,8 +66,8 @@ public final class Main {
             if (!text.isEmpty() && !NEWS_TEXT.matcher(text).matches()) throw new UpstreamException("Bad search text", 400);
             int limit = 6;
             try { limit = Integer.parseInt(r.query().getOrDefault("limit", "6")); } catch (NumberFormatException ignored) {}
-            return Json.obj("articles", Providers.news(symbols, text, limit));
-        }, 600, 60));
+            return Json.obj("articles", Providers.news(symbols, text, limit), "updated", java.time.Instant.now().toString());
+        }, 20, 60));
         ROUTES.put("/api/article", new Route(r -> {
             String id = r.query().getOrDefault("id", "").trim().toLowerCase();
             if (!id.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) throw new UpstreamException("Bad story id", 400);
