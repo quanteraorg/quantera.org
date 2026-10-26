@@ -83,6 +83,11 @@ public final class Main {
             return warm != null ? warm : markets();
         }, 60, 30));
         ROUTES.put("/api/world", new Route(r -> Yahoo.world(), 60, 30));
+        ROUTES.put("/api/popular", new Route(r -> {
+            String l = r.query().getOrDefault("list", "popular");
+            if (!l.matches("popular|active|gainers|losers|trending")) throw new UpstreamException("list must be popular, active, gainers, losers or trending", 400);
+            return Yahoo.popular(l);
+        }, 60, 60));
         ROUTES.put("/api/world/country", new Route(r -> {
             String c = r.query().getOrDefault("c", "").toLowerCase(), kind = r.query().getOrDefault("kind", "stocks"), sector = r.query().getOrDefault("sector", ""), sort = r.query().getOrDefault("sort", "cap");
             if (!c.matches("[a-z]{2}") || !kind.matches("stocks|etfs|indexes") || !(sector.isEmpty() || Yahoo.SECTORS.contains(sector)) || !sort.matches("cap|gainers|losers|active")) throw new UpstreamException("Bad request", 400);

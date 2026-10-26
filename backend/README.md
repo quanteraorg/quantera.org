@@ -4,7 +4,7 @@ Serves live market data, news, calendars, the waitlist and the Claude-powered AI
 Keys stay on this server. The browser never sees them.
 
 ## Run locally
-    ./test.sh                                   # 104 checks against fake providers (no keys needed)
+    ./test.sh                                   # 108 checks against fake providers (no keys needed)
     ./build.sh
     ALPHAVANTAGE_API_KEY=... MARKETAUX_API_TOKEN=... ANTHROPIC_API_KEY=... java -cp out com.quantera.Main
     curl localhost:8080/api/health
@@ -74,7 +74,7 @@ Note: Vercel itself does not run long-lived Java servers, which is why the API i
 - Support.java    config, cache, rate limiter, helpers
 - Yahoo.java      global markets: index levels, country stock/ETF lists, non-US quotes, charts, profiles, search
 - Json.java       small JSON reader/writer
-- src/test/.../TestMain.java  the 104 checks
+- src/test/.../TestMain.java  the 108 checks
 
 ## Honest limits
 - Cache and rate limiter live in memory per instance. Use Redis if you run several instances.
