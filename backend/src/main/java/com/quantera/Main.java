@@ -36,7 +36,7 @@ public final class Main {
     }
 
     static void routes() {
-        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn() || Yahoo.on(), "marketOpen", Providers.usMarketOpen(), "global", Yahoo.on(), "lastProviderError", Providers.LAST_ERR, "lastGlobalError", Yahoo.LAST_ERR), 0, 120));
+        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn() || Yahoo.on(), "marketOpen", Providers.usMarketOpen(), "global", Yahoo.on(), "pushAlerts", Push.on(), "economyKey", cfg("FRED_API_KEY", null) != null, "lastPushError", Push.LAST_ERR, "lastProviderError", Providers.LAST_ERR, "lastGlobalError", Yahoo.LAST_ERR), 0, 120));
         ROUTES.put("/api/quote", new Route(r -> Providers.quote(symbol(r), 60_000), 60, 60));
         ROUTES.put("/api/history", new Route(r -> Providers.history(symbol(r), "1".equals(r.query().get("full"))), 3600, 60));
         ROUTES.put("/api/intraday", new Route(r -> Providers.intraday(symbol(r), r.query().getOrDefault("interval", "5min")), 60, 30));
@@ -83,6 +83,14 @@ public final class Main {
             return warm != null ? warm : markets();
         }, 60, 30));
         ROUTES.put("/api/world", new Route(r -> Yahoo.world(), 60, 30));
+        ROUTES.put("/api/macro", new Route(r -> Macro.dashboard(), 1800, 30));
+        ROUTES.put("/api/filings", new Route(r -> Sec.filings(symbol(r)), 3600, 30));
+        ROUTES.put("/api/financials", new Route(r -> Sec.financials(symbol(r)), 21600, 30));
+        ROUTES.put("/api/push/key", new Route(r -> Push.key(), 3600, 30));
+        ROUTES.put("/api/push/alerts", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.add(r.body()); }, 0, 30));
+        ROUTES.put("/api/push/list", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.listFor(r.body()); }, 0, 30));
+        ROUTES.put("/api/push/delete", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.remove(r.body()); }, 0, 30));
+        ROUTES.put("/api/push/test", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.test(r.body()); }, 0, 6));
         ROUTES.put("/api/popular", new Route(r -> {
             String l = r.query().getOrDefault("list", "popular");
             if (!l.matches("popular|active|gainers|losers|trending")) throw new UpstreamException("list must be popular, active, gainers, losers or trending", 400);
@@ -276,5 +284,6 @@ public final class Main {
         System.out.println("Quantera API listening on :" + port + " (market=" + Providers.marketOn() + ", news=" + Providers.newsOn() + ", ai=" + Providers.aiOn() + ", storage=" + Store.on() + ")");
         startRefresh();
         Providers.startWarmer();
+        Push.start();
     }
 }

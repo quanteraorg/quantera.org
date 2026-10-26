@@ -37,6 +37,23 @@ final class Store {
         } catch (Exception e) { throw new UpstreamException("Storage error"); }
     }
 
+    /** Any Supabase REST call with the service key (server-side only): GET / POST / PATCH / DELETE on "table?filters". */
+    static Object rest(String method, String pathAndQuery, Object body) {
+        if (!on()) throw new UpstreamException("Storage is not configured", 503);
+        String key = cfg("SUPABASE_SERVICE_KEY", "").trim();
+        if (!key.matches("[A-Za-z0-9._\\-]+")) throw new UpstreamException("Storage is not configured correctly", 503);
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(cfg("SUPABASE_URL", "").replaceAll("/+$", "") + "/rest/v1/" + pathAndQuery))
+                .timeout(Duration.ofSeconds(8)).header("apikey", key).header("Content-Type", "application/json").header("Prefer", "return=representation");
+        if (key.startsWith("eyJ")) b.header("Authorization", "Bearer " + key);
+        b.method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(Json.write(body)));
+        try {
+            HttpResponse<String> r = HTTP.send(b.build(), HttpResponse.BodyHandlers.ofString());
+            if (r.statusCode() / 100 != 2) throw new UpstreamException("Storage error " + r.statusCode());
+            return r.body() == null || r.body().isBlank() ? List.of() : Json.parse(r.body());
+        } catch (UpstreamException e) { throw e;
+        } catch (Exception e) { throw new UpstreamException("Storage error"); }
+    }
+
     static Map<String, Object> joinWaitlist(Object body) {
         Map<String, Object> b = map(body);
         String email = String.valueOf(b.getOrDefault("email", "")).trim().toLowerCase(), interest = String.valueOf(b.getOrDefault("interest", "")).trim(), source = String.valueOf(b.getOrDefault("source", "")).trim();

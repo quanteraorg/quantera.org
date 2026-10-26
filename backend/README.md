@@ -46,6 +46,21 @@ profiles and worldwide search come from Yahoo Finance's public endpoints. Symbol
 Prices outside the US are delayed about 15 minutes. It is unofficial and unlicensed: fine for a prototype, but before a public or commercial
 launch move to a licensed feed (e.g. EODHD). Set YAHOO_ENABLED=0 to turn it off; /api/health reports "global" and "lastGlobalError".
 
+## Economy dashboard (FRED)
+Set FRED_API_KEY (free at fred.stlouisfed.org/docs/api/api_key.html). /api/macro then serves 16 US series (inflation, jobs, GDP, rates,
+housing, sentiment) with plain-English explanations, cached 30 minutes. Without a key the page says it is being set up.
+
+## SEC filings and financials (EDGAR, no key)
+/api/filings and /api/financials read SEC EDGAR for US-listed companies: recent 10-K/10-Q/8-K/insider filings with links, and 5 years of
+revenue, profit, EPS and free cash flow from XBRL. Set SEC_USER_AGENT to "Quantera you@yourdomain.com": the SEC blocks requests without a contact.
+
+## Background price alerts (Web Push)
+1. Run supabase-push-alerts.sql in the Supabase SQL editor (needs SUPABASE_URL / SUPABASE_SERVICE_KEY).
+2. Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY (base64url P-256 keys) and VAPID_SUBJECT. Keep the private key secret.
+3. The server checks active alerts every 60 s and sends an encrypted push (RFC 8291/8292, no libraries). It only runs while the server
+   is awake: on Render's free plan add an uptime pinger hitting /api/health every 5 minutes, or use a paid instance.
+iPhone/iPad users must add the site to the Home Screen before notifications work. /api/health reports "pushAlerts" and "lastPushError".
+
 ## Rate-limit safety (free plans)
 - Finnhub (60/min): the quote warmer uses ~40/min in session and ~10/min outside it. Any 429 makes every caller back off for 30 s and serve the warm snapshot instead.
 - Twelve Data (8/min, 800/day): a sparkline warmer refreshes one daily series every SPARK_WARM_SEC (default 20 s) for ~52 symbols, only when older than 6 h (~210 calls/day). Any 429 backs everything off for 60 s.

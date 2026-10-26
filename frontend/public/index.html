@@ -104,7 +104,7 @@ const Data={
   return out}
 };
 /* ===== helpers ===== */
-const $=s=>document.querySelector(s),fmt=(n,d=2)=>n.toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d}),pc=c=>`<span class="${c>=0?'up':'dn'}">${c>=0?'+':''}${fmt(c)}%</span>`;
+const $=s=>document.querySelector(s),fmt=(n,d=2)=>n==null||Number.isNaN(+n)?'—':(+n).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d}),pc=c=>`<span class="${c>=0?'up':'dn'}">${c>=0?'+':''}${fmt(c)}%</span>`;
 const sma=(a,n)=>a.map((_,i)=>i<n?null:a.slice(i-n,i).reduce((x,y)=>x+y)/n);
 const cap=a=>a.cap?'$'+(a.cap>=1000?fmt(a.cap/1000,1)+'T':fmt(a.cap,1)+'B'):'—';
 function svg(lines,w=860,h=300,log){const pad=6;let all=lines.flatMap(l=>l.d.filter(x=>x!=null)),f=x=>log?Math.log(x):x,mn=f(Math.min(...all)),mx=f(Math.max(...all));
@@ -1965,6 +1965,77 @@ PAGES.me=()=>{track('view_me');const nm=QAUTH.user?QAUTH.user.email.split('@')[0
  /* leaderboard snippet */
  LBGET().then(rows=>{const el=document.getElementById('melb');if(!el)return;el.className='';const me=QAUTH.user&&rows.findIndex(r=>r.user_id==QAUTH.user.id);el.innerHTML=rows.length?LBTABLE(rows,5)+(me>=5?`<div class="wsn">You’re #${me+1} of ${rows.length}.</div>`:''):'<div class="mu">Nobody has joined yet. Be the first!</div>'}).catch(e=>{const el=document.getElementById('melb');if(el)el.innerHTML='<span class="mu">'+(e.message=='missing'?'The leaderboard is being set up.':'Unavailable right now.')+'</span>'});
  checkBadges()};
+
+/* ===== v29: Economy dashboard (FRED), SEC filings and financial statements on stock pages, and price alerts that work when Quantera is closed ===== */
+document.head.insertAdjacentHTML('beforeend',`<style>
+.macg{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.mac{display:flex;flex-direction:column;gap:4px}.mac .mv{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}.mac .mn{font-size:13.5px;color:var(--mu)}.mac .mw{font-size:12.5px;color:var(--mu);line-height:1.5;margin-top:6px}.mac .md{font-size:12px;color:var(--mu)}
+.mbig{border:1px solid rgba(212,181,122,.3)!important}.mbig li{margin:6px 0;line-height:1.6}
+.fint{width:100%;border-collapse:collapse}.fint th,.fint td{padding:9px 8px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.fint th:first-child,.fint td:first-child{text-align:left;color:var(--mu)}.fint tr.k td{font-weight:600}
+.fbar{display:flex;align-items:flex-end;gap:10px;height:110px;margin:6px 0 14px}.fbar div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11.5px;color:var(--mu)}.fbar i{display:block;width:100%;max-width:56px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,#f5e6c4,#a8884e)}
+.ffl{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--ln);font-size:14px}.ffl .tag{min-width:64px;text-align:center}.ffl a{margin-left:auto;font-size:12.5px;white-space:nowrap}
+.pushbar{margin-top:10px;font-size:12.5px;line-height:1.5}.pushbar .chip{white-space:normal;text-align:left}
+</style>`);
+document.head.insertAdjacentHTML('beforeend','<link rel="manifest" href="/manifest.json">');
+Object.assign(HUB,{macro:'markets'});if(!SUBT.markets.some(x=>x[1]=='macro'))SUBT.markets.splice(2,0,['Economy','macro']);TT.macro=['Economy','Inflation, jobs, growth and interest rates, explained.'];
+/* ---------- Economy dashboard ---------- */
+const MACF=(x,v)=>v==null?'—':x.unit=='k'?(x.id=='PAYEMS'?(v>=0?'+':'−')+fmt(Math.abs(v),0)+'k':fmt(v,0)+'k'):x.unit=='%'||x.unit=='pts'?fmt(v,2)+(x.unit=='%'?'%':''):fmt(v,1);
+const MACD=x=>{const d=new Date(x.date+'T12:00:00');return x.points.length>40?d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):d.toLocaleDateString('en-US',{month:'short',year:'numeric'})};
+PAGES.macro=()=>{track('view_macro');$('#m').innerHTML=`<div id="mcb">${EMPTY('Loading the economy…')}</div>`;
+ jf('/api/macro').then(({ok,b})=>{const el=document.getElementById('mcb');if(!el)return;if(!ok){el.innerHTML=EMPTY(esc(b.error||'Economic data is unavailable right now.'));return}
+  const I={};b.items.forEach(x=>I[x.id]=x);const G=[...new Set(b.items.map(x=>x.group))];
+  const big=[];const c=I.CPIAUCSL;if(c)big.push(`Inflation is <b>${fmt(c.value,1)}%</b> a year, ${c.change>0.05?'<span class="dn">up</span> from':c.change<-0.05?'<span class="up">down</span> from':'about the same as'} ${fmt(c.prev,1)}% the month before, ${c.value>2.5?'still above':'close to'} the Fed’s 2% target.`);
+  const u=I.UNRATE;if(u)big.push(`Unemployment is <b>${fmt(u.value,1)}%</b>${u.change>0.05?', <span class="dn">rising</span>':u.change<-0.05?', <span class="up">falling</span>':', steady'}.${I.PAYEMS?` The economy added <b>${MACF(I.PAYEMS,I.PAYEMS.value)}</b> jobs last month.`:''}`);
+  const g=I.A191RL1Q225SBEA;if(g)big.push(`The economy grew at a <b>${fmt(g.value,1)}%</b> yearly pace last quarter${g.value<0?' — <span class="dn">a contraction</span>':''}.`);
+  const f=I.DFF,t=I.T10Y2Y;if(f)big.push(`The Fed’s key rate is <b>${fmt(f.value,2)}%</b>${I.DGS10?` and the 10-year Treasury yields <b>${fmt(I.DGS10.value,2)}%</b>`:''}.${t?(t.value<0?' The yield curve is <span class="dn">inverted</span>, which has often come before recessions.':' The yield curve is not inverted.'):''}`);
+  el.innerHTML=`<div class="pan mbig" style="margin-bottom:18px"><h3 style="margin:0 0 6px">The big picture</h3><ul style="margin:0;padding-left:20px">${big.map(x=>`<li>${x}</li>`).join('')}</ul><div class="wsn">Source: ${esc(b.source)}. Most numbers update once a month.</div></div>`
+   +G.map(gr=>`<h3 style="margin:22px 0 10px">${esc(gr)}</h3><div class="macg">${b.items.filter(x=>x.group==gr).map(x=>{const dir=x.change>0?1:x.change<0?-1:0,good=x.good=='none'||!dir?'mu':(x.good=='up')==(dir>0)?'up':'dn';
+    return `<div class="pan mac"><div class="mn">${esc(x.name)}</div><div class="mv">${MACF(x,x.value)}</div><div class="${good}" style="font-size:13px">${dir?(dir>0?'▲ ':'▼ ')+(x.unit=='k'?fmt(Math.abs(x.change),0)+'k':fmt(Math.abs(x.change),2)+(x.unit=='%'?' pts':'')):'● no change'} <span class="mu">vs ${fmt(x.prev,x.unit=='k'?0:2)}${x.unit=='%'?'%':x.unit=='k'?'k':''} before</span></div>${SPK(x.points,240,46)}<div class="md">${MACD(x)} · <a href="${esc(x.source)}" target="_blank" rel="noopener noreferrer">FRED ↗</a></div><div class="mw">${esc(x.what)}</div></div>`}).join('')}</div>`).join('')}).catch(()=>{const el=document.getElementById('mcb');if(el)el.innerHTML=EMPTY('Economic data is unavailable right now.')})};
+/* ---------- SEC financials and filings on stock pages ---------- */
+const BNS=v=>v==null?'—':(v<0?'−':'')+'$'+(Math.abs(v)>=1e9?fmt(Math.abs(v)/1e9,1)+'B':Math.abs(v)>=1e6?fmt(Math.abs(v)/1e6,0)+'M':fmt(Math.abs(v),0));
+const FYL=a=>a.end?'FY '+new Date(a.end+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'numeric'}):a.year;
+const SECLOAD=s=>{const el=document.getElementById('secp');if(!el)return;el.innerHTML='<div class="pan" style="margin-top:22px"><div class="chsk" style="height:120px"></div></div>';
+ Promise.all([jf('/api/financials?symbol='+encodeURIComponent(s)).catch(()=>({ok:false,b:{}})),jf('/api/filings?symbol='+encodeURIComponent(s)).catch(()=>({ok:false,b:{}}))]).then(([F,L])=>{const el=document.getElementById('secp');if(!el)return;let h='';
+  if(F.ok&&F.b.annual&&F.b.annual.length){const A=F.b.annual,mx=Math.max(...A.map(a=>Math.abs(a.revenue||0)),1),R=(lbl,f,cls)=>`<tr class="${cls||''}"><td>${lbl}</td>${A.map(a=>`<td>${f(a)}</td>`).join('')}</tr>`;
+   const gr=(a,i)=>i&&A[i-1].revenue&&a.revenue?((a.revenue/A[i-1].revenue-1)*100):null,P=v=>v==null?'—':`<span class="${v>=0?'up':'dn'}">${v>=0?'+':'−'}${fmt(Math.abs(v),1)}%</span>`;
+   h+=`<div class="pan" style="margin-top:22px"><h3 style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">Financials <span class="mu" style="font-size:12.5px;font-weight:400">From ${esc(F.b.name||s)}’s SEC filings · US$</span></h3>
+   <div class="fbar">${A.map(a=>`<div><span>${BNS(a.revenue)}</span><i style="height:${Math.max(4,Math.abs(a.revenue||0)/mx*80)}px"></i><span>${esc(String(a.year))}</span></div>`).join('')}</div>
+   <div class="ov"><table class="fint"><tr><th>Year</th>${A.map(a=>`<th>${esc(FYL(a))}</th>`).join('')}</tr>${R('Revenue',a=>BNS(a.revenue),'k')}${R('Revenue growth',a=>P(gr(a,A.indexOf(a))))}${R('Gross profit',a=>BNS(a.grossProfit))}${R('Operating income',a=>BNS(a.operatingIncome))}${R('Net income',a=>BNS(a.netIncome),'k')}${R('Net margin',a=>a.revenue&&a.netIncome!=null?fmt(a.netIncome/a.revenue*100,1)+'%':'—')}${R('Earnings per share',a=>a.eps!=null?'$'+fmt(a.eps,2):'—')}${R('Free cash flow',a=>BNS(a.freeCashFlow))}</table></div>
+   ${F.b.balance?`<div class="wsn" style="margin-top:10px">Balance sheet on ${new Date(F.b.balance.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}: cash ${BNS(F.b.balance.cash)} · long-term debt ${BNS(F.b.balance.longTermDebt)} · total assets ${BNS(F.b.balance.assets)} · shareholders’ equity ${BNS(F.b.balance.equity)}</div>`:''}
+   ${!isSimple()&&F.b.quarterly&&F.b.quarterly.length?`<div class="ov" style="margin-top:12px"><table class="fint"><tr><th>Quarter</th>${F.b.quarterly.map(q=>`<th>${esc(q.quarter)}</th>`).join('')}</tr><tr><td>Revenue</td>${F.b.quarterly.map(q=>`<td>${BNS(q.revenue)}</td>`).join('')}</tr><tr><td>Net income</td>${F.b.quarterly.map(q=>`<td>${BNS(q.netIncome)}</td>`).join('')}</tr><tr><td>EPS</td>${F.b.quarterly.map(q=>`<td>${q.eps!=null?'$'+fmt(q.eps,2):'—'}</td>`).join('')}</tr></table></div>`:''}
+   <div class="wsn">Revenue is total sales. Net income is profit after every cost and tax. Earnings per share is that profit divided by the number of shares. Free cash flow is the cash left after investing in the business.</div></div>`}
+  if(L.ok&&L.b.filings&&L.b.filings.length){const T=f=>({'10-K':'gold','10-Q':'','8-K':'','4':'dn'}[f]||'');h+=`<div class="pan" style="margin-top:22px"><h3 style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">SEC filings <a href="${esc(L.b.all)}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;font-weight:400">All filings at sec.gov ↗</a></h3>
+   ${L.b.insiderFilings90d?`<div class="nwhy" style="margin:0 0 10px"><b>Insiders:</b> ${L.b.insiderFilings90d} insider trading report${L.b.insiderFilings90d>1?'s':''} (Form 4) in the last 90 days. Executives and directors must report when they buy or sell the company’s shares.</div>`:''}
+   ${L.b.filings.slice(0,isSimple()?6:15).map(f=>`<div class="ffl"><span class="tag ${T(f.form)}">${esc(f.form)}</span><span>${esc(f.label)}<div class="mu" style="font-size:12px">${new Date(f.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}${f.period?' · period '+esc(f.period):''}</div></span><a href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">Open ↗</a></div>`).join('')}</div>`}
+  el.innerHTML=h})};
+const as29=PAGES.asset;PAGES.asset=s=>{as29(s);if(!QLIVE.market)return;let n=0;const t=setInterval(()=>{if(++n>80||hs_()!==s){clearInterval(t);return}const m=document.getElementById('m');if(!m||!m.querySelector('canvas'))return;clearInterval(t);if(!document.getElementById('secp')){m.insertAdjacentHTML('beforeend','<div id="secp"></div>');SECLOAD(s)}},300)};
+/* ---------- price alerts that work when Quantera is closed (Web Push) ---------- */
+SYNC.push('q_push');
+const PUSHOK=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window&&window.isSecureContext;
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const u8k=b=>{const p='='.repeat((4-b.length%4)%4),s=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...s].map(c=>c.charCodeAt(0)))};
+const ppost=(u,b)=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(r=>r.ok?r.json():Promise.reject(r.status));
+const pushSub=async()=>{if(!PUSHOK())return null;const r=await navigator.serviceWorker.getRegistration();return r?r.pushManager.getSubscription():null};
+window.PUSHON_=async()=>{if(!PUSHOK())return qtoast(/iP(hone|ad)/.test(navigator.userAgent)?'On iPhone and iPad, first add Quantera to your Home Screen (Share → Add to Home Screen), open it from there, then turn alerts on.':'This browser can’t show background notifications.');
+ const {ok,b}=await jf('/api/push/key').catch(()=>({ok:false,b:{}}));if(!ok)return qtoast(esc(b.error||'Background alerts aren’t available yet. Please try again soon.'));
+ const perm=await Notification.requestPermission();if(perm!=='granted')return qtoast('Notifications are blocked for this site. Allow them in your browser’s site settings, then try again.');
+ const r=await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;let s=await r.pushManager.getSubscription();if(!s)s=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8k(b.publicKey)});
+ SS('q_push',1);await ppost('/api/push/test',{subscription:s}).catch(()=>{});await PUSHSYNC().catch(()=>{});qtoast('<b>Background alerts are on.</b><br>You’ll get a notification when a price alert triggers, even with Quantera closed. We just sent a test.');track('push_on');route()};
+window.PUSHOFF_=async()=>{SS('q_push',0);const s=await pushSub().catch(()=>null);const A=LS('q_al',[]);if(s)for(const a of A)if(a.sid){await ppost('/api/push/delete',{subscription:s,id:a.sid}).catch(()=>{})}A.forEach(a=>delete a.sid);SS('q_al',A);if(s)await s.unsubscribe().catch(()=>{});qtoast('Background alerts are off.');route()};
+/* Keeps the server's alerts in step with this device's alert list: new ones are added, deleted or already-triggered ones removed, server-triggered ones marked done */
+const PUSHSYNC=async()=>{if(!LS('q_push',0))return;const s=await pushSub();if(!s)return;const A=LS('q_al',[]);let ch=0;
+ const L=await ppost('/api/push/list',{subscription:s}).catch(()=>null),srv=L&&L.alerts;
+ if(srv){const ids=new Set(srv.map(x=>x.id));for(const x of srv){const loc=A.find(a=>a.sid==x.id);if(!loc||(loc.fired&&!x.fired_at)){if(!x.fired_at)await ppost('/api/push/delete',{subscription:s,id:x.id}).catch(()=>{});if(loc){delete loc.sid;ch=1}}else if(x.fired_at&&!loc.fired){loc.fired=Date.parse(x.fired_at)||Date.now();ch=1}}for(const a of A)if(a.sid&&!ids.has(a.sid)){delete a.sid;ch=1}}
+ for(const a of A)if(!a.fired&&!a.sid){const r=await ppost('/api/push/alerts',{subscription:s,symbol:a.sym,op:a.op,price:a.px}).catch(()=>null);if(r&&r.id!=null){a.sid=r.id;ch=1}}
+ if(ch)SS('q_al',A)};
+(function pw(n){if(QLIVE.ok){PUSHSYNC().catch(()=>{});setInterval(()=>PUSHSYNC().catch(()=>{}),30000);return}if(n<60)setTimeout(()=>pw(n+1),500)})(0);
+const PUSHBAR=()=>LS('q_push',0)?'<div class="pushbar"><span class="up">🔔</span> Background alerts are on: you’ll be notified even when Quantera is closed. <a onclick="PUSHOFF_()">Turn off</a></div>':'<div class="pushbar"><button class="chip" onclick="PUSHON_()">🔔 Notify me even when Quantera is closed</button></div>';
+let pbT=0;new MutationObserver(()=>{clearTimeout(pbT);pbT=setTimeout(()=>{const w=document.getElementById('wal');if(w&&!w.querySelector('.pushbar'))w.insertAdjacentHTML('beforeend',PUSHBAR())},100)}).observe(document.getElementById('m'),{childList:true,subtree:true});
+/* Price alerts card on My Quantera */
+window.MEAL_=op=>{const s=String(($('#mals')||{}).value||'').trim().toUpperCase(),v=+(($('#malp')||{}).value||0);if(!SYMOK(s)||!(v>0))return qtoast('Enter a ticker and a price.');const A=LS('q_al',[]);A.push({sym:s,op,px:v});SS('q_al',A);track('alert_set');PUSHSYNC().catch(()=>{});setTimeout(()=>checkBadges&&checkBadges(),200);route()};
+window.MEALD_=i=>{const A=LS('q_al',[]);A.splice(i,1);SS('q_al',A);PUSHSYNC().catch(()=>{});route()};
+const me29=PAGES.me;PAGES.me=()=>{me29();const col=document.querySelector('#m .meg>div:nth-child(2)');if(!col)return;const A=LS('q_al',[]);
+ col.insertAdjacentHTML('afterbegin',`<div class="pan me-c"><h3>Price alerts</h3>${A.length?A.map((a,i)=>`<div class="stat"><span style="${a.fired?'text-decoration:line-through;color:var(--mu)':''}"><b>${esc(a.sym)}</b> ${a.op=='>'?'rises to':'falls to'} ${fmt(a.px)}${a.fired?' · triggered':a.sid?' · <span class="up">🔔 background</span>':''}</span><a class="mu" onclick="MEALD_(${i})">×</a></div>`).join(''):'<div class="mu" style="font-size:13px">No alerts yet.</div>'}
+ <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><input id="mals" type="text" placeholder="Ticker, e.g. AAPL" style="flex:1;min-width:100px"><input id="malp" type="number" step="any" placeholder="Price" style="width:110px"><button class="chip" onclick="MEAL_('>')">Above</button><button class="chip" onclick="MEAL_('<')">Below</button></div>${PUSHBAR()}</div>`)};
 
 addEventListener('hashchange',route);
 if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML='<div class="mu" style="padding:60px 32px">Loading live markets…</div>';setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();

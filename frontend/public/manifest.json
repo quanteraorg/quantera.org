@@ -1,0 +1,14 @@
+{
+  "name": "Quantera — Live markets, pro charts and plain-English research",
+  "short_name": "Quantera",
+  "description": "Live prices, pro charts, paper trading, news that explains the move, and an Academy.",
+  "start_url": "/#/me",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#06080c",
+  "theme_color": "#0a0c10",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
