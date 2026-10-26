@@ -137,6 +137,9 @@ public class TestMain {
         fake.createContext("/yh/v1/finance/screener", ex -> { String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8); upstreamCalls.add("yahoo screener " + body);
             reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"total\":209,\"quotes\":[{\"symbol\":\"INFY.NS\",\"longName\":\"Infosys Limited\",\"regularMarketPrice\":1153.8,\"regularMarketChangePercent\":0.4,\"currency\":\"INR\",\"quoteType\":\"EQUITY\"}]}]}}"); });
         fake.createContext("/yh/v1/finance/search", ex -> { upstreamCalls.add("yahoo search"); reply(ex, 200, "application/json", "{\"quotes\":[{\"symbol\":\"AAPL\",\"quoteType\":\"EQUITY\",\"longname\":\"Apple Inc.\"},{\"symbol\":\"APC.DE\",\"quoteType\":\"EQUITY\",\"longname\":\"Apple Inc.\",\"exchDisp\":\"XETRA\"},{\"symbol\":\"X1\",\"quoteType\":\"OPTION\"}],\"news\":[{\"uuid\":\"abc-1\",\"title\":\"Toyota raises its outlook\",\"publisher\":\"Reuters\",\"link\":\"https://x.test/y1\",\"providerPublishTime\":1792950000,\"type\":\"STORY\",\"relatedTickers\":[\"7203.T\",\"TM\"]},{\"uuid\":\"abc-2\",\"title\":\"A video\",\"link\":\"https://x.test/y2\",\"type\":\"VIDEO\"}]}"); });
+        fake.createContext("/yh/v1/finance/screener/predefined/saved", ex -> { upstreamCalls.add("yahoo predefined " + ex.getRequestURI().getRawQuery());
+            reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"quotes\":[{\"symbol\":\"RHI\",\"longName\":\"Robert Half Inc.\",\"regularMarketPrice\":45.87,\"regularMarketChangePercent\":21.7,\"currency\":\"USD\"},{\"symbol\":\"BRK-B\",\"longName\":\"Berkshire\",\"regularMarketPrice\":500,\"regularMarketChangePercent\":1.0,\"currency\":\"USD\"}]}]}}"); });
+        fake.createContext("/yh/v1/finance/trending/US", ex -> reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"quotes\":[{\"symbol\":\"NVDA\"},{\"symbol\":\"NQ=F\"},{\"symbol\":\"MU\"}]}]}}"));
         fake.createContext("/yh/v1/finance/visualization", ex -> { upstreamCalls.add("yahoo ipo " + new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"documents\":[{\"columns\":[{\"id\":\"ticker\"},{\"id\":\"companyshortname\"},{\"id\":\"exchange_short_name\"},{\"id\":\"startdatetime\"},{\"id\":\"pricefrom\"},{\"id\":\"priceto\"},{\"id\":\"offerprice\"},{\"id\":\"currencyname\"},{\"id\":\"shares\"},{\"id\":\"dealtype\"}],\"rows\":[[\"NEWCO\",\"NewCo Inc\",\"NASDAQ\",\"2026-11-03T00:00:00.000Z\",18,20,null,\"USD\",10000000,\"EXPECTED\"],[\"9999.HK\",\"Asia Co\",\"HKSE\",\"2026-10-01T00:00:00.000Z\",null,null,12.5,\"HKD\",2000000,\"PRICED\"]]}]}]}}"); });
         fake.start();
@@ -359,6 +362,13 @@ public class TestMain {
         t("news for a non-US company comes from Yahoo, videos skipped", r.code == 200 && Json.write(r.body).contains("Toyota raises its outlook") && Json.write(r.body).contains("yh-abc-1") && !Json.write(r.body).contains("A video"));
         r = get(p, "/api/calendar?type=ipo");
         t("IPO calendar from Yahoo: worldwide, with status and deal size", r.code == 200 && Json.write(r.body).contains("NewCo Inc") && Json.write(r.body).contains("\"status\":\"PRICED\"") && Json.write(r.body).contains("\"dealSize\":25000000"));
+        r = get(p, "/api/popular?list=gainers");
+        t("whole-market gainers from Yahoo, class shares mapped back (BRK.B)", r.code == 200 && "RHI".equals(m(l(m(r.body).get("items")).get(0)).get("symbol")) && Json.write(r.body).contains("\"BRK.B\"") && upstreamCalls.stream().anyMatch(u -> u.contains("scrIds=day_gainers")));
+        r = get(p, "/api/popular?list=trending");
+        t("trending skips futures, keeps order", r.code == 200 && "NVDA".equals(m(l(m(r.body).get("items")).get(0)).get("symbol")) && !Json.write(r.body).contains("NQ=F"));
+        r = get(p, "/api/popular?list=popular");
+        t("popular: 300+ well-known names with sectors, one batch per 50", r.code == 200 && d(m(r.body).get("count")) > 300 && Json.write(r.body).contains("\"sector\":\"Semiconductors\""));
+        t("popular list validated", get(p, "/api/popular?list=memes").code == 400);
         System.setProperty("YAHOO_ENABLED", "0");
         System.out.println("\n" + pass + " passed, " + fail + " failed");
         app.stop(0); fake.stop(0);

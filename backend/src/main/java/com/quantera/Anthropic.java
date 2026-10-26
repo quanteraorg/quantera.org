@@ -85,7 +85,9 @@ final class Anthropic {
             "impact", "Write three short sections with these bold headings. **What happened**: 2 to 3 sentences on the concrete facts of the story. "
                     + "**How it's moving the stock**: for each company, give its move from \"Today's price moves\" (if listed), say whether this news plausibly explains it and why "
                     + "(sales, costs, competition, regulation, demand, or just market mood), and say plainly when the move is more likely the whole market or sector. "
-                    + "**What to watch next**: 2 bullets. At most 190 words.",
+                    + "If the story is about war, conflict, sanctions, tariffs, elections, central banks or the economy rather than one company, use **How it's moving markets** instead: "
+                    + "explain the usual channels (oil and commodities, gold and other safe havens, stocks and volatility, bond yields, the dollar, and the sectors most exposed such as defense, airlines, energy or importers) and compare with any moves given. "
+                    + "**What to watch next**: 2 bullets. At most 200 words.",
             "tldr", "Give a TL;DR in exactly 3 short bullets: what happened, why it happened, what could happen next.",
             "eli5", "Explain it like the reader is 12: plain words, one everyday analogy, at most 110 words.",
             "matters", "Explain why it matters for investors: which listed companies or sectors could be affected, in which direction and why, and what to watch next. 3 to 5 bullets.",
