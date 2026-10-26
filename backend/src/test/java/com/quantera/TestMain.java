@@ -103,6 +103,38 @@ public class TestMain {
             else reply(ex, 200, "application/json", "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"**Data** Apple is $226 [[asset:AAPL]]\"}]}");
         });
         Set<String> joined = Collections.synchronizedSet(new HashSet<>());
+        // FRED: monthly series 2020-01 .. 2026-09 with value 100 + month index; daily series with "." holes
+        fake.createContext("/fred/graph/fredgraph.csv", ex -> { String id = ex.getRequestURI().getRawQuery().replaceAll(".*id=([A-Z0-9]+).*", "$1"); upstreamCalls.add("fred " + id);
+            StringBuilder b = new StringBuilder("observation_date," + id + "\n"); java.time.LocalDate d0 = java.time.LocalDate.of(2020, 1, 1);
+            for (int i = 0; i < 81; i++) b.append(d0.plusMonths(i)).append(',').append(i == 40 ? "." : String.valueOf(100 + i)).append('\n');
+            reply(ex, 200, "text/csv", b.toString()); });
+        fake.createContext("/fredapi/fred/series/observations", ex -> { upstreamCalls.add("fredapi " + ex.getRequestURI().getRawQuery()); StringBuilder b = new StringBuilder("{\"observations\":["); java.time.LocalDate d0 = java.time.LocalDate.of(2020, 1, 1);
+            for (int i = 0; i < 81; i++) b.append(i == 0 ? "" : ",").append("{\"date\":\"").append(d0.plusMonths(i)).append("\",\"value\":\"").append(i == 40 ? "." : String.valueOf(100 + i)).append("\"}");
+            reply(ex, 200, "application/json", b.append("]}").toString()); });
+                fake.createContext("/sec/files/company_tickers.json", ex -> { upstreamCalls.add("sec tickers ua=" + ex.getRequestHeaders().getFirst("User-Agent")); reply(ex, 200, "application/json", "{\"0\":{\"cik_str\":320193,\"ticker\":\"AAPL\",\"title\":\"Apple Inc.\"},\"1\":{\"cik_str\":1067983,\"ticker\":\"BRK-B\",\"title\":\"Berkshire\"}}"); });
+        fake.createContext("/secdata/submissions/", ex -> { String today = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString();
+            reply(ex, 200, "application/json", "{\"name\":\"Apple Inc.\",\"sicDescription\":\"Electronic Computers\",\"fiscalYearEnd\":\"0927\",\"filings\":{\"recent\":{\"form\":[\"4\",\"8-K\",\"SD\",\"10-K\"],\"filingDate\":[\"" + today + "\",\"" + today + "\",\"2026-05-01\",\"2025-10-31\"],\"accessionNumber\":[\"0001-26-000001\",\"0001-26-000002\",\"0001-26-000003\",\"0000320193-25-000079\"],\"primaryDocument\":[\"x.xml\",\"e.htm\",\"sd.htm\",\"aapl-20250927.htm\"],\"primaryDocDescription\":[\"\",\"8-K\",\"SD\",\"10-K\"],\"reportDate\":[\"\",\"\",\"\",\"2025-09-27\"]}}}"); });
+        fake.createContext("/secdata/api/xbrl/companyfacts/", ex -> reply(ex, 200, "application/json", "{\"facts\":{\"us-gaap\":{"
+            + "\"Revenues\":{\"units\":{\"USD\":[{\"end\":\"2023-09-30\",\"val\":383000000000,\"frame\":\"CY2023\"},{\"end\":\"2024-09-28\",\"val\":391000000000,\"frame\":\"CY2024\"},{\"end\":\"2024-12-28\",\"val\":124000000000,\"frame\":\"CY2024Q4\"},{\"end\":\"2024-09-28\",\"val\":1}]}},"
+            + "\"NetIncomeLoss\":{\"units\":{\"USD\":[{\"end\":\"2024-09-28\",\"val\":93700000000,\"frame\":\"CY2024\"}]}},"
+            + "\"EarningsPerShareDiluted\":{\"units\":{\"USD/shares\":[{\"end\":\"2024-09-28\",\"val\":6.08,\"frame\":\"CY2024\"}]}},"
+            + "\"NetCashProvidedByUsedInOperatingActivities\":{\"units\":{\"USD\":[{\"end\":\"2024-09-28\",\"val\":118000000000,\"frame\":\"CY2024\"}]}},"
+            + "\"PaymentsToAcquirePropertyPlantAndEquipment\":{\"units\":{\"USD\":[{\"end\":\"2024-09-28\",\"val\":9400000000,\"frame\":\"CY2024\"}]}},"
+            + "\"Assets\":{\"units\":{\"USD\":[{\"end\":\"2024-12-28\",\"val\":344000000000,\"frame\":\"CY2024Q4I\"}]}}}}}"));
+        // Supabase table push_alerts kept in memory; a push service that records what it receives
+        List<Map<String, Object>> pushRows = Collections.synchronizedList(new ArrayList<>());
+        List<String[]> pushed = Collections.synchronizedList(new ArrayList<>());
+        java.util.concurrent.atomic.AtomicInteger pushIds = new java.util.concurrent.atomic.AtomicInteger();
+        fake.createContext("/sb/rest/v1/push_alerts", ex -> { String q = ex.getRequestURI().getRawQuery() == null ? "" : java.net.URLDecoder.decode(ex.getRequestURI().getRawQuery(), StandardCharsets.UTF_8), body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8), mth = ex.getRequestMethod();
+            java.util.function.Predicate<Map<String, Object>> match = row -> { for (String part : q.split("&")) { String[] kv = part.split("=", 2); if (kv.length < 2 || kv[0].equals("select") || kv[0].equals("order") || kv[0].equals("limit")) continue;
+                if (kv[1].equals("is.null") ? row.get(kv[0]) != null : kv[1].startsWith("eq.") && !String.valueOf(row.get(kv[0])).replaceAll("\\.0$", "").equals(kv[1].substring(3))) return false; } return true; };
+            synchronized (pushRows) {
+                if (mth.equals("POST")) { List<Object> out = new ArrayList<>(); for (Object o : l(Json.parse(body))) { Map<String, Object> r = new LinkedHashMap<>(m(o)); r.put("id", (double) pushIds.incrementAndGet()); r.put("fired_at", null); pushRows.add(r); out.add(r); } reply(ex, 201, "application/json", Json.write(out)); return; }
+                if (mth.equals("PATCH")) { for (Map<String, Object> r : pushRows) if (match.test(r)) r.putAll(m(Json.parse(body))); reply(ex, 200, "application/json", "[]"); return; }
+                if (mth.equals("DELETE")) { pushRows.removeIf(match); reply(ex, 200, "application/json", "[]"); return; }
+                List<Object> out = new ArrayList<>(); for (Map<String, Object> r : pushRows) if (match.test(r)) out.add(r); reply(ex, 200, "application/json", Json.write(out)); }
+        });
+        fake.createContext("/push/", ex -> { pushed.add(new String[]{ex.getRequestHeaders().getFirst("Authorization"), ex.getRequestHeaders().getFirst("Content-Encoding"), Base64.getEncoder().encodeToString(ex.getRequestBody().readAllBytes())}); reply(ex, 201, "text/plain", ""); });
         fake.createContext("/sb/rest/v1/", ex -> {
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8), table = ex.getRequestURI().getPath().substring("/sb/rest/v1/".length());
             upstreamCalls.add("supabase " + table + " key=" + ex.getRequestHeaders().getFirst("apikey") + " " + body);
@@ -370,6 +402,61 @@ public class TestMain {
         t("popular: 300+ well-known names with sectors, one batch per 50", r.code == 200 && d(m(r.body).get("count")) > 300 && Json.write(r.body).contains("\"sector\":\"Semiconductors\""));
         t("popular list validated", get(p, "/api/popular?list=memes").code == 400);
         System.setProperty("YAHOO_ENABLED", "0");
+        // ---- economy dashboard (FRED)
+        System.setProperty("FRED_BASE_URL", base + "/fred");
+        r = get(p, "/api/macro");
+        Map<String, Object> cpi = l(m(r.body).get("items")).stream().map(x -> m(x)).filter(x -> "CPIAUCSL".equals(x.get("id"))).findFirst().orElse(Map.of());
+        t("macro: 16 series, CPI shown year over year from FRED's CSV, missing values skipped", r.code == 200 && l(m(r.body).get("items")).size() == 16 && Math.abs(d(cpi.get("value")) - (180.0 / 168 - 1) * 100) < 0.01 && "2026-09-01".equals(cpi.get("date")) && l(cpi.get("points")).size() == 36);
+        Map<String, Object> jobs = l(m(r.body).get("items")).stream().map(x -> m(x)).filter(x -> "PAYEMS".equals(x.get("id"))).findFirst().orElse(Map.of());
+        t("macro: jobs added = monthly change", d(jobs.get("value")) == 1.0);
+        System.setProperty("FRED_API_KEY", "fred-test"); System.setProperty("FRED_API_URL", base + "/fredapi"); Providers.CACHE.clear();
+        r = get(p, "/api/macro");
+        t("macro: official FRED API used when a key is set (key sent server-side only)", r.code == 200 && l(m(r.body).get("items")).size() == 16 && !r.raw.contains("fred-test") && upstreamCalls.stream().anyMatch(u -> u.startsWith("fredapi") && u.contains("api_key=fred-test")));
+        System.clearProperty("FRED_API_KEY");
+        // ---- SEC filings and financial statements
+        System.setProperty("SEC_BASE_URL", base + "/sec"); System.setProperty("SEC_DATA_URL", base + "/secdata"); System.setProperty("SEC_USER_AGENT", "Quantera Test test@example.com");
+        r = get(p, "/api/filings?symbol=AAPL");
+        t("filings: plain-English labels, links, insider count, unknown forms skipped, SEC user agent sent", r.code == 200 && "Insider buy or sell".equals(m(l(m(r.body).get("filings")).get(0)).get("label")) && d(m(r.body).get("insiderFilings90d")) == 1
+            && Json.write(r.body).contains("https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm") && !Json.write(r.body).contains("\"SD\"") && upstreamCalls.stream().anyMatch(u -> u.equals("sec tickers ua=Quantera Test test@example.com")));
+        r = get(p, "/api/financials?symbol=AAPL");
+        Map<String, Object> fy = m(l(m(r.body).get("annual")).get(1));
+        t("financials: yearly revenue, profit, EPS and free cash flow from XBRL frames; latest balance sheet", r.code == 200 && "2024".equals(fy.get("year")) && d(fy.get("revenue")) == 391e9 && d(fy.get("eps")) == 6.08 && d(fy.get("freeCashFlow")) == 118e9 - 9.4e9
+            && d(m(m(r.body).get("balance")).get("assets")) == 344e9 && l(m(r.body).get("quarterly")).size() == 1);
+        t("filings: companies that don't file with the SEC -> 404", get(p, "/api/filings?symbol=7203.T").code == 404);
+        // ---- background price alerts (Web Push)
+        java.security.KeyPairGenerator kg = java.security.KeyPairGenerator.getInstance("EC"); kg.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+        java.security.KeyPair vk = kg.generateKeyPair(), ua = kg.generateKeyPair();
+        System.setProperty("VAPID_PUBLIC_KEY", Push.b64e(Push.raw((java.security.interfaces.ECPublicKey) vk.getPublic())));
+        System.setProperty("VAPID_PRIVATE_KEY", Push.b64e(Push.fixed(((java.security.interfaces.ECPrivateKey) vk.getPrivate()).getS())));
+        System.setProperty("PUSH_ALLOW_LOCAL", "1"); System.setProperty("SUPABASE_URL", base + "/sb/"); System.setProperty("SUPABASE_SERVICE_KEY", "sb-test");
+        byte[] authSecret = new byte[16]; new java.security.SecureRandom().nextBytes(authSecret);
+        String subJ = Json.write(Json.obj("endpoint", base + "/push/device-123456", "keys", Json.obj("p256dh", Push.b64e(Push.raw((java.security.interfaces.ECPublicKey) ua.getPublic())), "auth", Push.b64e(authSecret))));
+        t("push: public key served", get(p, "/api/push/key").code == 200);
+        r = call(p, "POST", "/api/push/alerts", "{\"subscription\":" + subJ + ",\"symbol\":\"aapl\",\"op\":\">\",\"price\":1}", ip());
+        t("push: alert saved for this device", r.code == 200 && pushRows.size() == 1 && "AAPL".equals(pushRows.get(0).get("symbol")));
+        t("push: bad subscription rejected", call(p, "POST", "/api/push/alerts", "{\"subscription\":{\"endpoint\":\"javascript:x\"},\"symbol\":\"AAPL\",\"op\":\">\",\"price\":1}", ip()).code == 400);
+        Push.check();
+        boolean decrypted = false, signed = false;
+        if (!pushed.isEmpty()) {
+            byte[] bodyB = Base64.getDecoder().decode(pushed.get(0)[2]); byte[] salt = Arrays.copyOfRange(bodyB, 0, 16), asPub = Arrays.copyOfRange(bodyB, 21, 86), ct = Arrays.copyOfRange(bodyB, 86, bodyB.length);
+            javax.crypto.KeyAgreement ka = javax.crypto.KeyAgreement.getInstance("ECDH"); ka.init(ua.getPrivate()); ka.doPhase(Push.pub(asPub), true);
+            byte[] uaRaw = Push.raw((java.security.interfaces.ECPublicKey) ua.getPublic()), prkKey = Push.hmac(authSecret, ka.generateSecret());
+            byte[] ikm = Push.expand(prkKey, Push.cat("WebPush: info\0".getBytes(StandardCharsets.US_ASCII), uaRaw, asPub), 32), prk = Push.hmac(salt, ikm);
+            javax.crypto.Cipher c = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+            c.init(javax.crypto.Cipher.DECRYPT_MODE, new javax.crypto.spec.SecretKeySpec(Push.expand(prk, "Content-Encoding: aes128gcm\0".getBytes(StandardCharsets.US_ASCII), 16), "AES"), new javax.crypto.spec.GCMParameterSpec(128, Push.expand(prk, "Content-Encoding: nonce\0".getBytes(StandardCharsets.US_ASCII), 12)));
+            byte[] plain = c.doFinal(ct); String msg = new String(plain, 0, plain.length - 1, StandardCharsets.UTF_8);
+            decrypted = plain[plain.length - 1] == 2 && msg.contains("AAPL is above") && "aes128gcm".equals(pushed.get(0)[1]);
+            String jwt = pushed.get(0)[0].replaceAll("^vapid t=([^,]+),.*$", "$1"); String[] parts = jwt.split("\\.");
+            java.security.Signature sg = java.security.Signature.getInstance("SHA256withECDSAinP1363Format"); sg.initVerify(vk.getPublic()); sg.update((parts[0] + "." + parts[1]).getBytes(StandardCharsets.US_ASCII));
+            signed = sg.verify(Push.b64d(parts[2])) && new String(Push.b64d(parts[1]), StandardCharsets.UTF_8).contains("\"aud\":\"" + base + "\"") && pushed.get(0)[0].endsWith("k=" + System.getProperty("VAPID_PUBLIC_KEY"));
+        }
+        t("push: triggered alert sent encrypted (RFC 8291) and decrypts on the device", decrypted);
+        t("push: VAPID token signed with the server key for the push service's origin (RFC 8292)", signed);
+        Push.check();
+        t("push: fired alert marked and not sent twice", pushRows.get(0).get("fired_at") != null && pushed.size() == 1);
+        r = call(p, "POST", "/api/push/delete", "{\"subscription\":" + subJ + ",\"id\":1}", ip());
+        t("push: owner can delete the alert", r.code == 200 && pushRows.isEmpty());
+        System.clearProperty("VAPID_PUBLIC_KEY"); System.clearProperty("VAPID_PRIVATE_KEY");
         System.out.println("\n" + pass + " passed, " + fail + " failed");
         app.stop(0); fake.stop(0);
         System.exit(fail == 0 ? 0 : 1);
