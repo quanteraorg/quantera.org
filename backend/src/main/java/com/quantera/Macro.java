@@ -110,8 +110,10 @@ final class Macro {
     }
 
     /** The whole dashboard; series that fail are left out rather than failing the page. */
-    static Map<String, Object> dashboard() {
-        return CACHE.get("macro", 30 * 60_000L, () -> {
+    static Map<String, Object> dashboard() { return dashboard(30 * 60_000L); }
+
+    static Map<String, Object> dashboard(long ttlMs) {
+        return CACHE.get("macro", ttlMs, () -> {
             Map<String, Future<Map<String, Object>>> f = new LinkedHashMap<>();
             try (ExecutorService ex = Executors.newVirtualThreadPerTaskExecutor()) {
                 for (S s : SERIES) f.put(s.id(), ex.submit(() -> one(s)));
