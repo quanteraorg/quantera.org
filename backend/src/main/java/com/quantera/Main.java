@@ -283,7 +283,7 @@ public final class Main {
         start(port);
         System.out.println("Quantera API listening on :" + port + " (market=" + Providers.marketOn() + ", news=" + Providers.newsOn() + ", ai=" + Providers.aiOn() + ", storage=" + Store.on() + ")");
         startRefresh();
-        Providers.startWarmer();
+        Providers.startWarmer(); Providers.startPageWarmer();
         Push.start();
     }
 }

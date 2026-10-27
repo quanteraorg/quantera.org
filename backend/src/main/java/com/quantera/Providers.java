@@ -448,6 +448,22 @@ final class Providers {
      * Quotes: one Finnhub call every 1.5 s in session (~40/min of the 60/min free limit), every 6 s outside it (~10/min), none while backing off from a 429.
      * Sparklines: one Twelve Data daily series every 20 s (~3/min of the 8/min free limit), only for series older than 6 hours.
      */
+    /** Keeps the slowest shared pages (main news feed, economy dashboard) built ahead of visitors, so nobody waits on a cold cache. */
+    static void startPageWarmer() {
+        var ex = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().factory());
+        ex.scheduleWithFixedDelay(() -> { try { news("", "", 1, 45_000L); } catch (RuntimeException ignored) {} }, 5, 15, java.util.concurrent.TimeUnit.SECONDS);
+        if (cfg("FRED_API_KEY", null) != null)
+            ex.scheduleWithFixedDelay(() -> { try { Macro.dashboard(25 * 60_000L); } catch (RuntimeException ignored) {} }, 20, 60, java.util.concurrent.TimeUnit.SECONDS);
+        // Render's free plan sleeps after 15 idle minutes and the next visitor waits 30-60 s; a request to our own public URL keeps it awake.
+        // Render sets RENDER_EXTERNAL_URL itself. KEEP_AWAKE=0 turns this off.
+        String self = cfg("RENDER_EXTERNAL_URL", null);
+        if (self != null && !"0".equals(cfg("KEEP_AWAKE", "1"))) {
+            java.net.http.HttpClient c = java.net.http.HttpClient.newHttpClient();
+            ex.scheduleWithFixedDelay(() -> { try { c.send(java.net.http.HttpRequest.newBuilder(java.net.URI.create(self.replaceAll("/+$", "") + "/api/health")).timeout(java.time.Duration.ofSeconds(20)).GET().build(), java.net.http.HttpResponse.BodyHandlers.discarding()); } catch (Exception ignored) {} }, 10, 10, java.util.concurrent.TimeUnit.MINUTES);
+            System.out.println("Keep-awake on: " + self);
+        }
+    }
+
     static void startWarmer() {
         if (!finnhubOn()) return;
         java.util.concurrent.atomic.AtomicInteger i = new java.util.concurrent.atomic.AtomicInteger(), tick = new java.util.concurrent.atomic.AtomicInteger();
@@ -756,10 +772,13 @@ final class Providers {
         return out.subList(0, Math.min(out.size(), limit));
     }
 
-    static List<Object> news(String symbols, String text, int limit) {
+    static List<Object> news(String symbols, String text, int limit) { return news(symbols, text, limit, 60_000L); }
+
+    static List<Object> news(String symbols, String text, int limit, long ttlMs) {
         int lim = Math.min(Math.max(limit, 1), 300);
-        List<Object> base = CACHE.get("n" + symbols + "|" + text + "|" + lim, 60_000L, () -> {
-            String q = "language=en&filter_entities=true&limit=" + lim;
+        // One feed per query, built at full size and sliced, so the 10-, 60- and 300-article views share the work
+        List<Object> base = CACHE.get("n" + symbols + "|" + text, ttlMs, () -> {
+            String q = "language=en&filter_entities=true&limit=50";
             List<Object> mx = new ArrayList<>();
             RuntimeException err = null;
             final String q0 = q;
@@ -783,12 +802,14 @@ final class Providers {
             if (Yahoo.on()) {
                 List<String> qs = !text.isEmpty() ? List.of(text) : first != null ? Arrays.asList(symbols.split(",")).subList(0, Math.min(3, symbols.split(",").length))
                         : List.of("stock market", "Wall Street", "economy", "earnings", "Federal Reserve", "inflation", "oil prices", "gold price", "technology stocks", "AI stocks", "bank stocks", "IPO", "mergers acquisitions", "crypto", "European stocks", "Asian markets", "China economy", "trade tariffs");
-                for (String q2 : qs) try { more.addAll(Yahoo.news(q2)); } catch (RuntimeException ignored) {}
+                List<Object> yn = java.util.Collections.synchronizedList(new ArrayList<>());
+                qs.parallelStream().forEach(q2 -> { try { yn.addAll(Yahoo.news(q2)); } catch (RuntimeException ignored) {} }); // in parallel: ~18 topic searches for the main feed
+                more.addAll(yn);
             }
             if (mx.isEmpty() && more.isEmpty() && err != null) throw err;
-            return merge(mx, more, lim);
+            return merge(mx, more, 300);
         });
-        return withMoves(base);
+        return withMoves(new ArrayList<>(base.subList(0, Math.min(lim, base.size()))));
     }
 
     /** Adds today's price move to each tagged US stock ("AAPL +0.25%"). Only with Finnhub, so news never spends the small Alpha Vantage quota. */
