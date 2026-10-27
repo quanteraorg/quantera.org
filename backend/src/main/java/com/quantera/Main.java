@@ -91,6 +91,12 @@ public final class Main {
         ROUTES.put("/api/push/list", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.listFor(r.body()); }, 0, 30));
         ROUTES.put("/api/push/delete", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.remove(r.body()); }, 0, 30));
         ROUTES.put("/api/push/test", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.test(r.body()); }, 0, 6));
+        ROUTES.put("/api/private", new Route(r -> Yahoo.privates(), 600, 60));
+        ROUTES.put("/api/private/company", new Route(r -> {
+            String s = r.query().getOrDefault("symbol", "").toUpperCase();
+            if (!Yahoo.PVT.matcher(s).matches()) throw new UpstreamException("symbol must look like ANTH.PVT", 400);
+            return Yahoo.privateCompany(s);
+        }, 1800, 60));
         ROUTES.put("/api/popular", new Route(r -> {
             String l = r.query().getOrDefault("list", "popular");
             if (!l.matches("popular|active|gainers|losers|trending")) throw new UpstreamException("list must be popular, active, gainers, losers or trending", 400);
