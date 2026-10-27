@@ -170,7 +170,15 @@ public class TestMain {
             reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"total\":209,\"quotes\":[{\"symbol\":\"INFY.NS\",\"longName\":\"Infosys Limited\",\"regularMarketPrice\":1153.8,\"regularMarketChangePercent\":0.4,\"currency\":\"INR\",\"quoteType\":\"EQUITY\"}]}]}}"); });
         fake.createContext("/yh/v1/finance/search", ex -> { upstreamCalls.add("yahoo search"); reply(ex, 200, "application/json", "{\"quotes\":[{\"symbol\":\"AAPL\",\"quoteType\":\"EQUITY\",\"longname\":\"Apple Inc.\"},{\"symbol\":\"APC.DE\",\"quoteType\":\"EQUITY\",\"longname\":\"Apple Inc.\",\"exchDisp\":\"XETRA\"},{\"symbol\":\"X1\",\"quoteType\":\"OPTION\"}],\"news\":[{\"uuid\":\"abc-1\",\"title\":\"Toyota raises its outlook\",\"publisher\":\"Reuters\",\"link\":\"https://x.test/y1\",\"providerPublishTime\":1792950000,\"type\":\"STORY\",\"relatedTickers\":[\"7203.T\",\"TM\"]},{\"uuid\":\"abc-2\",\"title\":\"A video\",\"link\":\"https://x.test/y2\",\"type\":\"VIDEO\"}]}"); });
         fake.createContext("/yh/v1/finance/screener/predefined/saved", ex -> { upstreamCalls.add("yahoo predefined " + ex.getRequestURI().getRawQuery());
+            if (ex.getRequestURI().getRawQuery().contains("PRIVATE_COMPANY")) { boolean hv = ex.getRequestURI().getRawQuery().contains("HIGHEST");
+                reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"total\":2,\"records\":[" + (hv ? "{\"ticker\":\"OPAI.PVT\",\"companyName\":\"OpenAI\",\"sector\":\"Artificial Intelligence\",\"regularMarketPrice\":954.7,\"fiftyTwoWeekChangePercent\":91.2,\"latestImpliedValuation\":1.183e12,\"fundingToDate\":1.78e11,\"latestFundingDate\":1774828800,\"latestAmountRaised\":6.8e10,\"latestShareClass\":\"Series C\"}," : "")
+                    + "{\"ticker\":\"ANTH.PVT\",\"companyName\":\"Anthropic\",\"sector\":\"Artificial Intelligence\",\"regularMarketPrice\":589.01,\"fiftyTwoWeekChangePercent\":263.25,\"latestImpliedValuation\":9.65e11,\"fundingToDate\":6.8e10,\"latestFundingDate\":1779926400,\"latestAmountRaised\":4.1e10,\"latestShareClass\":\"Series H-1\"},{\"ticker\":\"BAD\"}]}]}}"); return; }
             reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"quotes\":[{\"symbol\":\"RHI\",\"longName\":\"Robert Half Inc.\",\"regularMarketPrice\":45.87,\"regularMarketChangePercent\":21.7,\"currency\":\"USD\"},{\"symbol\":\"BRK-B\",\"longName\":\"Berkshire\",\"regularMarketPrice\":500,\"regularMarketChangePercent\":1.0,\"currency\":\"USD\"}]}]}}"); });
+        fake.createContext("/yh/v10/finance/quoteSummary/", ex -> { upstreamCalls.add("yahoo summary " + ex.getRequestURI().getPath());
+            if (!ex.getRequestURI().getPath().endsWith(".PVT")) { reply(ex, 500, "text/plain", "no"); return; }
+            reply(ex, 200, "application/json", "{\"quoteSummary\":{\"result\":[{\"price\":{\"longName\":\"Anthropic\",\"currency\":\"USD\",\"regularMarketPrice\":{\"raw\":589.01}},\"assetProfile\":{\"sectorDisp\":\"Artificial Intelligence\",\"city\":\"San Francisco\",\"website\":\"https://www.anthropic.com\",\"longBusinessSummary\":\"AI safety company.\"},"
+                + "\"fundingRounds\":{\"fundingRoundList\":[{\"date\":{\"raw\":1779926400},\"shareClassShortLabel\":\"Series H-1\",\"amountRaised\":{\"raw\":41287237632},\"issuePrice\":{\"raw\":589.0095},\"impliedValuation\":{\"raw\":964999970816}}]},"
+                + "\"marks\":{\"markList\":[{\"date\":{\"raw\":1785456000},\"fund\":\"Growth Fund\",\"shareClass\":\"Series F-1\",\"price\":{\"raw\":589.01},\"filingLink\":\"https://www.sec.gov/Archives/x\"},{\"date\":{\"raw\":1785456000},\"fund\":\"Odd\",\"filingLink\":\"javascript:alert(1)\"}]}}]}}"); });
         fake.createContext("/yh/v1/finance/trending/US", ex -> reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"quotes\":[{\"symbol\":\"NVDA\"},{\"symbol\":\"NQ=F\"},{\"symbol\":\"MU\"}]}]}}"));
         fake.createContext("/yh/v1/finance/visualization", ex -> { upstreamCalls.add("yahoo ipo " + new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             reply(ex, 200, "application/json", "{\"finance\":{\"result\":[{\"documents\":[{\"columns\":[{\"id\":\"ticker\"},{\"id\":\"companyshortname\"},{\"id\":\"exchange_short_name\"},{\"id\":\"startdatetime\"},{\"id\":\"pricefrom\"},{\"id\":\"priceto\"},{\"id\":\"offerprice\"},{\"id\":\"currencyname\"},{\"id\":\"shares\"},{\"id\":\"dealtype\"}],\"rows\":[[\"NEWCO\",\"NewCo Inc\",\"NASDAQ\",\"2026-11-03T00:00:00.000Z\",18,20,null,\"USD\",10000000,\"EXPECTED\"],[\"9999.HK\",\"Asia Co\",\"HKSE\",\"2026-10-01T00:00:00.000Z\",null,null,12.5,\"HKD\",2000000,\"PRICED\"]]}]}]}}"); });
@@ -401,6 +409,15 @@ public class TestMain {
         r = get(p, "/api/popular?list=popular");
         t("popular: 300+ well-known names with sectors, one batch per 50", r.code == 200 && d(m(r.body).get("count")) > 300 && Json.write(r.body).contains("\"sector\":\"Semiconductors\""));
         t("popular list validated", get(p, "/api/popular?list=memes").code == 400);
+        r = get(p, "/api/private");
+        List<Object> pv = l(m(r.body).get("companies"));
+        t("private companies: merged from Yahoo screeners, deduped, biggest valuation first, bad tickers dropped", r.code == 200 && pv.size() == 2 && "OPAI.PVT".equals(m(pv.get(0)).get("symbol"))
+            && d(m(pv.get(1)).get("valuation")) == 9.65e11 && "2026-05-28".equals(m(pv.get(1)).get("lastRoundDate")) && "Series H-1".equals(m(pv.get(1)).get("lastRound")));
+        r = get(p, "/api/private/company?symbol=anth.pvt");
+        t("private company: funding rounds with post-money valuation, fund marks with SEC links only, profile", r.code == 200 && "Anthropic".equals(m(r.body).get("name"))
+            && d(m(l(m(r.body).get("rounds")).get(0)).get("valuation")) == 964999970816.0 && "https://www.sec.gov/Archives/x".equals(m(l(m(r.body).get("marks")).get(0)).get("filing"))
+            && m(l(m(r.body).get("marks")).get(1)).get("filing") == null && d(m(m(r.body).get("summary")).get("change52w")) == 263.25 && !l(m(r.body).get("history")).isEmpty());
+        t("private company symbol validated", get(p, "/api/private/company?symbol=AAPL").code == 400);
         System.setProperty("YAHOO_ENABLED", "0");
         // ---- economy dashboard (FRED)
         System.setProperty("FRED_BASE_URL", base + "/fred");

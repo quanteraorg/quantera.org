@@ -595,11 +595,80 @@ final class Yahoo {
 
     /** Exchange suffixes Yahoo uses for non-US listings (BRK.B and BF.B stay US). */
     static final Set<String> SUFFIXES = Set.of("NS", "BO", "T", "L", "IL", "DE", "F", "PA", "AS", "BR", "LS", "MI", "MC", "SW", "VI", "ST", "OL", "CO", "HE", "IR", "WA", "AT", "PR", "BD",
-            "HK", "SS", "SZ", "KS", "KQ", "TW", "TWO", "AX", "NZ", "SI", "JK", "KL", "BK", "PS", "TO", "V", "NE", "CN", "SA", "MX", "BA", "SN", "SR", "TA", "JO", "IS", "CA", "QA", "KW", "AE", "XC", "NYB");
+            "HK", "SS", "SZ", "KS", "KQ", "TW", "TWO", "AX", "NZ", "SI", "JK", "KL", "BK", "PS", "TO", "V", "NE", "CN", "SA", "MX", "BA", "SN", "SR", "TA", "JO", "IS", "CA", "QA", "KW", "AE", "XC", "NYB", "PVT");
 
     static boolean isGlobal(String s) {
         if (s.startsWith("^") || s.contains("=")) return true;
         int d = s.lastIndexOf('.');
         return d > 0 && SUFFIXES.contains(s.substring(d + 1).toUpperCase());
+    }
+
+    // ---------------------------------------------------------------- private companies (Yahoo Finance, data from Forge Global)
+
+    static final java.util.regex.Pattern PVT = java.util.regex.Pattern.compile("^[A-Z0-9]{1,8}\\.PVT$");
+    private static String day(Object epochSec) { Double d = epochSec instanceof Map ? raw(epochSec) : num(epochSec); return d == null ? null : LocalDate.ofEpochDay(Math.floorDiv(d.longValue(), 86400)).toString(); }
+
+    /** Every private company Yahoo tracks: estimated valuation, funding, latest round and secondary-market price. Cached 30 minutes. */
+    static Map<String, Object> privates() {
+        return CACHE.get("pvt", 30 * 60_000L, () -> {
+            Map<String, Map<String, Object>> by = new LinkedHashMap<>();
+            String f = "ticker,symbol,companyName,regularMarketPrice,fiftyTwoWeekChangePercent,latestImpliedValuation,fundingToDate,latestFundingDate,latestAmountRaised,latestShareClass,sector";
+            for (String id : List.of("HIGHEST_VALUATION_PRIVATE_COMPANY", "MOST_FUNDED_PRIVATE_COMPANY", "RECENTLY_FUNDED_PRIVATE_COMPANY")) {
+                Map<String, Object> res;
+                try { res = map(list(map(call("/v1/finance/screener/predefined/saved?scrIds=" + id + "&count=250&start=0&useRecordsResponse=true&fields=" + f, null, false).get("finance")).get("result")).stream().findFirst().orElse(null)); }
+                catch (UpstreamException e) { if (by.isEmpty() && id.startsWith("HIGHEST")) throw e; continue; }
+                for (Object o : list(res.get("records"))) {
+                    Map<String, Object> m = map(o);
+                    String sym = str(m.get("ticker")) != null ? str(m.get("ticker")) : str(m.get("symbol"));
+                    if (sym == null || !PVT.matcher(sym).matches() || by.containsKey(sym)) continue;
+                    // latestAmountRaised sometimes holds a share count (e.g. 68,209), so tiny amounts are dropped
+                    by.put(sym, Json.obj("symbol", sym, "name", str(m.get("companyName")), "sector", str(m.get("sector")), "price", num(m.get("regularMarketPrice")),
+                            "change52w", num(m.get("fiftyTwoWeekChangePercent")), "valuation", num(m.get("latestImpliedValuation")), "funding", num(m.get("fundingToDate")),
+                            "lastRoundDate", day(m.get("latestFundingDate")), "lastRaised", num(m.get("latestAmountRaised")) != null && num(m.get("latestAmountRaised")) >= 1e5 ? num(m.get("latestAmountRaised")) : null, "lastRound", str(m.get("latestShareClass"))));
+                }
+            }
+            if (by.isEmpty()) throw new UpstreamException("Private company data is unavailable right now");
+            List<Object> out = new ArrayList<>(by.values());
+            out.sort(Comparator.comparingDouble(o -> -Optional.ofNullable(num(map(o).get("valuation"))).orElse(0.0)));
+            return Json.obj("companies", out, "source", "Yahoo Finance (Forge Global)", "updated", Instant.now().toString());
+        });
+    }
+
+    /** One private company: profile, every funding round with post-money valuation, mutual-fund marks (with SEC filing links) and price history. Cached 6 hours. */
+    static Map<String, Object> privateCompany(String s) {
+        return CACHE.get("pvc" + s, 6 * 3600_000L, () -> {
+            Map<String, Object> r = map(list(map(call("/v10/finance/quoteSummary/" + enc(s) + "?modules=price,assetProfile,fundingRounds,marks,summaryDetail", null, true).get("quoteSummary")).get("result")).stream().findFirst().orElse(null));
+            if (r.isEmpty()) throw new UpstreamException("Company not found", 404);
+            Map<String, Object> p = map(r.get("price")), ap = map(r.get("assetProfile")), sd = map(r.get("summaryDetail"));
+            List<Object> rounds = new ArrayList<>(), marks = new ArrayList<>();
+            for (Object o : list(map(r.get("fundingRounds")).get("fundingRoundList"))) {
+                Map<String, Object> m = map(o);
+                rounds.add(Json.obj("date", day(m.get("date")), "round", str(m.get("shareClassShortLabel")) != null ? str(m.get("shareClassShortLabel")) : str(m.get("shareClass")),
+                        "raised", raw(m.get("amountRaised")) != null && raw(m.get("amountRaised")) >= 1e5 ? raw(m.get("amountRaised")) : null, "issuePrice", raw(m.get("issuePrice")), "valuation", raw(m.get("impliedValuation"))));
+            }
+            rounds.sort(Comparator.comparing(o -> String.valueOf(map(o).get("date")), Comparator.reverseOrder())); // newest first
+            for (Object o : list(map(r.get("marks")).get("markList"))) {
+                Map<String, Object> m = map(o);
+                String link = str(m.get("filingLink"));
+                marks.add(Json.obj("date", day(m.get("date")), "fund", str(m.get("fund")), "shareClass", str(m.get("shareClass")), "price", raw(m.get("price")),
+                        "filing", link != null && link.startsWith("https://www.sec.gov/") ? link : null));
+                if (marks.size() >= 12) break;
+            }
+            Map<String, Object> summary = null;
+            for (Object o : list(privates().get("companies"))) if (s.equals(map(o).get("symbol"))) summary = map(o);
+            List<Object> pts = new ArrayList<>();
+            try { for (Object b : list(chart(s, "5y", "1wk").get("bars"))) pts.add(Json.obj("t", String.valueOf(map(b).get("t")).substring(0, 10), "c", map(b).get("c"))); } catch (UpstreamException ignored) {}
+            String name = str(p.get("longName")) != null ? str(p.get("longName")) : str(p.get("shortName"));
+            Double hi = raw(sd.get("fiftyTwoWeekHigh")), lo = raw(sd.get("fiftyTwoWeekLow"));
+            if (hi == null && !pts.isEmpty()) { // not reported for private companies: from the last year of weekly prices
+                String yearAgo = LocalDate.now(ZoneOffset.UTC).minusYears(1).toString();
+                for (Object o : pts) { Map<String, Object> x = map(o); Double c = num(x.get("c")); if (c == null || String.valueOf(x.get("t")).compareTo(yearAgo) < 0) continue; hi = hi == null ? c : Math.max(hi, c); lo = lo == null ? c : Math.min(lo, c); }
+            }
+            return Json.obj("symbol", s, "name", name, "price", raw(p.get("regularMarketPrice")), "currency", str(p.get("currency")),
+                    "high52", hi, "low52", lo,
+                    "summary", summary, "sector", str(ap.get("sectorDisp")) != null ? str(ap.get("sectorDisp")) : str(ap.get("sector")), "industry", str(ap.get("industryDisp")),
+                    "city", str(ap.get("city")), "state", str(ap.get("state")), "country", str(ap.get("country")), "website", str(ap.get("website")), "employees", num(ap.get("fullTimeEmployees")),
+                    "description", str(ap.get("longBusinessSummary")), "rounds", rounds, "marks", marks, "history", pts, "source", "Yahoo Finance (Forge Global)");
+        });
     }
 }
