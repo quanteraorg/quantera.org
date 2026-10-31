@@ -1,14 +1,52 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://quantera-api.onrender.com/api/:path*" }
+    {
+      "source": "/stock/:s",
+      "destination": "https://quantera-api.onrender.com/seo/stock/:s"
+    },
+    {
+      "source": "/private-company/:s",
+      "destination": "https://quantera-api.onrender.com/seo/private/:s"
+    },
+    {
+      "source": "/stocks",
+      "destination": "https://quantera-api.onrender.com/seo/stocks"
+    },
+    {
+      "source": "/private-companies",
+      "destination": "https://quantera-api.onrender.com/seo/private"
+    },
+    {
+      "source": "/sitemap-markets.xml",
+      "destination": "https://quantera-api.onrender.com/seo/sitemap.xml"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://quantera-api.onrender.com/api/:path*"
+    }
   ],
-  "headers": [{
-    "source": "/(.*)",
-    "headers": [
-      { "key": "X-Content-Type-Options", "value": "nosniff" },
-      { "key": "X-Frame-Options", "value": "DENY" },
-      { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-      { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
-    ]
-  }]
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    }
+  ],
+  "cleanUrls": true
 }

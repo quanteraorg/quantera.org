@@ -67,6 +67,12 @@ iPhone/iPad users must add the site to the Home Screen before notifications work
 - Search is answered from the in-memory US directory once it has loaded, so typing in the search box costs no quota.
 - Index levels (^GSPC etc.) that the plan does not include are remembered for 6 h instead of being retried on every markets refresh.
 
+## Search-friendly pages
+The app lives behind #/ URLs, which Google does not treat as separate pages. These plain HTML pages exist for search engines and link previews; Vercel rewrites the public URLs to them (frontend/vercel.json):
+- /stock/AAPL -> /seo/stock/AAPL, /private-company/anthropic -> /seo/private/anthropic, /stocks and /private-companies (directories), /sitemap-markets.xml.
+- Lesson pages are static files in frontend/public/learn, built from frontend/scripts/lessons.json. Re-run node frontend/scripts/build-learn.js after changing lessons.
+Set SITE_URL if the site moves to a custom domain (also update robots.txt and the sitemaps in frontend/public). Prices are delayed Yahoo Finance data: move to a licensed feed before a commercial launch.
+
 ## Scheduled market refresh
 Set MARKET_REFRESH_SEC (60 or more, e.g. 300) to rebuild /api/markets in the background on a fixed schedule.
 Upstream calls then stay flat however many visitors arrive. Leave it unset on a free Alpha Vantage key:
