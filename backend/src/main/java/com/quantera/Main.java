@@ -91,6 +91,7 @@ public final class Main {
         ROUTES.put("/api/push/list", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.listFor(r.body()); }, 0, 30));
         ROUTES.put("/api/push/delete", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.remove(r.body()); }, 0, 30));
         ROUTES.put("/api/push/test", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.test(r.body()); }, 0, 6));
+        ROUTES.put("/api/fundamentals", new Route(r -> Yahoo.fundamentals(symbol(r)), 900, 60));
         ROUTES.put("/api/private", new Route(r -> Yahoo.privates(), 600, 60));
         ROUTES.put("/api/private/company", new Route(r -> {
             String s = r.query().getOrDefault("symbol", "").toUpperCase();

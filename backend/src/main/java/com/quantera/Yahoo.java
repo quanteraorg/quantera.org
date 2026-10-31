@@ -603,6 +603,80 @@ final class Yahoo {
         return d > 0 && SUFFIXES.contains(s.substring(d + 1).toUpperCase());
     }
 
+    // ---------------------------------------------------------------- fundamentals for any stock worldwide
+
+    private static final String[][] STATEMENT = {{"revenue", "TotalRevenue"}, {"grossProfit", "GrossProfit"}, {"operatingIncome", "OperatingIncome"}, {"ebitda", "EBITDA"}, {"netIncome", "NetIncome"}, {"eps", "DilutedEPS"},
+            {"operatingCashFlow", "OperatingCashFlow"}, {"capex", "CapitalExpenditure"}, {"freeCashFlow", "FreeCashFlow"}, {"cash", "CashAndCashEquivalents"}, {"debt", "TotalDebt"}, {"assets", "TotalAssets"},
+            {"liabilities", "TotalLiabilitiesNetMinorityInterest"}, {"equity", "StockholdersEquity"}};
+
+    /** Income statement, balance sheet and cash flow by period, oldest first ("annual" or "quarterly"), in the currency the company reports in. */
+    private static List<Object> statements(Map<String, Map<String, Object>> annual, Map<String, Map<String, Object>> quarterly, String period) {
+        List<Object> out = new ArrayList<>();
+        for (Map<String, Object> row : (period.equals("annual") ? annual : quarterly).values())
+            if (row.get("revenue") != null || row.get("netIncome") != null) out.add(row);
+        return out.size() > 8 ? out.subList(out.size() - 8, out.size()) : out;
+    }
+
+    /** Valuation, growth, profitability, financial health, analyst views and statements for one symbol. Parts Yahoo lacks (funds and indexes have no statements) are left empty. Cached 1 hour. */
+    static Map<String, Object> fundamentals(String s) {
+        return CACHE.get("fnd" + s, 3600_000L, () -> {
+            String y = isGlobal(s) ? s : ySym(s); // SHEL.L stays as it is; BRK.B becomes BRK-B
+            Map<String, Object> r = Map.of();
+            try { r = map(list(map(call("/v10/finance/quoteSummary/" + enc(y) + "?modules=price,summaryDetail,defaultKeyStatistics,financialData,calendarEvents,earningsHistory,recommendationTrend", null, true).get("quoteSummary")).get("result")).stream().findFirst().orElse(null)); }
+            catch (UpstreamException e) { if (e.code == 429) throw e; }
+            Map<String, Map<String, Object>> annual = new TreeMap<>(), quarterly = new TreeMap<>();
+            String reported = null;
+            StringBuilder types = new StringBuilder();
+            for (String[] f : STATEMENT) types.append("annual").append(f[1]).append(",quarterly").append(f[1]).append(",");
+            long now = Instant.now().getEpochSecond();
+            try {
+                for (Object o : list(map(call("/ws/fundamentals-timeseries/v1/finance/timeseries/" + enc(y) + "?type=" + types + "&period1=" + (now - 7 * 366 * 86400L) + "&period2=" + now + "&merge=false", null, false).get("timeseries")).get("result"))) {
+                    Map<String, Object> x = map(o);
+                    String t = str(list(map(x.get("meta")).get("type")).stream().findFirst().orElse(null));
+                    if (t == null) continue;
+                    boolean isAnnual = t.startsWith("annual");
+                    String name = t.substring(isAnnual ? 6 : 9);
+                    String field = null;
+                    for (String[] f : STATEMENT) if (f[1].equals(name)) field = f[0];
+                    if (field == null) continue;
+                    for (Object e : list(x.get(t))) {
+                        Map<String, Object> m = map(e);
+                        String d = str(m.get("asOfDate"));
+                        Double v = raw(m.get("reportedValue"));
+                        if (d == null || v == null) continue;
+                        (isAnnual ? annual : quarterly).computeIfAbsent(d, k -> Json.obj("date", k)).put(field, v);
+                        if (str(m.get("currencyCode")) != null) reported = str(m.get("currencyCode"));
+                    }
+                }
+            } catch (UpstreamException e) { if (e.code == 429) throw e; }
+            if (r.isEmpty() && annual.isEmpty() && quarterly.isEmpty()) throw new UpstreamException("No fundamentals for this symbol", 404);
+            Map<String, Object> p = map(r.get("price")), sd = map(r.get("summaryDetail")), ks = map(r.get("defaultKeyStatistics")), fd = map(r.get("financialData"));
+            Map<String, Object> key = new LinkedHashMap<>();
+            Object[][] fields = {{"marketCap", p, "marketCap"}, {"pe", sd, "trailingPE"}, {"forwardPe", sd, "forwardPE"}, {"ps", sd, "priceToSalesTrailing12Months"}, {"pb", ks, "priceToBook"}, {"peg", ks, "pegRatio"}, {"evEbitda", ks, "enterpriseToEbitda"},
+                    {"eps", ks, "trailingEps"}, {"forwardEps", ks, "forwardEps"}, {"dividendYield", sd, "dividendYield"}, {"payoutRatio", sd, "payoutRatio"}, {"beta", sd, "beta"}, {"high52", sd, "fiftyTwoWeekHigh"}, {"low52", sd, "fiftyTwoWeekLow"},
+                    {"dayHigh", sd, "dayHigh"}, {"dayLow", sd, "dayLow"}, {"prevClose", sd, "previousClose"}, {"open", sd, "open"}, {"volume", sd, "volume"}, {"avgVolume", sd, "averageVolume"}, {"shares", ks, "sharesOutstanding"},
+                    {"netAssets", ks, "totalAssets"}, {"fundYield", sd, "yield"}, {"grossMargin", fd, "grossMargins"}, {"operatingMargin", fd, "operatingMargins"}, {"profitMargin", fd, "profitMargins"}, {"roe", fd, "returnOnEquity"}, {"roa", fd, "returnOnAssets"},
+                    {"revenueGrowth", fd, "revenueGrowth"}, {"earningsGrowth", fd, "earningsGrowth"}, {"cash", fd, "totalCash"}, {"debt", fd, "totalDebt"}, {"debtToEquity", fd, "debtToEquity"}, {"currentRatio", fd, "currentRatio"}, {"freeCashFlow", fd, "freeCashflow"}, {"revenue", fd, "totalRevenue"}};
+            for (Object[] f : fields) { @SuppressWarnings("unchecked") Double v = raw(((Map<String, Object>) f[1]).get(f[2])); if (v != null) key.put((String) f[0], v); }
+            Map<String, Object> analysts = null;
+            if (raw(fd.get("targetMeanPrice")) != null || str(fd.get("recommendationKey")) != null) {
+                Map<String, Object> tr = map(list(map(r.get("recommendationTrend")).get("trend")).stream().findFirst().orElse(null));
+                analysts = Json.obj("target", raw(fd.get("targetMeanPrice")), "low", raw(fd.get("targetLowPrice")), "high", raw(fd.get("targetHighPrice")), "count", raw(fd.get("numberOfAnalystOpinions")), "rating", str(fd.get("recommendationKey")),
+                        "strongBuy", num(tr.get("strongBuy")), "buy", num(tr.get("buy")), "hold", num(tr.get("hold")), "sell", num(tr.get("sell")), "strongSell", num(tr.get("strongSell")));
+            }
+            List<Object> earnings = new ArrayList<>();
+            for (Object o : list(map(r.get("earningsHistory")).get("history"))) {
+                Map<String, Object> m = map(o);
+                if (raw(m.get("epsActual")) != null) earnings.add(Json.obj("quarter", day(m.get("quarter")), "actual", raw(m.get("epsActual")), "estimate", raw(m.get("epsEstimate")), "surprise", raw(m.get("surprisePercent"))));
+            }
+            String next = day(list(map(map(r.get("calendarEvents")).get("earnings")).get("earningsDate")).stream().findFirst().orElse(null));
+            String fin = str(fd.get("financialCurrency")) != null ? str(fd.get("financialCurrency")) : reported;
+            return Json.obj("symbol", s, "name", str(p.get("longName")) != null ? str(p.get("longName")) : str(p.get("shortName")), "type", str(p.get("quoteType")), "currency", str(p.get("currency")), "financialCurrency", fin, "price", raw(p.get("regularMarketPrice")),
+                    "key", key, "analysts", analysts, "nextEarnings", next != null && next.compareTo(LocalDate.now(ZoneOffset.UTC).toString()) >= 0 ? next : null, "earnings", earnings,
+                    "annual", statements(annual, quarterly, "annual"), "quarterly", statements(annual, quarterly, "quarterly"), "source", "Yahoo Finance");
+        });
+    }
+
     // ---------------------------------------------------------------- private companies (Yahoo Finance, data from Forge Global)
 
     static final java.util.regex.Pattern PVT = java.util.regex.Pattern.compile("^[A-Z0-9]{1,8}\\.PVT$");
