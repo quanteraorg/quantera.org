@@ -437,6 +437,8 @@ public class TestMain {
         t("fundamentals: a symbol with no data is a 404, not an error page", get(p, "/api/fundamentals?symbol=NOFUND").code == 404);
         String seoHtml = http(p, "/seo/stock/fndx");
         t("seo: stock page is real HTML with title, canonical, numbers and app link", seoHtml.contains("<title>Fund X (FNDX) Stock") && seoHtml.contains("rel=\"canonical\" href=\"https://quanteraorg.vercel.app/stock/FNDX\"") && seoHtml.contains("¥5.00T") && seoHtml.contains("/#/asset/FNDX") && seoHtml.contains("application/ld+json"));
+        t("seo: headline numbers state their period", seoHtml.contains("Latest quarter, vs a year ago") && seoHtml.contains("Full-year figures"));
+        t("seo: listed-rounds total only when the table sums to under half the reported total", Seo.listedRaised(100.0, List.of(Json.obj("raised", 30.0), Json.obj("raised", null))) == 30.0 && Seo.listedRaised(100.0, List.of(Json.obj("raised", 50.0))) == null && Seo.listedRaised(100.0, List.of(Json.obj("raised", null))) == null && Seo.listedRaised(null, List.of(Json.obj("raised", 5.0))) == null);
         t("seo: unknown stock gets a noindex 404", http(p, "/seo/stock/NOFUND").contains("noindex") && !seoHtml.contains("noindex"));
         t("seo: page text is escaped", Seo.h("<script>'\"&").equals("&lt;script&gt;&#39;&quot;&amp;"));
         t("seo: readable private company slug", Seo.slug("Figure AI, Inc.").equals("figure-ai-inc"));

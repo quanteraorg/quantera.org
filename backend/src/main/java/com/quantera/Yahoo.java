@@ -716,7 +716,7 @@ final class Yahoo {
             String next = day(list(map(map(r.get("calendarEvents")).get("earnings")).get("earningsDate")).stream().findFirst().orElse(null));
             String fin = str(fd.get("financialCurrency")) != null ? str(fd.get("financialCurrency")) : reported;
             return Json.obj("symbol", s, "name", str(p.get("longName")) != null ? str(p.get("longName")) : str(p.get("shortName")), "type", str(p.get("quoteType")), "currency", str(p.get("currency")), "financialCurrency", fin, "price", raw(p.get("regularMarketPrice")),
-                    "key", key, "analysts", analysts, "nextEarnings", next != null && next.compareTo(LocalDate.now(ZoneOffset.UTC).toString()) >= 0 ? next : null, "earnings", earnings,
+                    "latestQuarter", day(ks.get("mostRecentQuarter")), "key", key, "analysts", analysts, "nextEarnings", next != null && next.compareTo(LocalDate.now(ZoneOffset.UTC).toString()) >= 0 ? next : null, "earnings", earnings,
                     "annual", statements(annual, quarterly, "annual"), "quarterly", statements(annual, quarterly, "quarterly"), "source", "Yahoo Finance");
         });
     }
