@@ -63,21 +63,27 @@ final class Sec {
             long c = cik(symbol);
             Map<String, Object> j = map(get(cfg("SEC_DATA_URL", "https://data.sec.gov") + "/submissions/CIK" + pad(c) + ".json", 20));
             Map<String, Object> rec = map(map(j.get("filings")).get("recent"));
-            List<Object> form = list(rec.get("form")), date = list(rec.get("filingDate")), acc = list(rec.get("accessionNumber")), doc = list(rec.get("primaryDocument")), desc = list(rec.get("primaryDocDescription")), rep = list(rec.get("reportDate"));
-            List<Object> out = new ArrayList<>();
+            List<Object> form = list(rec.get("form")), date = list(rec.get("filingDate")), acc = list(rec.get("accessionNumber")), doc = list(rec.get("primaryDocument")), desc = list(rec.get("primaryDocDescription")), rep = list(rec.get("reportDate")), items = list(rec.get("items")), accepted = list(rec.get("acceptanceDateTime"));
+            List<Object> out = new ArrayList<>(), earnings = new ArrayList<>();
             int insiders = 0;
             String cutoff = LocalDate.now(ZoneOffset.UTC).minusDays(90).toString();
             for (int i = 0; i < form.size(); i++) {
                 String f = str(form.get(i)), d = i < date.size() ? str(date.get(i)) : null;
                 if (f == null || d == null) continue;
                 if (f.equals("4") && d.compareTo(cutoff) >= 0) insiders++;
+                // Item 2.02 of an 8-K is the earnings release; its timestamp says whether it came out after the 4 pm New York close
+                if (f.equals("8-K") && earnings.size() < 12 && i < items.size() && str(items.get(i)) != null && str(items.get(i)).contains("2.02")) {
+                    boolean after = false;
+                    try { after = !Instant.parse(str(accepted.get(i))).atZone(ZoneId.of("America/New_York")).toLocalTime().isBefore(LocalTime.of(16, 0)); } catch (RuntimeException ignored) {}
+                    earnings.add(Json.obj("date", d, "afterClose", after));
+                }
                 if (!FORMS.containsKey(f) || out.size() >= 40) continue;
                 String a = i < acc.size() ? str(acc.get(i)) : "", pd = i < doc.size() ? str(doc.get(i)) : "";
                 String url = "https://www.sec.gov/Archives/edgar/data/" + c + "/" + a.replace("-", "") + "/" + (pd == null ? "" : pd);
                 out.add(Json.obj("form", f, "label", FORMS.get(f), "date", d, "period", i < rep.size() ? str(rep.get(i)) : null, "description", i < desc.size() ? str(desc.get(i)) : null, "url", url));
             }
             return Json.obj("symbol", symbol, "cik", c, "name", str(j.get("name")), "industry", str(j.get("sicDescription")), "fiscalYearEnd", str(j.get("fiscalYearEnd")),
-                    "insiderFilings90d", insiders, "filings", out, "all", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=" + c + "&type=&dateb=&owner=include&count=40", "source", "SEC EDGAR");
+                    "insiderFilings90d", insiders, "filings", out, "earnings", earnings, "all", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=" + c + "&type=&dateb=&owner=include&count=40", "source", "SEC EDGAR");
         });
     }
 

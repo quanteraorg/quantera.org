@@ -16,6 +16,13 @@ public final class Main {
     interface Handler { Object handle(Req r) throws Exception; }
     record Req(String method, Map<String, String> query, Object body) {}
     record Route(Handler h, int ttlSec, int maxPerMin) {}
+    /** Optional numeric screener filter; empty means no filter. */
+    private static Double screenNum(Req r, String k) {
+        String v = r.query().getOrDefault(k, "").trim();
+        if (v.isEmpty()) return null;
+        try { double d = Double.parseDouble(v); if (d >= 0 && d < 1e16) return d; } catch (NumberFormatException ignored) {}
+        throw new UpstreamException("Bad filter: " + k, 400);
+    }
 
     static final Map<String, Route> ROUTES = new LinkedHashMap<>();
     static final RateLimiter LIMITER = new RateLimiter();
@@ -91,6 +98,13 @@ public final class Main {
         ROUTES.put("/api/push/list", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.listFor(r.body()); }, 0, 30));
         ROUTES.put("/api/push/delete", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.remove(r.body()); }, 0, 30));
         ROUTES.put("/api/push/test", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.test(r.body()); }, 0, 6));
+        ROUTES.put("/api/screen", new Route(r -> {
+            String c = r.query().getOrDefault("c", "us").toLowerCase(), sector = r.query().getOrDefault("sector", ""), sort = r.query().getOrDefault("sort", "cap");
+            if (!c.matches("[a-z]{2}") || !(sector.isEmpty() || Yahoo.SECTORS.contains(sector)) || !sort.matches("cap|gainers|losers|active|pe|dividend")) throw new UpstreamException("Bad request", 400);
+            int page = 1;
+            try { page = Math.max(1, Math.min(Integer.parseInt(r.query().getOrDefault("page", "1")), 400)); } catch (NumberFormatException ignored) {}
+            return Yahoo.screen(c, screenNum(r, "cap"), screenNum(r, "pe"), screenNum(r, "growth"), screenNum(r, "roe"), screenNum(r, "div"), sector, sort, page);
+        }, 300, 30));
         ROUTES.put("/api/fundamentals", new Route(r -> Yahoo.fundamentals(symbol(r)), 900, 60));
         ROUTES.put("/api/private", new Route(r -> Yahoo.privates(), 600, 60));
         ROUTES.put("/api/private/company", new Route(r -> {
