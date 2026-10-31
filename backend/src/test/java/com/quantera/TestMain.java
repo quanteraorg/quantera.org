@@ -43,6 +43,8 @@ public class TestMain {
     static String fn(HttpExchange ex) { for (String p : ex.getRequestURI().getRawQuery().split("&")) if (p.startsWith("function=")) return p.substring(9); return ""; }
     static String sym(HttpExchange ex) { for (String p : ex.getRequestURI().getRawQuery().split("&")) if (p.startsWith("symbol=")) return p.substring(7); return ""; }
 
+    static String http(int port, String path) throws Exception { return java.net.http.HttpClient.newHttpClient().send(java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:" + port + path)).GET().build(), java.net.http.HttpResponse.BodyHandlers.ofString()).body(); }
+
     public static void main(String[] a) throws Exception {
         HttpServer fake = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         fake.createContext("/av", ex -> {
@@ -424,6 +426,14 @@ public class TestMain {
         t("fundamentals: key stats, analysts, earnings and statements in the reporting currency, oldest first", r.code == 200 && d(fk.get("pe")) == 9.5 && d(fk.get("marketCap")) == 5e12 && d(fk.get("revenueGrowth")) == 0.1 && d(fa.get("target")) == 3600 && d(fa.get("buy")) == 10
             && fan.size() == 2 && d(m(fan.get(1)).get("revenue")) == 5e13 && d(m(fan.get(1)).get("netIncome")) == 3e12 && l(m(r.body).get("quarterly")).size() == 1 && "JPY".equals(m(r.body).get("financialCurrency")) && "2100-01-01".equals(m(r.body).get("nextEarnings")) && d(m(l(m(r.body).get("earnings")).get(0)).get("surprise")) == 0.428);
         t("fundamentals: a symbol with no data is a 404, not an error page", get(p, "/api/fundamentals?symbol=NOFUND").code == 404);
+        String seoHtml = http(p, "/seo/stock/fndx");
+        t("seo: stock page is real HTML with title, canonical, numbers and app link", seoHtml.contains("<title>Fund X (FNDX) Stock") && seoHtml.contains("rel=\"canonical\" href=\"https://quanteraorg.vercel.app/stock/FNDX\"") && seoHtml.contains("¥5.00T") && seoHtml.contains("/#/asset/FNDX") && seoHtml.contains("application/ld+json"));
+        t("seo: unknown stock gets a noindex 404", http(p, "/seo/stock/NOFUND").contains("noindex") && !seoHtml.contains("noindex"));
+        t("seo: page text is escaped", Seo.h("<script>'\"&").equals("&lt;script&gt;&#39;&quot;&amp;"));
+        t("seo: readable private company slug", Seo.slug("Figure AI, Inc.").equals("figure-ai-inc"));
+        String seoPvt = http(p, "/seo/private/anthropic"), seoMap = http(p, "/seo/sitemap.xml");
+        t("seo: private company page has valuation and funding rounds", seoPvt.contains("Anthropic Valuation") && seoPvt.contains("$965.0B") && seoPvt.contains("Series H-1") && http(p, "/seo/private/no-such-co").contains("noindex"));
+        t("seo: sitemap and directories list stock and private company URLs", seoMap.contains("/stock/AAPL</loc>") && !seoMap.contains("/stock/SPY</loc>") && seoMap.contains("/private-company/anthropic</loc>") && http(p, "/seo/stocks").contains("href=\"/stock/NVDA\"") && http(p, "/seo/private").contains("href=\"/private-company/openai\""));
         r = get(p, "/api/private");
         List<Object> pv = l(m(r.body).get("companies"));
         t("private companies: merged from Yahoo screeners, deduped, biggest valuation first, bad tickers dropped", r.code == 200 && pv.size() == 2 && "OPAI.PVT".equals(m(pv.get(0)).get("symbol"))

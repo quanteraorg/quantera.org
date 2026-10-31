@@ -1,0 +1,2187 @@
+[
+ {
+  "id": "compound",
+  "title": "Compound interest",
+  "cat": "Finance basics",
+  "level": "Beginner",
+  "desc": "Watch small, regular contributions outgrow the money you put in.",
+  "q": [
+   "Which input does compounding reward most?",
+   [
+    "Fees only",
+    "Time",
+    "Luck"
+   ],
+   1
+  ],
+  "world": "A 25-year-old saving $300 a month at 7% ends with several times the cash they deposited.",
+  "x": {
+   "i": "Compound interest means you earn returns not only on the money you put in, but also on the returns you already earned. Your gains start earning their own gains, so growth speeds up the longer you wait.",
+   "h": [
+    "Each year your balance grows by the rate of return. Next year the same percentage applies to a <b>bigger</b> balance, so the dollar gain is larger every year.",
+    "Formula: <b>Future value = Start × (1 + r)<sup>years</sup></b>, plus whatever you add along the way.",
+    "Three inputs matter: how much you save, the rate you earn, and — most of all — <b>how long</b> you leave it."
+   ],
+   "e": "$10,000 at 7% a year: after 10 years it is about $19,700; after 20 years about $38,700; after 30 years about $76,100. The last 10 years add more than the first 20 combined, because the base is so much bigger.",
+   "m": [
+    "Waiting to start \"until I have more money\" — lost years cost more than small amounts.",
+    "Ignoring fees: 1% a year in fees compounds against you just as returns compound for you.",
+    "Assuming the rate is guaranteed. Stock returns vary a lot from year to year."
+   ],
+   "k": [
+    "Gains earn gains, so growth accelerates over time.",
+    "Time is the most powerful input.",
+    "Small, regular contributions add up to large sums."
+   ],
+   "q": [
+    [
+     "$1,000 grows 10% a year for 2 years. What is it worth?",
+     [
+      "$1,210",
+      "$1,200",
+      "$1,100"
+     ],
+     0,
+     "Year 1: $1,100. Year 2: 10% of $1,100 is $110, so $1,210 — the extra $10 is interest on interest."
+    ],
+    [
+     "Which saver likely ends up with more at 65 (same 7% return)?",
+     [
+      "Saves $200/month from age 25",
+      "Saves $400/month from age 45",
+      "They end up equal"
+     ],
+     0,
+     "Starting 20 years earlier gives compounding far more time; the early saver ends with much more despite putting in less."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "rates",
+  "title": "Rates and markets",
+  "cat": "Macro",
+  "level": "Intermediate",
+  "desc": "Move the policy rate and see bonds, stocks, housing, the dollar and gold respond.",
+  "q": [
+   "When rates rise, bond prices usually…",
+   [
+    "Rise",
+    "Stay flat",
+    "Fall"
+   ],
+   2
+  ],
+  "world": "Rate hikes in 2022 pushed bond and growth-stock prices down together.",
+  "x": {
+   "i": "Interest rates are the price of borrowing money. When the central bank (the Fed in the US) raises its policy rate, borrowing gets more expensive across the whole economy, and almost every asset price reacts.",
+   "h": [
+    "<b>Bonds:</b> new bonds pay more, so existing lower-paying bonds fall in price.",
+    "<b>Stocks:</b> future profits are worth less today when you can earn more in safe assets, and companies pay more on debt. Fast-growing companies, whose profits are far in the future, are hit hardest.",
+    "<b>Housing:</b> mortgages get pricier, so demand and prices cool.",
+    "<b>Currency:</b> higher rates attract foreign money, which usually strengthens the dollar.",
+    "Cuts work the other way round."
+   ],
+   "e": "In 2022 the Fed raised rates from near 0% to over 4%. Bond prices fell sharply, the Nasdaq (heavy in growth stocks) fell about 33%, mortgage rates doubled, and the dollar rose strongly.",
+   "m": [
+    "Thinking only \"the\" stock market reacts — sectors react differently (banks can benefit, growth stocks suffer).",
+    "Forgetting that markets move on <b>expectations</b>: a widely expected hike may barely move prices."
+   ],
+   "k": [
+    "Rates are the price of money and touch every asset.",
+    "Higher rates: bonds down, growth stocks down, dollar up, housing cooler.",
+    "Surprises move markets more than expected changes."
+   ],
+   "q": [
+    [
+     "Which stocks are usually hurt most by rising rates?",
+     [
+      "Fast-growing companies with profits far in the future",
+      "Utilities with steady dividends",
+      "All stocks equally"
+     ],
+     0,
+     "Their value depends on distant profits, which are discounted more heavily when rates rise."
+    ],
+    [
+     "The Fed raises rates exactly as everyone expected. The market most likely…",
+     [
+      "Moves little, because it was already priced in",
+      "Crashes",
+      "Doubles"
+     ],
+     0,
+     "Prices already reflect expectations; surprises cause the big moves."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "divers",
+  "title": "Diversification",
+  "cat": "Investing",
+  "level": "Beginner",
+  "desc": "Add stocks to a portfolio and see volatility fall toward a floor set by correlation.",
+  "q": [
+   "What limits the benefit of adding more stocks?",
+   [
+    "Ticker length",
+    "Exchange",
+    "Correlation"
+   ],
+   2
+  ],
+  "world": "Owning 20 semiconductor stocks diversifies far less than owning 20 different sectors.",
+  "x": {
+   "i": "Diversification means spreading your money across many investments that do not all move together, so one bad outcome cannot sink your whole portfolio.",
+   "h": [
+    "Each stock has its own risks (a failed product, a lawsuit). Owning many stocks averages those company-specific risks away.",
+    "What cannot be diversified away is <b>market risk</b> — the whole market falling together.",
+    "The key is <b>correlation</b>: how closely two investments move together. Adding assets with low correlation reduces risk most."
+   ],
+   "e": "One stock can easily fall 50% in a year. An index fund of 500 stocks fell about 19% in 2022, a bad year — painful, but nothing like the worst single stocks, some of which fell over 70%.",
+   "m": [
+    "Owning many stocks in one industry (\"20 tech stocks\") and thinking you are diversified.",
+    "Over-diversifying into dozens of funds that all hold the same things.",
+    "Expecting diversification to prevent losses in a broad crash — it reduces risk, it does not remove it."
+   ],
+   "k": [
+    "Spread money across companies, sectors, countries and asset types.",
+    "Low correlation is what makes diversification work.",
+    "It removes company risk, not market risk."
+   ],
+   "q": [
+    [
+     "Which portfolio is most diversified?",
+     [
+      "A global index fund plus a bond fund",
+      "10 bank stocks",
+      "One very safe stock"
+     ],
+     0,
+     "It spreads across thousands of companies, countries and two asset classes with low correlation."
+    ],
+    [
+     "Diversification can remove which risk?",
+     [
+      "A single company failing",
+      "The whole market falling",
+      "Inflation entirely"
+     ],
+     0,
+     "Company-specific risk averages out; market-wide risk remains."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "bond",
+  "title": "Bond prices and yields",
+  "cat": "Markets",
+  "level": "Intermediate",
+  "desc": "Drag the market yield and see why price and yield move in opposite directions.",
+  "q": [
+   "A 4% coupon bond when market yields hit 6% trades…",
+   [
+    "At a discount",
+    "At a premium",
+    "At par"
+   ],
+   0
+  ],
+  "world": "Long bonds fell sharply as yields rose, because their fixed coupons became less attractive.",
+  "x": {
+   "i": "A bond is a loan you make to a government or company. It pays a fixed interest payment (the coupon) and returns your money at maturity. Its price moves opposite to market interest rates.",
+   "h": [
+    "If rates rise to 6%, nobody pays full price for an old bond paying 4% — its price falls until its total yield matches 6%.",
+    "If rates fall, old higher-coupon bonds become more valuable and their prices rise.",
+    "<b>Yield</b> is the return you get if you buy at today's price and hold to maturity."
+   ],
+   "e": "A $1,000 bond paying $40 a year (4%). Market rates jump to 5%. To give a buyer about 5%, its price must fall toward roughly $960–$900 depending on years left. Longer bonds fall more.",
+   "m": [
+    "Thinking bonds cannot lose money — their price can fall a lot when rates rise, especially long bonds.",
+    "Confusing the coupon (fixed) with the yield (changes with price)."
+   ],
+   "k": [
+    "Price and yield move in opposite directions.",
+    "Longer maturity means bigger price swings.",
+    "Held to maturity, a high-quality bond still repays its face value."
+   ],
+   "q": [
+    [
+     "Market rates fall. What happens to existing bond prices?",
+     [
+      "They rise",
+      "They fall",
+      "Nothing"
+     ],
+     0,
+     "Their fixed coupons are now more attractive than new bonds, so buyers pay more."
+    ],
+    [
+     "Which bond's price moves most when rates change?",
+     [
+      "A 30-year bond",
+      "A 1-year bond",
+      "They move the same"
+     ],
+     0,
+     "Longer bonds lock in the coupon for longer, so they are more sensitive to rates."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "mc",
+  "title": "Risk and return paths",
+  "cat": "Quant",
+  "level": "Advanced",
+  "desc": "Simulate 25 futures for the same portfolio and see how wide the range of outcomes is.",
+  "q": [
+   "Higher volatility mainly widens…",
+   [
+    "The coupon",
+    "The range of outcomes",
+    "The dividend"
+   ],
+   1
+  ],
+  "world": "Two funds with the same average return can leave investors with very different outcomes.",
+  "x": {
+   "i": "Investing has a range of possible outcomes, not one number. A Monte Carlo simulation runs thousands of random \"possible futures\" to show how wide that range really is.",
+   "h": [
+    "Each simulated year draws a random return based on the expected return and volatility.",
+    "Repeating this many times gives a fan of paths: the middle shows the typical outcome; the edges show lucky and unlucky futures.",
+    "Higher volatility widens the fan, even with the same average return."
+   ],
+   "e": "$10,000 at an average 7% with 15% volatility over 20 years: the median ends near $38,000, but the unlucky 10% of paths finish under about $17,000 and the lucky 10% above $80,000.",
+   "m": [
+    "Planning on the average outcome only — you could easily land in the bottom part of the range.",
+    "Thinking the simulation predicts the future. It only shows possibilities given your assumptions."
+   ],
+   "k": [
+    "Think in ranges, not single numbers.",
+    "Volatility widens the range of outcomes.",
+    "Plan so that a bad-luck outcome is still acceptable."
+   ],
+   "q": [
+    [
+     "Two portfolios have the same average return; one is more volatile. The volatile one has…",
+     [
+      "A wider range of outcomes",
+      "A guaranteed higher result",
+      "The same range"
+     ],
+     0,
+     "Volatility spreads results out in both directions."
+    ],
+    [
+     "A Monte Carlo result says \"80% of paths reach your goal\". This means…",
+     [
+      "In 20% of simulated futures you fall short",
+      "You will certainly reach it",
+      "The return is 80%"
+     ],
+     0,
+     "It is a probability across simulated paths, not a promise."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "dcf",
+  "title": "Build a DCF",
+  "cat": "Equity research",
+  "level": "Advanced",
+  "desc": "Turn cash flow, growth and a discount rate into a value, and see how much rests on the terminal value.",
+  "q": [
+   "A higher discount rate makes value…",
+   [
+    "Unchanged",
+    "Lower",
+    "Higher"
+   ],
+   1
+  ],
+  "world": "Small changes to the discount rate can move a DCF value by tens of percent.",
+  "x": {
+   "i": "A discounted cash flow (DCF) model values a business as the sum of all the cash it will produce in the future, translated into today's money.",
+   "h": [
+    "Step 1: forecast free cash flow for several years.",
+    "Step 2: estimate a <b>terminal value</b> for all the years after that (often most of the total).",
+    "Step 3: <b>discount</b> each future amount back to today: value today = cash ÷ (1 + discount rate)<sup>years</sup>.",
+    "The discount rate reflects risk and the return investors require."
+   ],
+   "e": "A company makes $100M of free cash flow growing 5% a year. With a 9% discount rate and 2.5% long-term growth, the value is roughly $1.6B. Change the discount rate to 10% and it drops to about $1.4B — a 1-point change moves the value ~13%.",
+   "m": [
+    "Treating the output as precise — it is only as good as the assumptions.",
+    "Using a long-term growth rate above the economy's growth (it would eventually be bigger than the world).",
+    "Forgetting that the terminal value usually dominates the answer."
+   ],
+   "k": [
+    "Value = future cash in today's money.",
+    "Higher discount rate → lower value.",
+    "Test a range of assumptions, not one number."
+   ],
+   "q": [
+    [
+     "Why is $100 in five years worth less than $100 today?",
+     [
+      "You could invest today's $100 and earn a return meanwhile",
+      "Money expires",
+      "Banks charge fees"
+     ],
+     0,
+     "That lost opportunity (plus risk) is exactly what discounting captures."
+    ],
+    [
+     "Most of a typical DCF value comes from…",
+     [
+      "The terminal value",
+      "The first year's cash flow",
+      "The share count"
+     ],
+     0,
+     "Years beyond the forecast window usually account for well over half of the total."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "stock",
+  "title": "What is a stock?",
+  "cat": "Finance basics",
+  "level": "Beginner",
+  "desc": "A stock is a small slice of a company. See how company value turns into your share price.",
+  "q": [
+   "If a company is worth more, each share is usually…",
+   [
+    "Worth more",
+    "Worth less",
+    "Unchanged"
+   ],
+   0
+  ],
+  "world": "Owning 50 shares of a $100B company with 2B shares means each share is about $50.",
+  "x": {
+   "i": "A stock (or share) is a small piece of ownership in a company. If the company grows and earns more, your piece usually becomes worth more; some companies also pay part of their profit to owners as dividends.",
+   "h": [
+    "Companies sell shares to raise money; after that, investors trade them with each other on an exchange.",
+    "The price moves with supply and demand, which reflect what investors think future profits will be.",
+    "You make money two ways: the price rising (capital gain) and dividends.",
+    "Your maximum loss is what you paid; the possible gain has no ceiling."
+   ],
+   "e": "If a company has 1 billion shares and you own 100, you own one ten-millionth of it. If the company's value rises from $50B to $60B, each share goes from $50 to $60 and your 100 shares from $5,000 to $6,000.",
+   "m": [
+    "Thinking a low share price means \"cheap\" — a $5 stock can be more expensive than a $500 one relative to its profits.",
+    "Confusing the company with the stock: a great company can be a poor investment if the price already assumes perfection."
+   ],
+   "k": [
+    "A share is part-ownership of a business.",
+    "Prices reflect expectations of future profits.",
+    "Returns come from price gains and dividends."
+   ],
+   "q": [
+    [
+     "You own 1,000 shares of a company with 1,000,000 shares. You own…",
+     [
+      "0.1% of the company",
+      "1%",
+      "10%"
+     ],
+     0,
+     "1,000 ÷ 1,000,000 = 0.001, or 0.1%."
+    ],
+    [
+     "What is the most you can lose buying a stock (no borrowing)?",
+     [
+      "What you paid",
+      "Unlimited",
+      "Double what you paid"
+     ],
+     0,
+     "The price can only fall to zero."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "rule72",
+  "title": "The Rule of 72",
+  "cat": "Finance basics",
+  "level": "Beginner",
+  "desc": "A quick trick: divide 72 by your yearly return to see how long money takes to double.",
+  "q": [
+   "At 8% a year, money doubles in about…",
+   [
+    "20 years",
+    "4 years",
+    "9 years"
+   ],
+   2
+  ],
+  "world": "At 6% it takes about 12 years. At 12% it takes about 6.",
+  "x": {
+   "i": "The Rule of 72 is a quick mental trick: divide 72 by an annual growth rate to estimate how many years it takes for money to double.",
+   "h": [
+    "<b>Years to double ≈ 72 ÷ rate (%)</b>.",
+    "It works for anything that compounds: investments, inflation, debt.",
+    "It is most accurate for rates between about 4% and 12%."
+   ],
+   "e": "At 8% a year, money doubles in about 72 ÷ 8 = 9 years. At 3% inflation, prices double in about 24 years — so $100 of groceries today costs about $200 in 24 years.",
+   "m": [
+    "Using it for very high rates (at 50% it is noticeably off).",
+    "Forgetting it also works against you: credit-card debt at 24% doubles in about 3 years."
+   ],
+   "k": [
+    "72 ÷ rate = years to double.",
+    "Use it for investments, inflation and debt.",
+    "A few extra percent shortens doubling time a lot."
+   ],
+   "q": [
+    [
+     "Roughly how long does money take to double at 6%?",
+     [
+      "12 years",
+      "6 years",
+      "20 years"
+     ],
+     0,
+     "72 ÷ 6 = 12."
+    ],
+    [
+     "A loan at 18% a year left unpaid doubles in about…",
+     [
+      "4 years",
+      "18 years",
+      "10 years"
+     ],
+     0,
+     "72 ÷ 18 = 4 — compounding works against borrowers too."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "dividend",
+  "title": "Dividends and yield",
+  "cat": "Finance basics",
+  "level": "Beginner",
+  "desc": "Some companies pay cash to shareholders. Learn what yield means and what reinvesting does.",
+  "q": [
+   "Dividend yield is…",
+   [
+    "Total company profit",
+    "Yearly dividend divided by price",
+    "Share price divided by earnings"
+   ],
+   1
+  ],
+  "world": "A $100 share paying $3 a year has a 3% yield.",
+  "x": {
+   "i": "A dividend is cash a company pays its shareholders out of profits. The dividend yield tells you how much income you get each year for every dollar invested.",
+   "h": [
+    "<b>Dividend yield = annual dividend per share ÷ share price</b>.",
+    "If the price falls and the dividend stays, the yield rises — and vice versa.",
+    "A very high yield can be a warning: the market may expect the dividend to be cut.",
+    "Reinvesting dividends makes compounding much stronger."
+   ],
+   "e": "A stock at $50 pays $2 a year: yield 4%. If the price drops to $40, the same $2 is a 5% yield. Over the last century, reinvested dividends have made up a large share of total US stock returns.",
+   "m": [
+    "Chasing the highest yield without asking whether the company can keep paying it.",
+    "Ignoring taxes on dividends in taxable accounts."
+   ],
+   "k": [
+    "Yield = dividend ÷ price.",
+    "High yields can signal risk.",
+    "Reinvested dividends power long-term returns."
+   ],
+   "q": [
+    [
+     "A $100 stock pays $3 a year. Its dividend yield is…",
+     [
+      "3%",
+      "30%",
+      "0.3%"
+     ],
+     0,
+     "$3 ÷ $100 = 3%."
+    ],
+    [
+     "A stock's yield suddenly jumps to 12% because its price fell. This most likely means…",
+     [
+      "Investors fear the dividend will be cut",
+      "The company is very safe",
+      "Dividends doubled"
+     ],
+     0,
+     "Falling prices push the yield up, often because the market doubts the payout."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "loan",
+  "title": "Loan payments",
+  "cat": "Finance basics",
+  "level": "Beginner",
+  "desc": "See your monthly payment and how much interest you really pay over time.",
+  "q": [
+   "A longer loan usually means…",
+   [
+    "Higher payments, less interest",
+    "No interest",
+    "Lower payments, more total interest"
+   ],
+   2
+  ],
+  "world": "A 30-year loan costs far more interest than a 15-year loan on the same amount.",
+  "x": {
+   "i": "Loan payments repay interest and part of the original amount (principal) each month. How much you pay overall depends on the rate and how long the loan lasts.",
+   "h": [
+    "Early payments are mostly interest; later payments are mostly principal (this schedule is called amortisation).",
+    "A longer term lowers the monthly payment but raises total interest.",
+    "A small rate difference changes total cost a lot on big, long loans."
+   ],
+   "e": "A $300,000 mortgage over 30 years: at 4% the payment is about $1,432/month and total interest about $216,000; at 7% it is about $1,996/month and total interest about $419,000.",
+   "m": [
+    "Focusing only on the monthly payment and not the total cost.",
+    "Not paying extra principal when possible — even small extra payments cut years off a loan."
+   ],
+   "k": [
+    "Payments cover interest first, then principal.",
+    "Longer term = smaller payment, more interest overall.",
+    "Rate matters enormously on long loans."
+   ],
+   "q": [
+    [
+     "Stretching a car loan from 3 to 6 years usually…",
+     [
+      "Lowers the monthly payment but increases total interest",
+      "Lowers both",
+      "Raises both"
+     ],
+     0,
+     "You pay interest for twice as long."
+    ],
+    [
+     "Early in a mortgage, most of each payment goes to…",
+     [
+      "Interest",
+      "Principal",
+      "Fees"
+     ],
+     0,
+     "Interest is charged on the large remaining balance."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "pe",
+  "title": "The P/E ratio",
+  "cat": "Investing",
+  "level": "Beginner",
+  "desc": "Price divided by earnings. A quick way to see how expensive a stock is.",
+  "q": [
+   "A high P/E usually means investors expect…",
+   [
+    "Falling profits",
+    "No profits",
+    "Fast growth"
+   ],
+   2
+  ],
+  "world": "A P/E of 50 means paying $50 for each $1 of yearly profit.",
+  "x": {
+   "i": "The price-to-earnings (P/E) ratio shows how many dollars investors pay for each dollar of a company's yearly profit. It is the most common quick measure of how \"expensive\" a stock is.",
+   "h": [
+    "<b>P/E = share price ÷ earnings per share</b> (or market value ÷ total profit).",
+    "A high P/E means investors expect fast growth; a low P/E can mean low expectations — or a bargain.",
+    "Compare P/Es within the same industry and against the company's own history."
+   ],
+   "e": "A stock at $60 earning $3 per share has a P/E of 20. A fast-growing software company might trade at 40, a mature bank at 10. Neither is automatically right or wrong.",
+   "m": [
+    "Comparing P/Es across very different industries.",
+    "Ignoring that earnings can be temporarily high or low (e.g., in a recession).",
+    "Forgetting companies with losses have no meaningful P/E."
+   ],
+   "k": [
+    "P/E = price per dollar of profit.",
+    "High P/E = high growth expectations.",
+    "Compare like with like."
+   ],
+   "q": [
+    [
+     "A $90 stock earns $4.50 per share. Its P/E is…",
+     [
+      "20",
+      "4.5",
+      "90"
+     ],
+     0,
+     "90 ÷ 4.5 = 20."
+    ],
+    [
+     "Why might a company deserve a higher P/E than another?",
+     [
+      "Its profits are expected to grow faster",
+      "Its share price is higher",
+      "It has more employees"
+     ],
+     0,
+     "Investors pay more today for faster expected profit growth."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "fees",
+  "title": "Fees: small numbers, big impact",
+  "cat": "Investing",
+  "level": "Beginner",
+  "desc": "A 1% fee sounds tiny. Watch what it does to your money over decades.",
+  "q": [
+   "Fees matter more over…",
+   [
+    "Long periods",
+    "Short periods",
+    "Never"
+   ],
+   0
+  ],
+  "world": "On $10,000 over 30 years, a 1% yearly fee can cost tens of thousands of dollars.",
+  "x": {
+   "i": "Fees look tiny — 0.5% or 1% a year — but they are charged every year on your whole balance, so they compound against you and can take a huge share of your final wealth.",
+   "h": [
+    "The expense ratio of a fund is taken from your balance every year whether the fund gains or not.",
+    "Over decades, a 1% fee can consume around a quarter of your ending balance.",
+    "Low-cost index funds often charge 0.03%–0.10%."
+   ],
+   "e": "$100,000 for 30 years at 7%: with a 0.05% fee it grows to about $750,000; with a 1% fee about $574,000. That 1% cost you roughly $176,000.",
+   "m": [
+    "Judging a fee by its size in one year instead of over decades.",
+    "Assuming higher fees buy better performance — most high-fee active funds trail cheap index funds over time."
+   ],
+   "k": [
+    "Fees compound against you.",
+    "1% a year is a big deal over 30 years.",
+    "Prefer low-cost funds unless there is a clear reason."
+   ],
+   "q": [
+    [
+     "Over 30 years, which costs you more?",
+     [
+      "A 1% yearly fee",
+      "A one-time $100 fee on a $100,000 account",
+      "They cost the same"
+     ],
+     0,
+     "1% of a growing balance every year adds up to far more."
+    ],
+    [
+     "A fund charges 0.04%. On $10,000 that is about…",
+     [
+      "$4 a year",
+      "$40 a year",
+      "$400 a year"
+     ],
+     0,
+     "0.04% × $10,000 = $4."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "drawdown",
+  "title": "Recovering from a loss",
+  "cat": "Investing",
+  "level": "Beginner",
+  "desc": "A 50% loss needs a 100% gain to get back. See why losses hurt more than gains help.",
+  "q": [
+   "After a 50% loss you need a gain of…",
+   [
+    "25%",
+    "100%",
+    "50%"
+   ],
+   1
+  ],
+  "world": "A stock that falls from $100 to $50 must double to return to $100.",
+  "x": {
+   "i": "A drawdown is a fall from a previous peak. Losses and gains are not symmetrical: after a loss you need a larger percentage gain just to get back to where you were.",
+   "h": [
+    "<b>Gain needed to recover = loss ÷ (1 − loss)</b>.",
+    "−10% needs +11%; −25% needs +33%; −50% needs +100%; −80% needs +400%.",
+    "This is why avoiding big losses matters so much for long-term results."
+   ],
+   "e": "The Nasdaq fell about 78% from 2000 to 2002. It needed a gain of about 350% to recover and did not regain its 2000 peak until 2015.",
+   "m": [
+    "Thinking a 50% loss followed by a 50% gain gets you back to even (it leaves you 25% down).",
+    "Taking concentrated bets where one large loss could take years to recover."
+   ],
+   "k": [
+    "Bigger losses need much bigger gains to recover.",
+    "−50% needs +100%.",
+    "Limiting large losses is central to long-term investing."
+   ],
+   "q": [
+    [
+     "You lose 50%, then gain 50%. Overall you are…",
+     [
+      "Down 25%",
+      "Back to even",
+      "Up 25%"
+     ],
+     0,
+     "$100 → $50 → $75."
+    ],
+    [
+     "After a 20% loss, what gain gets you back to even?",
+     [
+      "25%",
+      "20%",
+      "15%"
+     ],
+     0,
+     "0.20 ÷ 0.80 = 25%."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "inflation",
+  "title": "Inflation and your savings",
+  "cat": "Macro",
+  "level": "Beginner",
+  "desc": "Cash loses buying power every year. Compare cash with investing after inflation.",
+  "q": [
+   "Over time, cash left idle usually…",
+   [
+    "Stays equal",
+    "Buys less",
+    "Buys more"
+   ],
+   1
+  ],
+  "world": "At 3% inflation, $10,000 buys about what $5,500 buys in 20 years.",
+  "x": {
+   "i": "Inflation is the general rise in prices over time. It means each dollar buys less, so money kept in cash slowly loses purchasing power.",
+   "h": [
+    "Real return = investment return − inflation (roughly).",
+    "At 3% inflation, prices double in about 24 years (Rule of 72).",
+    "Central banks usually target about 2% inflation and raise rates when it runs higher."
+   ],
+   "e": "$10,000 in cash for 20 years at 3% inflation buys what about $5,500 buys today. A savings account paying 2% during 4% inflation loses about 2% of purchasing power a year.",
+   "m": [
+    "Thinking cash is \"safe\" over long periods — it is safe from price swings, not from inflation.",
+    "Ignoring inflation when planning goals decades away."
+   ],
+   "k": [
+    "Inflation shrinks what money can buy.",
+    "Look at real (after-inflation) returns.",
+    "Long-term savings need to outgrow inflation."
+   ],
+   "q": [
+    [
+     "Your savings earn 2% while inflation is 5%. Your real return is about…",
+     [
+      "−3%",
+      "+7%",
+      "+2%"
+     ],
+     0,
+     "2% − 5% = −3% in purchasing power."
+    ],
+    [
+     "Which loses purchasing power most reliably over 30 years?",
+     [
+      "Cash under the mattress",
+      "A diversified stock fund",
+      "Inflation-linked bonds"
+     ],
+     0,
+     "Cash earns nothing while prices rise every year."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "income",
+  "title": "Reading an income statement",
+  "cat": "Accounting",
+  "level": "Beginner",
+  "desc": "Follow money from sales down to profit, step by step.",
+  "q": [
+   "Net income is…",
+   [
+    "Total sales",
+    "Cash in the bank",
+    "What is left after all costs and taxes"
+   ],
+   2
+  ],
+  "world": "A company with $1B sales and 10% net margin keeps $100M as profit.",
+  "x": {
+   "i": "An income statement shows how much a company sold, what it spent, and what was left as profit over a period (a quarter or a year).",
+   "h": [
+    "<b>Revenue</b> (sales) at the top.",
+    "Minus cost of goods sold = <b>gross profit</b>.",
+    "Minus operating expenses (salaries, marketing, R&D) = <b>operating income</b>.",
+    "Minus interest and taxes = <b>net income</b> (the \"bottom line\"). Divided by shares = earnings per share.",
+    "Margins (profit ÷ revenue) show how much of each sales dollar is kept."
+   ],
+   "e": "Revenue $1,000M, cost of goods $600M → gross profit $400M (40% margin). Operating costs $250M → operating income $150M (15%). Interest and tax $50M → net income $100M (10% net margin).",
+   "m": [
+    "Looking only at revenue growth while margins shrink.",
+    "Ignoring one-off items that make a single quarter look unusually good or bad."
+   ],
+   "k": [
+    "Revenue → gross profit → operating income → net income.",
+    "Margins show efficiency.",
+    "Read trends over several periods."
+   ],
+   "q": [
+    [
+     "Revenue $500M, net income $50M. The net margin is…",
+     [
+      "10%",
+      "50%",
+      "5%"
+     ],
+     0,
+     "50 ÷ 500 = 10%."
+    ],
+    [
+     "Which line comes right after revenue minus cost of goods sold?",
+     [
+      "Gross profit",
+      "Net income",
+      "Dividends"
+     ],
+     0,
+     "Revenue − cost of goods sold = gross profit."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "orders",
+  "title": "Market and limit orders",
+  "cat": "Markets",
+  "level": "Beginner",
+  "desc": "Choose between buying right now or waiting for your price.",
+  "q": [
+   "A limit order lets you…",
+   [
+    "Set the price you will pay",
+    "Buy instantly at any price",
+    "Skip fees"
+   ],
+   0
+  ],
+  "world": "A limit buy at $95 only fills if the price falls to $95 or lower.",
+  "x": {
+   "i": "When you buy or sell a stock you choose an order type. The two basics: a market order (fill now at the best available price) and a limit order (fill only at your price or better).",
+   "h": [
+    "<b>Market order:</b> executes almost instantly, but the exact price is not guaranteed — in fast or thin markets it can be worse than the last quote.",
+    "<b>Limit order:</b> you set the maximum you will pay (or minimum you will accept). You control the price but may not get filled.",
+    "<b>Stop order:</b> becomes a market order once a trigger price is hit, often used to limit losses.",
+    "The <b>spread</b> is the gap between the best bid (buy) and ask (sell) prices."
+   ],
+   "e": "A stock shows bid $49.98 / ask $50.02. A market buy fills around $50.02. A limit buy at $49.90 waits until a seller accepts $49.90 — which may never happen.",
+   "m": [
+    "Using market orders on illiquid stocks or at the market open, when spreads are wide.",
+    "Setting limits far from the price and forgetting about them."
+   ],
+   "k": [
+    "Market = speed, limit = price control.",
+    "Watch the bid–ask spread.",
+    "Use limits on thinly traded stocks."
+   ],
+   "q": [
+    [
+     "You must buy at no more than $20. Which order?",
+     [
+      "A limit buy at $20",
+      "A market buy",
+      "A stop sell"
+     ],
+     0,
+     "A limit order sets your maximum price."
+    ],
+    [
+     "A market order guarantees…",
+     [
+      "That it fills quickly",
+      "The exact price",
+      "No fees"
+     ],
+     0,
+     "Speed of execution is guaranteed, not the price."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "leverage",
+  "title": "Leverage: gains and losses",
+  "cat": "Trading",
+  "level": "Intermediate",
+  "desc": "Borrowing to trade multiplies gains and losses. See how fast it can wipe you out.",
+  "q": [
+   "3x leverage on a 10% drop means about…",
+   [
+    "A 10% loss",
+    "A 3% loss",
+    "A 30% loss"
+   ],
+   2
+  ],
+  "world": "At 10x leverage, a 10% drop can erase all of your money.",
+  "x": {
+   "i": "Leverage means investing with borrowed money. It magnifies both gains and losses relative to your own money.",
+   "h": [
+    "With 2× leverage, a 10% move in the investment becomes about a 20% move in your equity.",
+    "Borrowing costs interest, which eats into returns.",
+    "If losses shrink your equity too far, the broker issues a <b>margin call</b> and may sell your holdings at the worst time."
+   ],
+   "e": "You put in $10,000 and borrow $10,000 to buy $20,000 of stock. A 20% rise makes $4,000 (+40% on your money). A 20% fall loses $4,000 (−40%). A 50% fall wipes you out completely.",
+   "m": [
+    "Focusing on magnified gains and ignoring magnified losses.",
+    "Holding leveraged ETFs long-term without understanding daily resets, which erode value in choppy markets."
+   ],
+   "k": [
+    "Leverage multiplies gains and losses.",
+    "Borrowing has a cost.",
+    "Margin calls can force selling at the bottom."
+   ],
+   "q": [
+    [
+     "With 3× leverage, the asset falls 10%. Your equity falls about…",
+     [
+      "30%",
+      "10%",
+      "3%"
+     ],
+     0,
+     "Losses are multiplied by the leverage."
+    ],
+    [
+     "What is a margin call?",
+     [
+      "A demand to add money because losses shrank your equity",
+      "A dividend payment",
+      "A type of order"
+     ],
+     0,
+     "The broker requires more collateral or sells your positions."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "sizing",
+  "title": "Position sizing",
+  "cat": "Trading",
+  "level": "Intermediate",
+  "desc": "Decide how many shares to buy so one bad trade cannot hurt much.",
+  "q": [
+   "Risking 1% per trade means a loss costs…",
+   [
+    "All of it",
+    "1% of your account",
+    "1% of the stock"
+   ],
+   1
+  ],
+  "world": "On a $20,000 account risking 1%, you can lose about $200 on a trade.",
+  "x": {
+   "i": "Position sizing decides how much money to put into each trade or investment so that no single loss can do serious damage.",
+   "h": [
+    "A common rule: risk only 1–2% of your account on any one trade.",
+    "<b>Shares = (account × risk %) ÷ (entry price − stop price)</b>.",
+    "Wider stops mean smaller positions; tighter stops allow larger ones, for the same risk."
+   ],
+   "e": "Account $20,000, risk 1% = $200. Buy at $50 with a stop at $46 (risk $4 per share): 200 ÷ 4 = 50 shares, a $2,500 position. If the stop is hit you lose about $200.",
+   "m": [
+    "Choosing size by gut feeling or by how confident you feel.",
+    "Moving stops further away after entering to \"give it room\", which quietly increases risk."
+   ],
+   "k": [
+    "Decide the risk first, then the size.",
+    "1–2% risk per trade keeps losses survivable.",
+    "Size depends on the distance to your stop."
+   ],
+   "q": [
+    [
+     "$10,000 account, 2% risk, entry $40, stop $38. How many shares?",
+     [
+      "100",
+      "50",
+      "200"
+     ],
+     0,
+     "Risk $200 ÷ $2 per share = 100 shares."
+    ],
+    [
+     "Your stop moves further from entry but risk stays 1%. Your position size should…",
+     [
+      "Shrink",
+      "Grow",
+      "Stay the same"
+     ],
+     0,
+     "More risk per share means fewer shares for the same dollar risk."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "ratios",
+  "title": "Financial ratios",
+  "cat": "Accounting",
+  "level": "Intermediate",
+  "desc": "Turn a few numbers into return on equity, debt load and short-term safety.",
+  "q": [
+   "A debt-to-equity of 2 means…",
+   [
+    "The company owes twice what shareholders own",
+    "It has twice the cash",
+    "Profit doubled"
+   ],
+   0
+  ],
+  "world": "A company with $200M of debt and $100M of equity has a debt-to-equity of 2.",
+  "x": {
+   "i": "Financial ratios turn a company's numbers into quick comparisons: how profitable it is, how much debt it carries, and how easily it can pay its bills.",
+   "h": [
+    "<b>Profitability:</b> net margin (profit ÷ revenue), return on equity (profit ÷ shareholders' equity).",
+    "<b>Debt:</b> debt-to-equity — how much borrowing compared with owners' money.",
+    "<b>Liquidity:</b> current ratio (current assets ÷ current liabilities); above 1 means short-term assets cover short-term bills.",
+    "<b>Valuation:</b> P/E, price-to-sales, price-to-book."
+   ],
+   "e": "Company A: net margin 25%, debt-to-equity 0.3, current ratio 2. Company B: net margin 3%, debt-to-equity 2.5, current ratio 0.8. A is more profitable, less indebted and more liquid.",
+   "m": [
+    "Comparing ratios across industries with very different norms (banks always carry high leverage).",
+    "Looking at one ratio in isolation."
+   ],
+   "k": [
+    "Ratios compare companies quickly.",
+    "Group them: profitability, debt, liquidity, valuation.",
+    "Compare within an industry and over time."
+   ],
+   "q": [
+    [
+     "A current ratio of 0.6 suggests…",
+     [
+      "Short-term bills exceed short-term assets",
+      "Very high profits",
+      "No debt"
+     ],
+     0,
+     "Current assets cover only 60% of current liabilities."
+    ],
+    [
+     "Return on equity measures…",
+     [
+      "Profit relative to shareholders' money",
+      "Share price growth",
+      "Dividend size"
+     ],
+     0,
+     "ROE = net income ÷ shareholders' equity."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "cashflow",
+  "title": "Cash flow and free cash flow",
+  "cat": "Accounting",
+  "level": "Intermediate",
+  "desc": "Profit is not cash. Subtract spending on equipment to see the cash a business really keeps.",
+  "q": [
+   "Free cash flow is…",
+   [
+    "Net income plus debt",
+    "Operating cash minus capital spending",
+    "Revenue minus taxes"
+   ],
+   1
+  ],
+  "world": "A company can report a profit while burning cash if it spends heavily on new factories.",
+  "x": {
+   "i": "Cash flow tracks real money moving in and out of a business. Profit can be shaped by accounting choices; cash is much harder to fake.",
+   "h": [
+    "<b>Operating cash flow:</b> cash generated by the core business.",
+    "<b>Capital expenditure (capex):</b> money spent on equipment, buildings, technology.",
+    "<b>Free cash flow = operating cash flow − capex</b>: cash left for dividends, buybacks, debt repayment or growth."
+   ],
+   "e": "A company reports $500M profit but only $150M of operating cash flow because customers have not paid yet. After $100M of capex, free cash flow is $50M — far weaker than profit suggests.",
+   "m": [
+    "Trusting earnings while cash flow keeps lagging (a classic warning sign).",
+    "Ignoring capex for capital-heavy businesses like airlines or chipmakers."
+   ],
+   "k": [
+    "Cash flow shows real money.",
+    "Free cash flow = operating cash − capex.",
+    "Profits that never turn into cash are a red flag."
+   ],
+   "q": [
+    [
+     "Operating cash flow $800M, capex $300M. Free cash flow is…",
+     [
+      "$500M",
+      "$1,100M",
+      "$300M"
+     ],
+     0,
+     "800 − 300 = 500."
+    ],
+    [
+     "Profits keep rising but operating cash flow keeps falling. This is…",
+     [
+      "A warning sign worth investigating",
+      "Always good news",
+      "Irrelevant"
+     ],
+     0,
+     "Earnings not turning into cash can mean aggressive accounting or customers not paying."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "peg",
+  "title": "PEG: price versus growth",
+  "cat": "Investing",
+  "level": "Intermediate",
+  "desc": "Adjust the P/E for growth to compare fast and slow companies fairly.",
+  "q": [
+   "A PEG near 1 suggests…",
+   [
+    "Always a bubble",
+    "Price roughly matches growth",
+    "Always a bargain"
+   ],
+   1
+  ],
+  "world": "A P/E of 30 with 30% growth has a PEG of 1.",
+  "x": {
+   "i": "The PEG ratio adjusts the P/E ratio for growth, so you can compare a fast grower and a slow grower more fairly.",
+   "h": [
+    "<b>PEG = P/E ÷ expected annual earnings growth (%)</b>.",
+    "Around 1 is often called fairly priced; below 1 may be cheap for its growth; above 2 may be expensive.",
+    "It depends heavily on the growth forecast, which can be wrong."
+   ],
+   "e": "Stock A: P/E 30, growth 30% → PEG 1.0. Stock B: P/E 15, growth 5% → PEG 3.0. Despite the higher P/E, A looks cheaper relative to its growth.",
+   "m": [
+    "Trusting optimistic growth forecasts.",
+    "Using PEG for companies with negative or very unstable earnings."
+   ],
+   "k": [
+    "PEG = P/E ÷ growth.",
+    "It compares value across growth rates.",
+    "Only as good as the growth estimate."
+   ],
+   "q": [
+    [
+     "P/E 24, expected growth 12%. The PEG is…",
+     [
+      "2",
+      "12",
+      "0.5"
+     ],
+     0,
+     "24 ÷ 12 = 2."
+    ],
+    [
+     "Which looks cheaper relative to growth?",
+     [
+      "PEG 0.8",
+      "PEG 2.5",
+      "They are equal"
+     ],
+     0,
+     "A lower PEG means paying less for each unit of growth."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "capm",
+  "title": "Risk, beta and expected return",
+  "cat": "Investing",
+  "level": "Intermediate",
+  "desc": "Estimate the return a stock should offer for the risk it adds.",
+  "q": [
+   "A beta above 1 means the stock tends to…",
+   [
+    "Swing less than the market",
+    "Never move",
+    "Swing more than the market"
+   ],
+   2
+  ],
+  "world": "With a 4% safe rate, an 8% market premium and a beta of 1.5, the required return is 16%.",
+  "x": {
+   "i": "Beta measures how much a stock tends to move with the overall market. The Capital Asset Pricing Model (CAPM) uses beta to estimate the return investors should expect for taking that risk.",
+   "h": [
+    "Beta 1 = moves with the market; 1.5 = about 50% bigger moves; 0.5 = about half.",
+    "<b>Expected return = risk-free rate + beta × (market return − risk-free rate)</b>.",
+    "The extra return over the risk-free rate is compensation for market risk."
+   ],
+   "e": "Risk-free rate 4%, market expected to return 9% (a 5% premium). A stock with beta 1.4: 4% + 1.4 × 5% = 11% expected return.",
+   "m": [
+    "Treating beta as total risk — it ignores company-specific risk.",
+    "Assuming beta is stable; it changes as businesses change."
+   ],
+   "k": [
+    "Beta = sensitivity to the market.",
+    "Higher beta → higher required return.",
+    "CAPM is a simple model, not a forecast."
+   ],
+   "q": [
+    [
+     "A stock with beta 2 when the market rises 5% would typically move about…",
+     [
+      "+10%",
+      "+5%",
+      "+2%"
+     ],
+     0,
+     "Beta 2 roughly doubles the market move."
+    ],
+    [
+     "Risk-free 3%, market premium 6%, beta 1. CAPM expected return?",
+     [
+      "9%",
+      "6%",
+      "3%"
+     ],
+     0,
+     "3% + 1 × 6% = 9%."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "rsi",
+  "title": "The RSI indicator",
+  "cat": "Trading",
+  "level": "Intermediate",
+  "desc": "Compare average gains and losses to see when a move may be stretched.",
+  "q": [
+   "An RSI above 70 is usually read as…",
+   [
+    "Always neutral",
+    "Overbought",
+    "Oversold"
+   ],
+   1
+  ],
+  "world": "RSI is a gauge, not a prediction: strong trends can stay above 70 for weeks.",
+  "x": {
+   "i": "The Relative Strength Index (RSI) is a momentum indicator from 0 to 100 that compares recent gains with recent losses, usually over 14 periods.",
+   "h": [
+    "Above 70 is often called \"overbought\" (rose fast); below 30 \"oversold\" (fell fast).",
+    "In strong trends RSI can stay above 70 or below 30 for a long time.",
+    "Divergence — price making a new high while RSI makes a lower high — can hint momentum is fading."
+   ],
+   "e": "A stock rises 9 days out of 10 and RSI climbs to 78. That does not mean it must fall; in a strong uptrend RSI often sits between 60 and 80 for weeks.",
+   "m": [
+    "Selling just because RSI is above 70 in a strong uptrend.",
+    "Using RSI alone without considering trend or news."
+   ],
+   "k": [
+    "RSI measures momentum on a 0–100 scale.",
+    "70/30 are guides, not rules.",
+    "Look for divergences and the overall trend."
+   ],
+   "q": [
+    [
+     "RSI falls to 25. This usually means…",
+     [
+      "The price fell quickly recently",
+      "The company is bankrupt",
+      "Volume is high"
+     ],
+     0,
+     "Low RSI reflects strong recent selling."
+    ],
+    [
+     "In a powerful uptrend, RSI above 70…",
+     [
+      "Can persist for a long time",
+      "Always signals an immediate drop",
+      "Is impossible"
+     ],
+     0,
+     "Overbought can stay overbought."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "options101",
+  "title": "Options: calls and puts",
+  "cat": "Derivatives",
+  "level": "Intermediate",
+  "desc": "See profit and loss at expiry for a call or a put, and where you break even.",
+  "q": [
+   "A call option gains when the stock…",
+   [
+    "Falls",
+    "Stays flat",
+    "Rises above the strike plus premium"
+   ],
+   2
+  ],
+  "world": "Paying $5 for a $100 call breaks even at $105 at expiry.",
+  "x": {
+   "i": "Options are contracts on a stock. A call profits if the price rises above the strike; a put profits if it falls below. Buyers pay a premium; their loss is limited to that premium.",
+   "h": [
+    "<b>Call:</b> the right to buy at the strike price before expiry.",
+    "<b>Put:</b> the right to sell at the strike price before expiry.",
+    "Each US stock option usually covers 100 shares.",
+    "At expiry, a call is worth (stock − strike) if positive; a put (strike − stock) if positive."
+   ],
+   "e": "Stock at $100. You buy a $105 call for $2 (×100 = $200). At expiry the stock is $112: the call is worth $7 → $700, profit $500. If the stock is $104, the call expires worthless and you lose $200.",
+   "m": [
+    "Forgetting the premium when calculating break-even (strike + premium for a call).",
+    "Selling options without understanding the possibly large losses."
+   ],
+   "k": [
+    "Calls bet on rises, puts on falls (or protect against them).",
+    "Buyers risk only the premium.",
+    "Break-even = strike ± premium."
+   ],
+   "q": [
+    [
+     "You buy a $50 call for $3. The break-even at expiry is…",
+     [
+      "$53",
+      "$50",
+      "$47"
+     ],
+     0,
+     "Strike + premium paid."
+    ],
+    [
+     "Which option gains when a stock falls?",
+     [
+      "A put",
+      "A call",
+      "Neither"
+     ],
+     0,
+     "A put gives the right to sell at the higher strike."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "bs",
+  "title": "Black-Scholes and the Greeks",
+  "cat": "Derivatives",
+  "level": "Advanced",
+  "desc": "Price an option and watch delta, gamma, theta and vega respond to your inputs.",
+  "q": [
+   "Delta measures…",
+   [
+    "Time decay",
+    "Interest rate risk",
+    "Option price change for a $1 stock move"
+   ],
+   2
+  ],
+  "world": "A call with delta 0.5 gains about 50 cents when the stock rises $1.",
+  "x": {
+   "i": "The Black-Scholes model prices options from five inputs. The \"Greeks\" measure how an option's price reacts to each input.",
+   "h": [
+    "Inputs: stock price, strike, time to expiry, volatility, interest rate.",
+    "<b>Delta:</b> price change per $1 move in the stock (0 to 1 for calls).",
+    "<b>Gamma:</b> how fast delta changes.",
+    "<b>Theta:</b> value lost per day from time decay.",
+    "<b>Vega:</b> change per 1-point change in volatility."
+   ],
+   "e": "A call with delta 0.6 rises about $0.60 when the stock rises $1. With theta −0.05, it loses about $5 per contract per day if nothing else changes.",
+   "m": [
+    "Assuming the Greeks stay constant — they change as price and time change.",
+    "Treating model value as \"true value\"; real volatility is unknown."
+   ],
+   "k": [
+    "Five inputs drive option prices.",
+    "Delta, gamma, theta and vega describe sensitivities.",
+    "Models are approximations."
+   ],
+   "q": [
+    [
+     "A call has delta 0.4. The stock rises $2. The option rises about…",
+     [
+      "$0.80",
+      "$2",
+      "$0.40"
+     ],
+     0,
+     "0.4 × $2 = $0.80."
+    ],
+    [
+     "Which Greek measures time decay?",
+     [
+      "Theta",
+      "Vega",
+      "Delta"
+     ],
+     0,
+     "Theta is the daily loss in value from time passing."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "sharpe",
+  "title": "Sharpe and Sortino ratios",
+  "cat": "Quant",
+  "level": "Advanced",
+  "desc": "Compare return per unit of risk, and see why downside-only risk matters.",
+  "q": [
+   "A higher Sharpe ratio means…",
+   [
+    "More return per unit of risk",
+    "More total return",
+    "Less trading"
+   ],
+   0
+  ],
+  "world": "Two funds earning 10% differ if one swings twice as much as the other.",
+  "x": {
+   "i": "The Sharpe ratio measures return per unit of risk. It answers: was the extra return worth the extra volatility?",
+   "h": [
+    "<b>Sharpe = (portfolio return − risk-free rate) ÷ volatility</b>.",
+    "The Sortino ratio is similar but only counts downside volatility, since upside swings are welcome.",
+    "Higher is better; above 1 is generally considered good over long periods."
+   ],
+   "e": "Fund A: 12% return, 20% volatility. Fund B: 9% return, 8% volatility. Risk-free 4%. Sharpe A = 0.40; Sharpe B = 0.63. B delivered more return for the risk taken.",
+   "m": [
+    "Comparing Sharpe ratios measured over different periods.",
+    "Trusting a high Sharpe from a short or calm period."
+   ],
+   "k": [
+    "Sharpe = excess return ÷ volatility.",
+    "Sortino focuses on downside risk.",
+    "Use it to compare risk-adjusted performance."
+   ],
+   "q": [
+    [
+     "Return 10%, risk-free 2%, volatility 16%. The Sharpe ratio is…",
+     [
+      "0.5",
+      "0.625",
+      "8"
+     ],
+     0,
+     "(10 − 2) ÷ 16 = 0.5."
+    ],
+    [
+     "Sortino differs from Sharpe because it…",
+     [
+      "Counts only downside volatility",
+      "Ignores returns",
+      "Uses dividends"
+     ],
+     0,
+     "Upside swings are not penalised."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "kelly",
+  "title": "The Kelly criterion",
+  "cat": "Quant",
+  "level": "Advanced",
+  "desc": "Find the bet size that maximises long-run growth, and see why betting too much destroys it.",
+  "q": [
+   "Betting far more than the Kelly size…",
+   [
+    "Lowers long-run growth and raises ruin risk",
+    "Always raises growth",
+    "Has no effect"
+   ],
+   0
+  ],
+  "world": "With a 55% win chance at even odds, full Kelly is 10% of capital. Many people use half.",
+  "x": {
+   "i": "The Kelly criterion calculates the bet size that maximises long-term growth when you know your odds. In practice most people use a fraction of it because estimates are uncertain.",
+   "h": [
+    "For a simple bet: <b>Kelly % = W − (1 − W) ÷ R</b>, where W is win probability and R is win/loss ratio.",
+    "Betting more than Kelly increases risk and actually lowers long-run growth.",
+    "\"Half Kelly\" keeps most of the growth with much smaller swings."
+   ],
+   "e": "You win 55% of the time and wins equal losses (R = 1): Kelly = 0.55 − 0.45 = 10% of your bankroll per bet. Half Kelly would be 5%.",
+   "m": [
+    "Plugging in overconfident win rates — errors push you to oversize.",
+    "Using full Kelly and enduring huge drawdowns."
+   ],
+   "k": [
+    "Kelly sizes bets to maximise growth.",
+    "Over-betting destroys growth.",
+    "Use a fraction because your edge is uncertain."
+   ],
+   "q": [
+    [
+     "W = 60%, R = 1. Kelly says bet…",
+     [
+      "20%",
+      "60%",
+      "40%"
+     ],
+     0,
+     "0.60 − 0.40 ÷ 1 = 0.20."
+    ],
+    [
+     "Why do many use half Kelly?",
+     [
+      "Estimates are uncertain and full Kelly is very volatile",
+      "It is required by law",
+      "It doubles returns"
+     ],
+     0,
+     "Smaller bets protect against mistaken odds."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "var",
+  "title": "Value at Risk",
+  "cat": "Quant",
+  "level": "Advanced",
+  "desc": "Estimate how much a portfolio could lose over a day or a month at a chosen confidence.",
+  "q": [
+   "A 95% one-day VaR of $1,000 means…",
+   [
+    "A loss beyond $1,000 is expected about 1 day in 20",
+    "You will never lose more",
+    "The average loss is $1,000"
+   ],
+   0
+  ],
+  "world": "VaR says nothing about how bad the worst 5% of days can be.",
+  "x": {
+   "i": "Value at Risk (VaR) estimates how much a portfolio could lose over a period at a given confidence level, e.g., \"a 95% one-day VaR of $10,000\".",
+   "h": [
+    "95% one-day VaR of $10,000 means on 95% of days losses should be smaller than $10,000.",
+    "It says nothing about how bad the other 5% of days can be.",
+    "<b>Expected shortfall</b> (CVaR) averages the losses beyond the VaR point."
+   ],
+   "e": "A $1M portfolio with 1% daily volatility: a 95% one-day VaR is about 1.65 × 1% × $1M ≈ $16,500. On roughly 1 day in 20, losses should exceed that.",
+   "m": [
+    "Reading VaR as the maximum loss.",
+    "Assuming normal distributions — real markets have fatter tails."
+   ],
+   "k": [
+    "VaR = a loss threshold at a confidence level.",
+    "It ignores the size of the worst losses.",
+    "Pair it with expected shortfall and stress tests."
+   ],
+   "q": [
+    [
+     "A 99% one-day VaR is $5,000. How often should losses exceed $5,000?",
+     [
+      "About 1 day in 100",
+      "Never",
+      "Every day"
+     ],
+     0,
+     "99% confidence leaves 1% of days beyond the threshold."
+    ],
+    [
+     "VaR's biggest blind spot is…",
+     [
+      "How large losses are beyond the threshold",
+      "Average returns",
+      "Dividends"
+     ],
+     0,
+     "Expected shortfall addresses that tail."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "wacc",
+  "title": "WACC: cost of capital",
+  "cat": "Equity research",
+  "level": "Advanced",
+  "desc": "Blend the cost of debt and equity into the discount rate used in a DCF.",
+  "q": [
+   "Debt is usually cheaper than equity because…",
+   [
+    "Banks are generous",
+    "It is riskier",
+    "Interest is tax-deductible and lenders are paid first"
+   ],
+   2
+  ],
+  "world": "A firm funded 30% by 5% debt and 70% by 10% equity has an after-tax WACC of about 8.1% at a 25% tax rate.",
+  "x": {
+   "i": "The weighted average cost of capital (WACC) is the average return a company must pay its lenders and shareholders. It is the usual discount rate in a DCF.",
+   "h": [
+    "<b>WACC = (E/V × cost of equity) + (D/V × cost of debt × (1 − tax rate))</b>.",
+    "E = market value of equity, D = debt, V = E + D.",
+    "Debt is cheaper (interest is tax-deductible) but more debt raises risk for everyone.",
+    "Projects earning above the WACC create value; below it they destroy value."
+   ],
+   "e": "Equity 70% at 10%, debt 30% at 5% with 25% tax: WACC = 0.7×10% + 0.3×5%×0.75 = 7% + 1.125% = 8.1%.",
+   "m": [
+    "Using book values instead of market values for weights.",
+    "Forgetting the tax shield on debt."
+   ],
+   "k": [
+    "WACC blends the cost of equity and debt.",
+    "It is the hurdle rate for investments.",
+    "Higher WACC means lower valuations."
+   ],
+   "q": [
+    [
+     "Why is debt usually cheaper than equity?",
+     [
+      "Lenders get paid first and interest is tax-deductible",
+      "Debt never needs repaying",
+      "Shareholders accept less"
+     ],
+     0,
+     "Lower risk for lenders plus the tax shield."
+    ],
+    [
+     "A project returns 7% while the WACC is 9%. It…",
+     [
+      "Destroys value",
+      "Creates value",
+      "Breaks even"
+     ],
+     0,
+     "It earns less than investors require."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "duration",
+  "title": "Bond duration",
+  "cat": "Markets",
+  "level": "Advanced",
+  "desc": "See how much a bond price moves when yields change, and why long bonds are riskier.",
+  "q": [
+   "Higher duration means a bond price is…",
+   [
+    "Less sensitive",
+    "Fixed",
+    "More sensitive to yield changes"
+   ],
+   2
+  ],
+  "world": "A bond with a duration of 7 loses about 7% if yields rise 1%.",
+  "x": {
+   "i": "Duration measures how sensitive a bond's price is to changes in interest rates, expressed in years.",
+   "h": [
+    "<b>Price change ≈ −duration × change in yield</b>.",
+    "Longer maturity and lower coupons mean higher duration.",
+    "Bond funds list their average duration — a quick gauge of rate risk."
+   ],
+   "e": "A bond fund with duration 7: if yields rise 1 percentage point, its price falls about 7%. A fund with duration 2 falls only about 2%.",
+   "m": [
+    "Confusing duration with maturity.",
+    "Holding long-duration bonds while expecting rising rates."
+   ],
+   "k": [
+    "Duration = rate sensitivity.",
+    "Price change ≈ −duration × yield change.",
+    "Long, low-coupon bonds are the most sensitive."
+   ],
+   "q": [
+    [
+     "Duration 10, yields fall 0.5 points. The price changes about…",
+     [
+      "+5%",
+      "−5%",
+      "+10%"
+     ],
+     0,
+     "−10 × −0.5% = +5%."
+    ],
+    [
+     "Which has the higher duration?",
+     [
+      "A 30-year low-coupon bond",
+      "A 2-year high-coupon bond",
+      "They are equal"
+     ],
+     0,
+     "Longer maturity and smaller coupons raise duration."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "movingavg",
+  "title": "Moving averages",
+  "cat": "Technical analysis",
+  "level": "Beginner",
+  "desc": "A moving average smooths out daily noise so you can see the trend. It is the most used line on any chart.",
+  "q": [
+   "A 50-day moving average is…",
+   [
+    "The average closing price of the last 50 days",
+    "The price 50 days ago",
+    "The highest price in 50 days"
+   ],
+   0
+  ],
+  "world": "Many investors watch the 200-day average as a rough dividing line between long-term uptrends and downtrends.",
+  "x": {
+   "i": "A moving average is the average closing price over a set number of days, recalculated every day. Plotted as a line, it smooths out the noise so you can see which way the price has been heading.",
+   "h": [
+    "<b>Simple (SMA):</b> every day counts equally. <b>Exponential (EMA):</b> recent days count more, so it reacts faster.",
+    "Short averages (9 or 20 days) follow the price closely. Long ones (50 or 200 days) show the bigger trend.",
+    "When a short average crosses above a long one, some traders see improving momentum. It can also be a false signal."
+   ],
+   "e": "Closing prices over 5 days of $10, $11, $12, $11 and $13 add up to $57, so the 5-day average is $57 ÷ 5 = <b>$11.40</b>. Tomorrow the oldest day drops out and the newest comes in.",
+   "m": [
+    "Expecting a moving average to predict the future. It is built from past prices, so it always lags.",
+    "Trading every crossover in a choppy, sideways market, where they often fail."
+   ],
+   "k": [
+    "It shows the trend, not the future.",
+    "Longer means smoother but slower.",
+    "Use it with other evidence."
+   ],
+   "q": [
+    [
+     "An EMA differs from an SMA because…",
+     [
+      "It gives more weight to recent prices",
+      "It uses volume",
+      "It predicts earnings"
+     ],
+     0,
+     "That extra weight is why an EMA reacts faster."
+    ],
+    [
+     "Why do moving averages lag the price?",
+     [
+      "They are calculated from past prices",
+      "Exchanges delay them",
+      "They only update monthly"
+     ],
+     0,
+     "Every point averages prices that have already happened."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "macd",
+  "title": "The MACD indicator",
+  "cat": "Technical analysis",
+  "level": "Intermediate",
+  "desc": "MACD compares a fast and a slow average to show when momentum is building or fading.",
+  "q": [
+   "The MACD line is…",
+   [
+    "The fast average minus the slow average",
+    "Price times volume",
+    "A company’s profit"
+   ],
+   0
+  ],
+  "world": "On Quantera’s chart, open Indicators and add MACD to see it in its own panel under the price.",
+  "x": {
+   "i": "MACD (Moving Average Convergence Divergence) subtracts a slow average from a fast one. When the fast average pulls ahead of the slow one, recent momentum is stronger than the longer-term trend.",
+   "h": [
+    "<b>MACD line:</b> usually the 12-period EMA minus the 26-period EMA.",
+    "<b>Signal line:</b> a 9-period EMA of the MACD line.",
+    "<b>Histogram:</b> the gap between those two lines. Growing bars mean momentum is strengthening in that direction."
+   ],
+   "e": "If the 12-day EMA is $105 and the 26-day EMA is $102, the MACD line is <b>+3</b>. If the signal line is 2, the histogram is +1, and momentum is on the upside.",
+   "m": [
+    "Treating every crossover as a buy or sell signal.",
+    "Comparing MACD values between stocks. It is measured in dollars, so a $500 stock has larger numbers than a $20 one."
+   ],
+   "k": [
+    "It measures momentum from two averages.",
+    "Watch the direction of the histogram.",
+    "It lags, like the averages it is built from."
+   ],
+   "q": [
+    [
+     "MACD above zero means…",
+     [
+      "The fast average is above the slow average",
+      "The stock is cheap",
+      "The company is profitable"
+     ],
+     0,
+     "MACD is just fast minus slow."
+    ],
+    [
+     "The histogram shows…",
+     [
+      "The gap between MACD and its signal line",
+      "Trading volume",
+      "Dividends paid"
+     ],
+     0,
+     "It is MACD minus signal."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "volume",
+  "title": "Volume and VWAP",
+  "cat": "Technical analysis",
+  "level": "Beginner",
+  "desc": "Volume shows how many shares changed hands. VWAP is the average price paid, weighted by that volume.",
+  "q": [
+   "A big price jump on very high volume suggests…",
+   [
+    "Many traders took part in the move",
+    "The chart is broken",
+    "The company is closing"
+   ],
+   0
+  ],
+  "world": "Day traders often compare the price with VWAP to judge whether they are paying more or less than the average buyer that day.",
+  "x": {
+   "i": "Volume is the number of shares traded in a period. It tells you how much participation sits behind a price move. VWAP, the Volume-Weighted Average Price, is the average price paid per share, counting busier moments more.",
+   "h": [
+    "A move on unusually high volume involved more traders than a move on thin volume.",
+    "VWAP = total dollars traded ÷ total shares traded. It usually restarts each trading day.",
+    "Trading above VWAP means the current price is higher than the average paid so far."
+   ],
+   "e": "100 shares trade at $10 and 300 shares trade at $12. Total value is $4,600 across 400 shares, so VWAP is <b>$11.50</b>, closer to $12 because more shares traded there. The plain average would be $11.",
+   "m": [
+    "Assuming high volume tells you the direction. It only shows activity.",
+    "Comparing raw volume between companies with very different share counts."
+   ],
+   "k": [
+    "Volume shows participation.",
+    "VWAP is the volume-weighted average price.",
+    "Compare volume with the stock’s own normal level."
+   ],
+   "q": [
+    [
+     "1,000 shares trade at $5 and 1,000 at $7. VWAP is…",
+     [
+      "$6",
+      "$5",
+      "$12"
+     ],
+     0,
+     "$12,000 ÷ 2,000 shares = $6."
+    ],
+    [
+     "High volume alone tells you…",
+     [
+      "Many shares traded",
+      "The price will rise",
+      "The stock is cheap"
+     ],
+     0,
+     "It measures activity, not direction."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "bollinger",
+  "title": "Bollinger Bands",
+  "cat": "Technical analysis",
+  "level": "Intermediate",
+  "desc": "Bands around a moving average widen when prices swing more and tighten when they calm down.",
+  "q": [
+   "When Bollinger Bands get wider, it means…",
+   [
+    "Prices have become more volatile",
+    "The price must fall",
+    "Volume is zero"
+   ],
+   0
+  ],
+  "world": "A period of very narrow bands, known as a squeeze, is often followed by a bigger move, in either direction.",
+  "x": {
+   "i": "Bollinger Bands draw a line above and below a moving average, set by how much the price has been varying. They give a quick picture of volatility: how wide the recent swings have been.",
+   "h": [
+    "The middle line is usually a 20-day average.",
+    "The bands are normally 2 standard deviations above and below it.",
+    "Bands widen when swings grow and narrow when the price calms down."
+   ],
+   "e": "If the 20-day average is $100 and the standard deviation is $3, the bands sit at <b>$106 and $94</b> ($100 ± 2 × $3).",
+   "m": [
+    "Assuming a touch of the upper band means the stock must fall. In strong trends, prices can ride a band for weeks.",
+    "Reading a narrow “squeeze” as a sign of direction. It says nothing about which way a move might go."
+   ],
+   "k": [
+    "Bands measure volatility.",
+    "A touch is not a signal by itself.",
+    "A squeeze says a bigger move may come, not its direction."
+   ],
+   "q": [
+    [
+     "Narrow bands mean…",
+     [
+      "Recent price swings have been small",
+      "The stock is about to rise",
+      "Earnings are due"
+     ],
+     0,
+     "Band width follows volatility."
+    ],
+    [
+     "With an average of $50 and standard deviation of $2, the 2-SD upper band is…",
+     [
+      "$54",
+      "$52",
+      "$100"
+     ],
+     0,
+     "$50 + 2 × $2 = $54."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "levels",
+  "title": "Support, resistance and trendlines",
+  "cat": "Technical analysis",
+  "level": "Beginner",
+  "desc": "Mark the prices where a stock keeps stopping, and draw your first trendline on a real chart.",
+  "q": [
+   "Resistance is a price where…",
+   [
+    "A stock has repeatedly struggled to rise above",
+    "A company pays dividends",
+    "The market closes"
+   ],
+   0
+  ],
+  "world": "When a stock finally breaks above an old resistance level, traders often watch to see whether that level now acts as support.",
+  "x": {
+   "i": "Support is a price area where a falling stock has repeatedly stopped. Resistance is an area where a rising stock has repeatedly stalled. A trendline connects rising lows or falling highs to show the direction of travel.",
+   "h": [
+    "Levels are zones more than exact prices. Allow a little room.",
+    "An uptrend line connects at least two rising lows. A downtrend line connects falling highs.",
+    "An old resistance, once broken, sometimes becomes support, and the other way around."
+   ],
+   "e": "A stock rises to about $150 in March, June and August, and turns down each time. $150 is resistance. On Quantera’s chart, pick the <b>Horizontal line</b> tool and click at $150 to mark it. Your drawing saves with the chart.",
+   "m": [
+    "Forcing lines onto a chart to fit what you already want to believe.",
+    "Assuming a level must hold. Levels show where the price reacted before, not where it will next time."
+   ],
+   "k": [
+    "Support: where falls have paused.",
+    "Resistance: where rises have paused.",
+    "Treat levels as zones, and have a plan if they break."
+   ],
+   "q": [
+    [
+     "A stock has bounced near $40 four times. $40 is likely…",
+     [
+      "Support",
+      "Resistance",
+      "Its dividend"
+     ],
+     0,
+     "Repeated bounces describe support."
+    ],
+    [
+     "An uptrend line connects…",
+     [
+      "Rising lows",
+      "Random highs",
+      "Volume bars"
+     ],
+     0,
+     "Connecting higher lows outlines an uptrend."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "fib",
+  "title": "Fibonacci retracement",
+  "cat": "Technical analysis",
+  "level": "Intermediate",
+  "desc": "A tool that marks common levels where a pullback might pause after a big move.",
+  "q": [
+   "Fibonacci levels are…",
+   [
+    "Reference levels, with no guarantee price will react",
+    "Prices where a stock must reverse",
+    "Set by the exchange"
+   ],
+   0
+  ],
+  "world": "Levels matter partly because many traders watch the same ones, which is one reason they should never be used alone.",
+  "x": {
+   "i": "Fibonacci retracement divides a big price move into levels where a pullback might pause, commonly 23.6%, 38.2%, 50% and 61.8%. It is a way of asking “how far back is a normal pullback?”",
+   "h": [
+    "Pick a clear swing low and swing high, then the tool draws the levels between them.",
+    "In an uptrend the levels show possible pauses as the price falls back.",
+    "The 50% level is popular but isn’t really a Fibonacci ratio."
+   ],
+   "e": "A stock rises from $100 to $200, a $100 move. The 61.8% retracement is $200 − (0.618 × $100) = <b>$138.20</b>. The 38.2% level is $161.80.",
+   "m": [
+    "Believing the levels have predictive power by themselves. Evidence for them is mixed.",
+    "Choosing different swing points until the lines appear to fit."
+   ],
+   "k": [
+    "Levels are measured from one swing low to one swing high.",
+    "Use them as reference points only.",
+    "Be consistent about which swings you choose."
+   ],
+   "q": [
+    [
+     "From $50 up to $150, the 50% level is…",
+     [
+      "$100",
+      "$75",
+      "$125"
+     ],
+     0,
+     "Halfway through the $100 move."
+    ],
+    [
+     "If the price reaches a Fibonacci level, it…",
+     [
+      "May or may not react",
+      "Must reverse",
+      "Must keep going"
+     ],
+     0,
+     "They are reference levels, not rules."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "riskreward",
+  "title": "Risk and reward",
+  "cat": "Trading",
+  "level": "Beginner",
+  "desc": "Decide your exit before you enter. Learn the one calculation that shapes every good trade plan.",
+  "q": [
+   "You buy at $100, stop at $95, target $115. The reward-to-risk ratio is…",
+   [
+    "3 to 1",
+    "1 to 3",
+    "15 to 1"
+   ],
+   0
+  ],
+  "world": "A stock can gap past your stop overnight, so a stop-loss limits risk but cannot guarantee the exact exit price.",
+  "x": {
+   "i": "Reward-to-risk compares what you could gain with what you could lose. You work it out before you buy, using two prices: a target where you would take profit, and a stop where you would admit you were wrong.",
+   "h": [
+    "Risk per share = entry − stop. Reward per share = target − entry.",
+    "Ratio = reward ÷ risk. At 3:1 you stand to make $3 for each $1 risked.",
+    "Break-even win rate = 1 ÷ (1 + ratio). At 3:1 that is 25%."
+   ],
+   "e": "Entry $100, stop $95, target $115. You risk $5 to make $15: a <b>3:1</b> ratio. Risking $200 on the trade means buying $200 ÷ $5 = <b>40 shares</b>.",
+   "m": [
+    "Moving the stop further away once the price nears it, which quietly raises your risk.",
+    "Setting an unrealistic target just to make the ratio look good."
+   ],
+   "k": [
+    "Plan the exit before the entry.",
+    "The stop sets your position size.",
+    "A good ratio doesn’t make a trade likely to work."
+   ],
+   "q": [
+    [
+     "Entry $50, stop $48, target $56. The ratio is…",
+     [
+      "3:1",
+      "2:1",
+      "6:1"
+     ],
+     0,
+     "$6 reward ÷ $2 risk = 3."
+    ],
+    [
+     "At a 1:1 ratio, the break-even win rate is…",
+     [
+      "50%",
+      "25%",
+      "75%"
+     ],
+     0,
+     "1 ÷ (1 + 1) = 50%, before fees."
+    ]
+   ]
+  }
+ },
+ {
+  "id": "research",
+  "title": "How to research a company",
+  "cat": "Equity research",
+  "level": "Beginner",
+  "desc": "Use the Quantera scorecard and notebook to go from “I heard about this stock” to your own reasoned view.",
+  "q": [
+   "Before buying, the most useful note to write is…",
+   [
+    "Why you think it will do well and what could prove you wrong",
+    "How much you hope to make",
+    "Who recommended it"
+   ],
+   0
+  ],
+  "world": "Writing your reasons down lets you check later whether you were right for the right reasons.",
+  "x": {
+   "i": "Researching a company means answering a few plain questions and writing down your reasoning. Is the business growing? Does it make money? Can it pay its bills? What are you paying for it? And what could go wrong?",
+   "h": [
+    "<b>Start with the scorecard</b> on any stock page. Each card shows the checks behind it.",
+    "<b>Read the financials:</b> look for the direction of sales, profit and free cash flow over several years.",
+    "<b>Read the news and filings</b> to find out why the numbers changed.",
+    "<b>Write it down</b> in your notes: your reasons, your risks, and what would change your mind."
+   ],
+   "e": "A company’s sales grow 25% a year with 20% margins, but its P/E is 80. The business scores well while the price is high, so a useful note might be: “Great business. The risk is that it’s already priced for perfection.”",
+   "m": [
+    "Stopping at the first number that agrees with you.",
+    "Comparing a bank’s debt or a software company’s margins with those of a retailer. Compare within an industry.",
+    "Treating any score as a buy or sell signal."
+   ],
+   "k": [
+    "Business quality and price are separate questions.",
+    "Write down what would prove you wrong.",
+    "Compare companies with their own industry."
+   ],
+   "q": [
+    [
+     "A high scorecard for profitability tells you…",
+     [
+      "The business keeps a good share of its sales",
+      "The stock will rise",
+      "The stock is cheap"
+     ],
+     0,
+     "Quality and future price are different things."
+    ],
+    [
+     "Why write down what would change your mind?",
+     [
+      "So you can judge new facts honestly later",
+      "It’s required by law",
+      "To increase your returns automatically"
+     ],
+     0,
+     "It guards against explaining away bad news."
+    ]
+   ]
+  }
+ }
+]

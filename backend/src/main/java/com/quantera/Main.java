@@ -262,12 +262,30 @@ public final class Main {
         try (OutputStream o = ex.getResponseBody()) { o.write(b); }
     }
 
+    /** Search-friendly HTML: cached at the CDN for an hour, and kept available while it refreshes. */
+    static void sendPage(HttpExchange ex, Seo.Page p) throws IOException {
+        byte[] b = p.body().getBytes(StandardCharsets.UTF_8);
+        Headers h = ex.getResponseHeaders();
+        h.set("Content-Type", p.type());
+        h.set("X-Content-Type-Options", "nosniff");
+        h.set("Cache-Control", p.code() == 200 ? "public, s-maxage=3600, stale-while-revalidate=86400" : "public, s-maxage=300");
+        if (ex.getRequestMethod().equals("HEAD")) { ex.sendResponseHeaders(p.code(), -1); ex.close(); return; }
+        ex.sendResponseHeaders(p.code(), b.length);
+        try (OutputStream o = ex.getResponseBody()) { o.write(b); }
+    }
+
     static void handle(HttpExchange ex) throws IOException {
         int ttl = 0;
         try {
             String method = ex.getRequestMethod(), path = ex.getRequestURI().getPath();
             if (method.equals("OPTIONS")) { send(ex, 204, Json.obj(), 0); return; }
             if (serveStatic(ex, path)) return;
+            if (path.startsWith("/seo/")) {
+                String fwd0 = ex.getRequestHeaders().getFirst("X-Forwarded-For"), ip0 = fwd0 != null && !fwd0.isBlank() ? fwd0.split(",")[0].trim() : ex.getRemoteAddress().getAddress().getHostAddress();
+                if (LIMITER.limited(ip0, "/seo", 120)) { send(ex, 429, Json.obj("error", "Too many requests"), 0); return; }
+                Seo.Page pg = Seo.route(path);
+                if (pg != null) { sendPage(ex, pg); return; }
+            }
             Route route = ROUTES.get(path);
             if (route == null) { send(ex, 404, Json.obj("error", "Not found"), 0); return; }
             if (!method.equals("GET") && !method.equals("POST")) { send(ex, 405, Json.obj("error", "Method not allowed"), 0); return; }
