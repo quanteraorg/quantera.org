@@ -454,6 +454,9 @@ final class Providers {
         ex.scheduleWithFixedDelay(() -> { try { news("", "", 1, 45_000L); } catch (RuntimeException ignored) {} }, 5, 15, java.util.concurrent.TimeUnit.SECONDS);
         if (cfg("FRED_API_KEY", null) != null)
             ex.scheduleWithFixedDelay(() -> { try { Macro.dashboard(25 * 60_000L); } catch (RuntimeException ignored) {} }, 20, 60, java.util.concurrent.TimeUnit.SECONDS);
+        // Slow first requests: the SEC's ticker list (5 s), the world board and the private company list
+        ex.scheduleWithFixedDelay(() -> { try { Sec.ciks(); } catch (RuntimeException ignored) {} }, 15, 3600, java.util.concurrent.TimeUnit.SECONDS);
+        if (Yahoo.on()) ex.scheduleWithFixedDelay(() -> { try { Yahoo.world(); Yahoo.privates(); } catch (RuntimeException ignored) {} }, 25, 120, java.util.concurrent.TimeUnit.SECONDS);
         // Render's free plan sleeps after 15 idle minutes and the next visitor waits 30-60 s; a request to our own public URL keeps it awake.
         // Render sets RENDER_EXTERNAL_URL itself. KEEP_AWAKE=0 turns this off.
         String self = cfg("RENDER_EXTERNAL_URL", null);
