@@ -67,27 +67,28 @@ final class Seo {
         Double px = d(f, "price"), cap = d(k, "marketCap"), pe = d(k, "pe"), rg = d(k, "revenueGrowth"), pm = d(k, "profitMargin"), cash = d(k, "cash"), debt = d(k, "debt"), target = d(a, "target");
         Map<String, Object> last = map(annual.get(annual.size() - 1));
         Double rev = d(last, "revenue"), ni = d(last, "netIncome");
+        String lq = str(f.get("latestQuarter")), asOf = lq == null ? "latest quarter" : "latest quarter, " + month(lq), fy = month(str(last.get("date")));
         boolean pence = q != null && !q.equals(q.toUpperCase(Locale.ROOT));
         String capCcy = pence ? q.toUpperCase(Locale.ROOT) : q, price = px == null ? "—" : (pence ? num(px, "#,##0.00") + " " + q : money(px, q));
-        String desc = name + " (" + s + ") stock: " + (cap != null ? "market cap " + money(cap, capCcy) + ", " : "") + (pe != null ? "P/E " + num(pe, "0.0") + ", " : "") + (rev != null ? "revenue " + money(rev, c) + ". " : ". ") + "Financials, analyst targets and a plain-English summary.";
+        String desc = name + " (" + s + ") stock: " + (cap != null ? "market cap " + money(cap, capCcy) + ", " : "") + (pe != null ? "P/E " + num(pe, "0.0") + ", " : "") + (rev != null ? "revenue " + money(rev, c) + " in the latest full year. " : ". ") + "Financials, analyst targets and a plain-English summary.";
         StringBuilder m = new StringBuilder("<p class=\"crumb\"><a href=\"/stocks\">Stocks</a> › " + h(s) + "</p><h1>" + h(name) + " <span>" + h(s) + "</span></h1><p class=\"px\">" + h(price) + "</p><div class=\"kn\">");
-        if (cap != null) m.append(tile("Company value", money(cap, capCcy), "Market cap"));
-        if (pe != null) m.append(tile("Price vs profit", num(pe, "0.0"), "P/E ratio")); else if (d(k, "eps") != null && d(k, "eps") < 0) m.append(tile("Price vs profit", "Loss", "No P/E: earnings are negative"));
-        if (rg != null) m.append(tile("Sales growth", signed(rg), "vs a year ago"));
-        if (pm != null) m.append(tile("Profit margin", pct(pm), "Profit ÷ sales"));
-        if (cash != null && debt != null) m.append(tile(cash >= debt ? "Net cash" : "Net debt", money(Math.abs(cash - debt), c), "Cash " + money(cash, c) + " · debt " + money(debt, c)));
-        if (target != null && px != null) m.append(tile("Analyst target", pence ? num(target, "#,##0.00") + " " + q : money(target, q), signed(target / px - 1) + " from this price"));
+        if (cap != null) m.append(tile("Company value", money(cap, capCcy), "Market cap at the latest price"));
+        if (pe != null) m.append(tile("Price vs profit", num(pe, "0.0"), "P/E ratio, past 12 months of profit")); else if (d(k, "eps") != null && d(k, "eps") < 0) m.append(tile("Price vs profit", "Loss", "No P/E: earnings are negative"));
+        if (rg != null) m.append(tile("Sales growth", signed(rg), "Latest quarter, vs a year ago"));
+        if (pm != null) m.append(tile("Profit margin", pct(pm), "Profit ÷ sales, past 12 months"));
+        if (cash != null && debt != null) m.append(tile(cash >= debt ? "Net cash" : "Net debt", money(Math.abs(cash - debt), c), "Cash and investments " + money(cash, c) + " · debt " + money(debt, c) + " (" + asOf + ")"));
+        if (target != null && px != null) m.append(tile("Analyst target", pence ? num(target, "#,##0.00") + " " + q : money(target, q), "Average 12-month target, " + signed(target / px - 1) + " from this price"));
         m.append("</div><p class=\"go\"><a class=\"cta\" href=\"/#/asset/").append(h(s)).append("\">Open the live chart and full research</a><a href=\"/#/trade/").append(h(s)).append("\">Practice trading ").append(h(s)).append(" with paper money</a></p>");
         m.append("<h2>").append(h(name)).append(" in plain English</h2><p>");
-        if (rev != null) m.append("In its latest full year, ").append(h(name)).append(" sold ").append(h(money(rev, c))).append(" of products and services").append(ni != null ? (ni >= 0 ? " and kept " + h(money(ni, c)) + " as profit" : " and lost " + h(money(-ni, c))) : "").append(". ");
-        if (rg != null) m.append("Recent sales are ").append(rg >= 0 ? "up " : "down ").append(h(pct(Math.abs(rg)))).append(" from a year earlier. ");
-        if (pe != null) m.append("At this price, investors pay about ").append(h(num(pe, "0"))).append(" times its yearly profit. ");
-        if (cash != null && debt != null) m.append(cash >= debt ? "It holds more cash than debt." : "It owes more in debt than it holds in cash.");
+        if (rev != null) m.append("In its latest full year (to ").append(h(fy)).append("), ").append(h(name)).append(" sold ").append(h(money(rev, c))).append(" of products and services").append(ni != null ? (ni >= 0 ? " and kept " + h(money(ni, c)) + " as profit" : " and lost " + h(money(-ni, c))) : "").append(". ");
+        if (rg != null) m.append("In the latest quarter, sales were ").append(rg >= 0 ? "up " : "down ").append(h(pct(Math.abs(rg)))).append(" from a year earlier. ");
+        if (pe != null) m.append("At this price, investors pay about ").append(h(num(pe, "0"))).append(" times its profit over the past 12 months. ");
+        if (cash != null && debt != null) m.append(cash >= debt ? "At the latest quarter, it held more cash and short-term investments than debt." : "At the latest quarter, it owed more in debt than it held in cash and short-term investments.");
         m.append("</p>");
-        m.append("<h2>").append(h(s)).append(" financials</h2><div class=\"tw\"><table><tr><th>Year ending</th>");
+        m.append("<h2>").append(h(s)).append(" yearly financials</h2><div class=\"tw\"><table><tr><th>Year ending</th>");
         for (Object o : annual) m.append("<th>").append(month(str(map(o).get("date")))).append("</th>");
         m.append("</tr>");
-        String[][] rows = {{"Revenue", "revenue"}, {"Gross profit", "grossProfit"}, {"Operating income", "operatingIncome"}, {"Net income", "netIncome"}, {"Free cash flow", "freeCashFlow"}, {"Cash", "cash"}, {"Total debt", "debt"}};
+        String[][] rows = {{"Revenue", "revenue"}, {"Gross profit", "grossProfit"}, {"Operating income", "operatingIncome"}, {"Net income", "netIncome"}, {"Free cash flow", "freeCashFlow"}, {"Cash and equivalents", "cash"}, {"Total debt", "debt"}};
         for (String[] r : rows) {
             boolean any = annual.stream().anyMatch(o -> d(map(o), r[1]) != null);
             if (!any) continue;
@@ -95,9 +96,9 @@ final class Seo {
             for (Object o : annual) m.append("<td>").append(h(money(d(map(o), r[1]), c))).append("</td>");
             m.append("</tr>");
         }
-        m.append("</table></div><h2>Common questions about ").append(h(name)).append("</h2>");
+        m.append("</table></div><p class=\"src\">Full-year figures. The headline numbers above use the latest quarter or the past 12 months, and include short-term investments in cash, so they can differ from this table.</p><h2>Common questions about ").append(h(name)).append("</h2>");
         if (cap != null) m.append(faq("What is " + name + " worth?", name + "’s market cap, the value of all its shares, is about " + money(cap, capCcy) + "."));
-        if (pe != null) m.append(faq("What is " + s + "’s P/E ratio?", "About " + num(pe, "0.0") + ". The P/E ratio compares the share price with yearly profit per share."));
+        if (pe != null) m.append(faq("What is " + s + "’s P/E ratio?", "About " + num(pe, "0.0") + ", based on the past 12 months of profit. The P/E ratio compares the share price with profit per share."));
         if (target != null && d(a, "count") != null) m.append(faq("What do analysts expect for " + s + "?", "The average 12-month price target from " + num(d(a, "count"), "0") + " analysts is " + (pence ? num(target, "#,##0.00") + " " + q : money(target, q)) + ". Analyst targets are opinions and are often wrong."));
         if (str(f.get("nextEarnings")) != null) m.append(faq("When does " + name + " report earnings next?", "The next expected report date is " + h(str(f.get("nextEarnings"))) + ". Dates can change."));
         String sector = null;
@@ -117,6 +118,13 @@ final class Seo {
         return null;
     }
 
+    /** Sum of the rounds shown when it is under half the reported total (the listing is then clearly incomplete or the total unreliable), otherwise null. */
+    static Double listedRaised(Double reported, List<Object> shownRounds) {
+        double sum = 0;
+        for (Object o : shownRounds) { Double v = d(map(o), "raised"); if (v != null) sum += v; }
+        return reported != null && sum > 0 && sum < reported / 2 ? sum : null;
+    }
+
     /** One private company: valuation, funding rounds and what funds report it is worth. */
     static Page privateCompany(String sl) {
         Map<String, Object> co = privateBySlug(sl.toLowerCase(Locale.ROOT));
@@ -124,18 +132,21 @@ final class Seo {
         Map<String, Object> f = Yahoo.privateCompany(str(co.get("symbol")));
         String name = str(co.get("name")), path = "/private-company/" + slug(name), sym = str(co.get("symbol"));
         Double val = d(co, "valuation"), fund = d(co, "funding");
-        String desc = name + " valuation: estimated " + money(val, "USD") + (fund != null ? ", with " + money(fund, "USD") + " raised" : "") + ". Funding rounds, price per share and what mutual funds report it is worth.";
+        List<Object> rounds = list(f.get("rounds"));
+        rounds = rounds.subList(0, Math.min(30, rounds.size()));
+        Double listed = listedRaised(fund, rounds);
+        if (listed != null) fund = listed;
+        String desc = name + " valuation: estimated " + money(val, "USD") + (fund != null ? ", with " + money(fund, "USD") + (listed != null ? " raised in listed rounds" : " raised") : "") + ". Funding rounds, price per share and what mutual funds report it is worth.";
         StringBuilder m = new StringBuilder("<p class=\"crumb\"><a href=\"/private-companies\">Private companies</a> › " + h(name) + "</p><h1>" + h(name) + " valuation</h1><p class=\"px\">" + h(money(val, "USD")) + " <small>estimated</small></p><div class=\"kn\">");
         m.append(tile("Past year", d(co, "change52w") == null ? "—" : signed(d(co, "change52w") / 100), "Change in estimated price"));
         if (d(co, "price") != null) m.append(tile("Price per share", money(d(co, "price"), "USD"), "Estimated"));
-        if (fund != null) m.append(tile("Total raised", money(fund, "USD"), "All funding rounds"));
+        if (fund != null) m.append(listed != null ? tile("Total raised (listed rounds)", money(fund, "USD"), "Sum of the rounds below") : tile("Total raised", money(fund, "USD"), "Reported total"));
         if (str(co.get("lastRound")) != null) m.append(tile("Latest round", str(co.get("lastRound")), h(str(co.get("lastRoundDate")))));
         m.append("</div><p class=\"go\"><a class=\"cta\" href=\"/#/pvt/").append(h(sym)).append("\">See the chart and full profile</a></p><h2>What is ").append(h(name)).append("?</h2><p>").append(h(f.get("description"))).append("</p>");
         m.append("<h2>Can you buy ").append(h(name)).append(" stock?</h2><p>").append(h(name)).append(" is a private company, so its shares aren’t sold on a stock exchange or through a normal brokerage. Its value is estimated from funding rounds and secondary-market trades, and it updates only when new deals happen.</p>");
-        List<Object> rounds = list(f.get("rounds"));
         if (!rounds.isEmpty()) {
             m.append("<h2>").append(h(name)).append(" funding rounds</h2><div class=\"tw\"><table><tr><th>Date</th><th>Round</th><th>Raised</th><th>Price per share</th><th>Post-money valuation</th></tr>");
-            for (Object o : rounds.subList(0, Math.min(30, rounds.size()))) { Map<String, Object> r = map(o); m.append("<tr><td>").append(h(r.get("date"))).append("</td><td>").append(h(r.get("round"))).append("</td><td>").append(h(money(d(r, "raised"), "USD"))).append("</td><td>").append(d(r, "issuePrice") == null ? "—" : "$" + h(num(d(r, "issuePrice"), "#,##0.00"))).append("</td><td>").append(h(money(d(r, "valuation"), "USD"))).append("</td></tr>"); }
+            for (Object o : rounds) { Map<String, Object> r = map(o); m.append("<tr><td>").append(h(r.get("date"))).append("</td><td>").append(h(r.get("round"))).append("</td><td>").append(h(money(d(r, "raised"), "USD"))).append("</td><td>").append(d(r, "issuePrice") == null ? "—" : "$" + h(num(d(r, "issuePrice"), "#,##0.00"))).append("</td><td>").append(h(money(d(r, "valuation"), "USD"))).append("</td></tr>"); }
             m.append("</table></div>");
         }
         m.append("<p class=\"src\">Source: ").append(h(f.get("source"))).append(". Private company values are estimates and can differ a lot from what shares would sell for. Not investment advice.</p>");
