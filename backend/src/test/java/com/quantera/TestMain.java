@@ -113,7 +113,7 @@ public class TestMain {
             reply(ex, 200, "application/json", b.append("]}").toString()); });
                 fake.createContext("/sec/files/company_tickers.json", ex -> { upstreamCalls.add("sec tickers ua=" + ex.getRequestHeaders().getFirst("User-Agent")); reply(ex, 200, "application/json", "{\"0\":{\"cik_str\":320193,\"ticker\":\"AAPL\",\"title\":\"Apple Inc.\"},\"1\":{\"cik_str\":1067983,\"ticker\":\"BRK-B\",\"title\":\"Berkshire\"}}"); });
         fake.createContext("/secdata/submissions/", ex -> { String today = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString();
-            reply(ex, 200, "application/json", "{\"name\":\"Apple Inc.\",\"sicDescription\":\"Electronic Computers\",\"fiscalYearEnd\":\"0927\",\"filings\":{\"recent\":{\"form\":[\"4\",\"8-K\",\"SD\",\"10-K\"],\"filingDate\":[\"" + today + "\",\"" + today + "\",\"2026-05-01\",\"2025-10-31\"],\"accessionNumber\":[\"0001-26-000001\",\"0001-26-000002\",\"0001-26-000003\",\"0000320193-25-000079\"],\"primaryDocument\":[\"x.xml\",\"e.htm\",\"sd.htm\",\"aapl-20250927.htm\"],\"primaryDocDescription\":[\"\",\"8-K\",\"SD\",\"10-K\"],\"reportDate\":[\"\",\"\",\"\",\"2025-09-27\"]}}}"); });
+            reply(ex, 200, "application/json", "{\"name\":\"Apple Inc.\",\"sicDescription\":\"Electronic Computers\",\"fiscalYearEnd\":\"0927\",\"filings\":{\"recent\":{\"form\":[\"4\",\"8-K\",\"SD\",\"10-K\"],\"filingDate\":[\"" + today + "\",\"" + today + "\",\"2026-05-01\",\"2025-10-31\"],\"accessionNumber\":[\"0001-26-000001\",\"0001-26-000002\",\"0001-26-000003\",\"0000320193-25-000079\"],\"primaryDocument\":[\"x.xml\",\"e.htm\",\"sd.htm\",\"aapl-20250927.htm\"],\"primaryDocDescription\":[\"\",\"8-K\",\"SD\",\"10-K\"],\"reportDate\":[\"\",\"\",\"\",\"2025-09-27\"],\"items\":[\"\",\"2.02,9.01\",\"\",\"\"],\"acceptanceDateTime\":[\"\",\"2026-07-30T20:30:28.000Z\",\"\",\"\"]}}}"); });
         fake.createContext("/secdata/api/xbrl/companyfacts/", ex -> reply(ex, 200, "application/json", "{\"facts\":{\"us-gaap\":{"
             + "\"Revenues\":{\"units\":{\"USD\":[{\"end\":\"2023-09-30\",\"val\":383000000000,\"frame\":\"CY2023\"},{\"end\":\"2024-09-28\",\"val\":391000000000,\"frame\":\"CY2024\"},{\"end\":\"2024-12-28\",\"val\":124000000000,\"frame\":\"CY2024Q4\"},{\"end\":\"2024-09-28\",\"val\":1}]}},"
             + "\"NetIncomeLoss\":{\"units\":{\"USD\":[{\"end\":\"2024-09-28\",\"val\":93700000000,\"frame\":\"CY2024\"}]}},"
@@ -413,6 +413,11 @@ public class TestMain {
         r = get(p, "/api/popular?list=popular");
         t("popular: 300+ well-known names with sectors, one batch per 50", r.code == 200 && d(m(r.body).get("count")) > 300 && Json.write(r.body).contains("\"sector\":\"Semiconductors\""));
         t("popular list validated", get(p, "/api/popular?list=memes").code == 400);
+        r = get(p, "/api/screen?c=in&cap=1000000000&pe=20&growth=10&roe=12&div=2&sort=dividend");
+        Map<String, Object> scr0 = m(l(m(r.body).get("items")).get(0));
+        t("screener: filters reach Yahoo and rows come back normalized", r.code == 200 && "INFY.NS".equals(scr0.get("symbol")) && d(m(r.body).get("total")) == 209
+            && upstreamCalls.stream().anyMatch(u -> u.startsWith("yahoo screener") && u.contains("quarterlyrevenuegrowth.quarterly") && u.contains("returnonequity.lasttwelvemonths") && u.contains("forward_dividend_yield") && u.contains("peratio.lasttwelvemonths") && u.contains("intradaymarketcap")));
+        t("screener: bad input rejected", get(p, "/api/screen?sort=memes").code == 400 && get(p, "/api/screen?pe=abc").code == 400 && get(p, "/api/screen?c=zz").code == 400 && get(p, "/api/screen?sector=Nope").code == 400);
         r = get(p, "/api/fundamentals?symbol=FNDX");
         Map<String, Object> fk = m(m(r.body).get("key")), fa = m(m(r.body).get("analysts"));
         List<Object> fan = l(m(r.body).get("annual"));
@@ -453,6 +458,8 @@ public class TestMain {
         List<Object> sp = new ArrayList<>(List.of(Json.obj("eps", 3.85, "netIncome", 9.75e9), Json.obj("eps", 0.17, "netIncome", 4.37e9), Json.obj("eps", 1.19, "netIncome", 29.8e9), Json.obj("eps", -0.5, "netIncome", -1e9)));
         Sec.splitAdjust(sp);
         t("financials: EPS before an unrestated 10-for-1 split is adjusted; later years untouched", d(m(sp.get(0)).get("eps")) == 0.39 && d(m(sp.get(1)).get("eps")) == 0.17 && d(m(sp.get(2)).get("eps")) == 1.19);
+        r = get(p, "/api/filings?symbol=AAPL");
+        t("filings: earnings dates from 8-K item 2.02, flagged after the New York close", l(m(r.body).get("earnings")).size() == 1 && Boolean.TRUE.equals(m(l(m(r.body).get("earnings")).get(0)).get("afterClose")));
         t("filings: companies that don't file with the SEC -> 404", get(p, "/api/filings?symbol=7203.T").code == 404);
         // ---- background price alerts (Web Push)
         java.security.KeyPairGenerator kg = java.security.KeyPairGenerator.getInstance("EC"); kg.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));

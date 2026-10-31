@@ -603,6 +603,45 @@ final class Yahoo {
         return d > 0 && SUFFIXES.contains(s.substring(d + 1).toUpperCase());
     }
 
+    // ---------------------------------------------------------------- stock screener on real fundamentals
+
+    /** Stocks in one country matching the filters (null = no filter). Amounts are in the country's own currency. Cached 5 minutes. */
+    static Map<String, Object> screen(String code, Double minCap, Double maxPe, Double minGrowth, Double minRoe, Double minDiv, String sector, String sort, int page) {
+        Country c = BY_CODE.get(code);
+        if (c == null || c.exchanges() == null) throw new UpstreamException("Unknown country", 400);
+        String key = "yscr" + code + "|" + minCap + "|" + maxPe + "|" + minGrowth + "|" + minRoe + "|" + minDiv + "|" + sector + "|" + sort + "|" + page;
+        return CACHE.get(key, 5 * 60_000L, () -> {
+            List<Object> ops = new ArrayList<>(List.of(Json.obj("operator", "eq", "operands", List.of("region", c.code()))));
+            if (!c.exchanges().isEmpty()) {
+                List<Object> ex = new ArrayList<>();
+                for (String e : c.exchanges()) ex.add(Json.obj("operator", "eq", "operands", List.of("exchange", e)));
+                ops.add(Json.obj("operator", "or", "operands", ex));
+            }
+            if (!sector.isEmpty()) ops.add(Json.obj("operator", "eq", "operands", List.of("sector", sector)));
+            if (minCap != null) ops.add(Json.obj("operator", "gt", "operands", List.of("intradaymarketcap", minCap)));
+            if (maxPe != null) ops.add(Json.obj("operator", "btwn", "operands", List.of("peratio.lasttwelvemonths", 0, maxPe)));
+            if (minGrowth != null) ops.add(Json.obj("operator", "gt", "operands", List.of("quarterlyrevenuegrowth.quarterly", minGrowth)));
+            if (minRoe != null) ops.add(Json.obj("operator", "gt", "operands", List.of("returnonequity.lasttwelvemonths", minRoe)));
+            if (minDiv != null) ops.add(Json.obj("operator", "gt", "operands", List.of("forward_dividend_yield", minDiv)));
+            if (sort.equals("gainers")) ops.add(Json.obj("operator", "gt", "operands", List.of("percentchange", 0)));
+            if (sort.equals("losers")) ops.add(Json.obj("operator", "lt", "operands", List.of("percentchange", 0)));
+            String field = switch (sort) { case "gainers", "losers" -> "percentchange"; case "pe" -> "peratio.lasttwelvemonths"; case "dividend" -> "forward_dividend_yield"; case "active" -> "dayvolume"; default -> "intradaymarketcap"; };
+            String body = Json.write(Json.obj("size", PER_PAGE, "offset", (page - 1) * PER_PAGE, "sortField", field, "sortType", sort.equals("losers") || sort.equals("pe") ? "ASC" : "DESC",
+                    "quoteType", "EQUITY", "query", Json.obj("operator", "AND", "operands", ops), "userId", "", "userIdType", "guid"));
+            Map<String, Object> r = map(list(map(call("/v1/finance/screener?lang=en-US&region=US", body, true).get("finance")).get("result")).stream().findFirst().orElse(null));
+            List<Object> items = new ArrayList<>();
+            for (Object o : list(r.get("quotes"))) {
+                Map<String, Object> q = map(o);
+                String sym = str(q.get("symbol"));
+                if (sym == null || sym.matches("[A-Z]+-P[A-Z]*")) continue; // preferred shares (JPM-PC) aren't the common stock people mean
+                String name = str(q.get("longName")) != null ? str(q.get("longName")) : str(q.get("shortName"));
+                items.add(Json.obj("symbol", ourSym(sym), "name", name, "price", num(q.get("regularMarketPrice")), "changePct", num(q.get("regularMarketChangePercent")), "marketCap", num(q.get("marketCap")), "pe", num(q.get("trailingPE")),
+                        "change52w", num(q.get("fiftyTwoWeekChangePercent")), "dividendYield", num(q.get("dividendYield")), "currency", str(q.get("currency"))));
+            }
+            return Json.obj("items", items, "total", num(r.get("total")) == null ? items.size() : num(r.get("total")), "page", page, "perPage", PER_PAGE, "country", c.name(), "source", "Yahoo Finance");
+        });
+    }
+
     // ---------------------------------------------------------------- fundamentals for any stock worldwide
 
     private static final String[][] STATEMENT = {{"revenue", "TotalRevenue"}, {"grossProfit", "GrossProfit"}, {"operatingIncome", "OperatingIncome"}, {"ebitda", "EBITDA"}, {"netIncome", "NetIncome"}, {"eps", "DilutedEPS"},
