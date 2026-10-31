@@ -420,6 +420,15 @@ public class TestMain {
         t("screener: filters reach Yahoo and rows come back normalized", r.code == 200 && "INFY.NS".equals(scr0.get("symbol")) && d(m(r.body).get("total")) == 209
             && upstreamCalls.stream().anyMatch(u -> u.startsWith("yahoo screener") && u.contains("quarterlyrevenuegrowth.quarterly") && u.contains("returnonequity.lasttwelvemonths") && u.contains("forward_dividend_yield") && u.contains("peratio.lasttwelvemonths") && u.contains("intradaymarketcap")));
         t("screener: bad input rejected", get(p, "/api/screen?sort=memes").code == 400 && get(p, "/api/screen?pe=abc").code == 400 && get(p, "/api/screen?c=zz").code == 400 && get(p, "/api/screen?sector=Nope").code == 400);
+        System.setProperty("TWELVEDATA_API_KEY", "td-test"); Providers.TD_BLOCKED_UNTIL = System.currentTimeMillis() + 60_000;
+        t("stock history falls back to Yahoo when Twelve Data's limit is reached", get(p, "/api/history?symbol=NEWUS").code == 200 && "Yahoo Finance".equals(m(get(p, "/api/history?symbol=NEWUS").body).get("source")));
+        t("intraday falls back to Yahoo too", "Yahoo Finance".equals(m(get(p, "/api/intraday?symbol=NEWUS&interval=1h").body).get("source")));
+        upstreamCalls.clear(); get(p, "/api/history?symbol=NEWB.B");
+        t("fallback asks Yahoo for class shares by their Yahoo symbol", upstreamCalls.stream().anyMatch(u -> u.contains("/chart/NEWB-B")));
+        Providers.TD_BLOCKED_UNTIL = 0; System.clearProperty("TWELVEDATA_API_KEY");
+        System.setProperty("FINNHUB_API_KEY", "fh-test"); Providers.FH_BLOCKED_UNTIL = System.currentTimeMillis() + 60_000;
+        t("quotes and company profiles fall back to Yahoo when Finnhub's limit is reached", get(p, "/api/quote?symbol=NEWUSQ").code == 200 && get(p, "/api/overview?symbol=FNDX").code == 200);
+        Providers.FH_BLOCKED_UNTIL = 0; System.clearProperty("FINNHUB_API_KEY");
         r = get(p, "/api/fundamentals?symbol=FNDX");
         Map<String, Object> fk = m(m(r.body).get("key")), fa = m(m(r.body).get("analysts"));
         List<Object> fan = l(m(r.body).get("annual"));

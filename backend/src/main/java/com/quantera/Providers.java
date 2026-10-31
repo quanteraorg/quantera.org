@@ -113,7 +113,7 @@ final class Providers {
             if (finnhubOn()) {
                 try { return finnhubQuote(s); }
                 catch (UpstreamException e) {
-                    if (Yahoo.on() && e.code != 429) try { return Yahoo.quote(s); } catch (UpstreamException ignored) {}
+                    if (Yahoo.on()) try { return Yahoo.quote(s); } catch (UpstreamException ignored) {}
                     if (e.code == 404 || cfg("ALPHAVANTAGE_API_KEY", null) == null) throw e;
                 } // fall back to Yahoo, then Alpha Vantage, on provider trouble
             }
@@ -187,7 +187,7 @@ final class Providers {
             if (twelveOn()) {
                 try { return twelveHistory(s, full); }
                 catch (UpstreamException e) {
-                    if (Yahoo.on() && e.code != 429) try { return Yahoo.history(s, full); } catch (UpstreamException ignored) {} // symbols outside the Twelve Data plan
+                    if (Yahoo.on()) try { return Yahoo.history(s, full); } catch (UpstreamException ignored) {} // over the free plan's limit, or a symbol outside it
                     if (e.code == 404 || cfg("ALPHAVANTAGE_API_KEY", null) == null) throw e;
                 }
             }
@@ -220,6 +220,7 @@ final class Providers {
         if (Yahoo.on() && (Yahoo.isGlobal(s) || !twelveOn())) return CACHE.get("yi" + s + interval, 60_000L, () -> Yahoo.intraday(s, interval));
         if (!twelveOn()) throw new UpstreamException("Intraday charts need a Twelve Data key", 503);
         long ttl = interval.endsWith("min") ? (usMarketOpen() ? 60_000L : 30 * 60_000L) : (usMarketOpen() ? 5 * 60_000L : 60 * 60_000L);
+        if (Yahoo.on() && System.currentTimeMillis() < TD_BLOCKED_UNTIL) return CACHE.get("yi" + s + interval, 60_000L, () -> Yahoo.intraday(s, interval));
         return CACHE.get("i" + s + interval, ttl, () -> {
             String sym = s.equals("BTC-USD") ? "BTC/USD" : s.equals("ETH-USD") ? "ETH/USD" : s;
             Map<String, Object> j = map(getJson("td", "/time_series?interval=" + interval + "&outputsize=" + (perDay * 20) + "&timezone=America/New_York&symbol=" + URLEncoder.encode(sym, StandardCharsets.UTF_8)));
@@ -321,7 +322,7 @@ final class Providers {
             if (Yahoo.on() && (Yahoo.isGlobal(s) || (!finnhubOn() && cfg("ALPHAVANTAGE_API_KEY", null) == null))) return Yahoo.overview(s);
             if (finnhubOn()) {
                 try { return finnhubOverview(s); }
-                catch (UpstreamException e) { if (Yahoo.on() && e.code == 404) return Yahoo.overview(s); throw e; }
+                catch (UpstreamException e) { if (Yahoo.on()) return Yahoo.overview(s); throw e; } // rate limited, or not covered
             }
             Map<String, Object> j = av(q("function", "OVERVIEW", "symbol", s));
             if (str(j.get("Symbol")) == null) throw new UpstreamException("No company data for this symbol", 404);
@@ -454,6 +455,9 @@ final class Providers {
         ex.scheduleWithFixedDelay(() -> { try { news("", "", 1, 45_000L); } catch (RuntimeException ignored) {} }, 5, 15, java.util.concurrent.TimeUnit.SECONDS);
         if (cfg("FRED_API_KEY", null) != null)
             ex.scheduleWithFixedDelay(() -> { try { Macro.dashboard(25 * 60_000L); } catch (RuntimeException ignored) {} }, 20, 60, java.util.concurrent.TimeUnit.SECONDS);
+        // Slow first requests: the SEC's ticker list (5 s), the world board and the private company list
+        ex.scheduleWithFixedDelay(() -> { try { Sec.ciks(); } catch (RuntimeException ignored) {} }, 15, 3600, java.util.concurrent.TimeUnit.SECONDS);
+        if (Yahoo.on()) ex.scheduleWithFixedDelay(() -> { try { Yahoo.world(); Yahoo.privates(); } catch (RuntimeException ignored) {} }, 25, 120, java.util.concurrent.TimeUnit.SECONDS);
         // Render's free plan sleeps after 15 idle minutes and the next visitor waits 30-60 s; a request to our own public URL keeps it awake.
         // Render sets RENDER_EXTERNAL_URL itself. KEEP_AWAKE=0 turns this off.
         String self = cfg("RENDER_EXTERNAL_URL", null);

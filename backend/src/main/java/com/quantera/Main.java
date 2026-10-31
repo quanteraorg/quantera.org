@@ -43,7 +43,7 @@ public final class Main {
     }
 
     static void routes() {
-        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn() || Yahoo.on(), "marketOpen", Providers.usMarketOpen(), "global", Yahoo.on(), "pushAlerts", Push.on(), "economyKey", cfg("FRED_API_KEY", null) != null, "lastPushError", Push.LAST_ERR, "lastProviderError", Providers.LAST_ERR, "lastGlobalError", Yahoo.LAST_ERR), 0, 120));
+        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn() || Yahoo.on(), "marketOpen", Providers.usMarketOpen(), "global", Yahoo.on(), "pushAlerts", Push.on(), "economyKey", cfg("FRED_API_KEY", null) != null, "lastPushError", Push.LAST_ERR, "lastProviderError", Providers.LAST_ERR, "lastGlobalError", Yahoo.LAST_ERR), 30, 120));
         ROUTES.put("/api/quote", new Route(r -> Providers.quote(symbol(r), 60_000), 60, 60));
         ROUTES.put("/api/history", new Route(r -> Providers.history(symbol(r), "1".equals(r.query().get("full"))), 3600, 60));
         ROUTES.put("/api/intraday", new Route(r -> Providers.intraday(symbol(r), r.query().getOrDefault("interval", "5min")), 60, 30));
@@ -251,7 +251,7 @@ public final class Main {
         Headers h = ex.getResponseHeaders();
         h.set("Content-Type", "application/json; charset=utf-8");
         h.set("X-Content-Type-Options", "nosniff");
-        h.set("Cache-Control", ttl > 0 && code == 200 ? "public, s-maxage=" + ttl + ", stale-while-revalidate=" + ttl * 4 : "no-store");
+        h.set("Cache-Control", ttl > 0 && code == 200 ? "public, max-age=" + Math.min(ttl, 30) + ", s-maxage=" + ttl + ", stale-while-revalidate=" + ttl * 4 : "no-store");
         String origin = ex.getRequestHeaders().getFirst("Origin"), allowed = cfg("ALLOWED_ORIGIN", "");
         if (origin != null && Arrays.asList(allowed.split(",")).contains(origin)) {
             h.set("Access-Control-Allow-Origin", origin); h.set("Vary", "Origin");

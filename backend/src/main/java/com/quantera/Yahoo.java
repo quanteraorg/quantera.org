@@ -173,6 +173,7 @@ final class Yahoo {
     }
 
     static Map<String, Object> quote(String s) {
+        if (!isGlobal(s) && !ySym(s).equals(s)) { Map<String, Object> c = new LinkedHashMap<>(quote(ySym(s))); c.put("symbol", s); return c; }
         Map<String, Object> q;
         try { q = quotes(List.of(s)).get(s); }
         catch (UpstreamException e) { if (e.code == 429) throw e; q = null; }
@@ -202,7 +203,7 @@ final class Yahoo {
 
     /** Bars from Yahoo's chart API in exchange-local time, oldest first. */
     private static Map<String, Object> chart(String s, String range, String interval) {
-        Map<String, Object> res = map(list(map(call("/v8/finance/chart/" + enc(s) + "?range=" + range + "&interval=" + interval + "&includePrePost=false", null, false).get("chart")).get("result")).stream().findFirst().orElse(null));
+        Map<String, Object> res = map(list(map(call("/v8/finance/chart/" + enc(isGlobal(s) ? s : ySym(s)) + "?range=" + range + "&interval=" + interval + "&includePrePost=false", null, false).get("chart")).get("result")).stream().findFirst().orElse(null));
         Map<String, Object> meta = map(res.get("meta")), ind = map(list(map(res.get("indicators")).get("quote")).stream().findFirst().orElse(null));
         List<Object> ts = list(res.get("timestamp")), o = list(ind.get("open")), h = list(ind.get("high")), l = list(ind.get("low")), c = list(ind.get("close")), v = list(ind.get("volume"));
         if (ts.isEmpty()) throw new UpstreamException("No price history for this symbol", 404);
@@ -253,7 +254,7 @@ final class Yahoo {
     /** Company or fund profile in the same units as Providers.overview (dollars and fractions). */
     static Map<String, Object> overview(String s) {
         Map<String, Object> r;
-        try { r = map(list(map(call("/v10/finance/quoteSummary/" + enc(s) + "?modules=price,summaryProfile,summaryDetail,defaultKeyStatistics,financialData", null, true).get("quoteSummary")).get("result")).stream().findFirst().orElse(null)); }
+        try { r = map(list(map(call("/v10/finance/quoteSummary/" + enc(isGlobal(s) ? s : ySym(s)) + "?modules=price,summaryProfile,summaryDetail,defaultKeyStatistics,financialData", null, true).get("quoteSummary")).get("result")).stream().findFirst().orElse(null)); }
         catch (UpstreamException e) {
             if (e.code == 404 || e.code == 429) throw e;
             Map<String, Object> q = chartQuote(s); // crumb refused: the basics from the chart header
@@ -660,9 +661,10 @@ final class Yahoo {
     static Map<String, Object> fundamentals(String s) {
         return CACHE.get("fnd" + s, 3600_000L, () -> {
             String y = isGlobal(s) ? s : ySym(s); // SHEL.L stays as it is; BRK.B becomes BRK-B
-            Map<String, Object> r = Map.of();
-            try { r = map(list(map(call("/v10/finance/quoteSummary/" + enc(y) + "?modules=price,summaryDetail,defaultKeyStatistics,financialData,calendarEvents,earningsHistory,recommendationTrend", null, true).get("quoteSummary")).get("result")).stream().findFirst().orElse(null)); }
-            catch (UpstreamException e) { if (e.code == 429) throw e; }
+            var summary = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                try { return map(list(map(call("/v10/finance/quoteSummary/" + enc(y) + "?modules=price,summaryDetail,defaultKeyStatistics,financialData,calendarEvents,earningsHistory,recommendationTrend", null, true).get("quoteSummary")).get("result")).stream().findFirst().orElse(null)); }
+                catch (UpstreamException e) { if (e.code == 429) throw e; return Map.<String, Object>of(); }
+            });
             Map<String, Map<String, Object>> annual = new TreeMap<>(), quarterly = new TreeMap<>();
             String reported = null;
             StringBuilder types = new StringBuilder();
@@ -688,6 +690,9 @@ final class Yahoo {
                     }
                 }
             } catch (UpstreamException e) { if (e.code == 429) throw e; }
+            Map<String, Object> r;
+            try { r = summary.join(); }
+            catch (java.util.concurrent.CompletionException e) { if (e.getCause() instanceof UpstreamException u) throw u; throw e; }
             if (r.isEmpty() && annual.isEmpty() && quarterly.isEmpty()) throw new UpstreamException("No fundamentals for this symbol", 404);
             Map<String, Object> p = map(r.get("price")), sd = map(r.get("summaryDetail")), ks = map(r.get("defaultKeyStatistics")), fd = map(r.get("financialData"));
             Map<String, Object> key = new LinkedHashMap<>();
