@@ -2211,11 +2211,11 @@ const tapeItems=b=>{const X=[],add=(sym,nm,pc,px)=>{if(px!=null&&pc!=null&&isFin
  const M=b.movers||{},n=isSimple()?3:7;[...(M.gainers||[]).slice(0,n),...(M.losers||[]).slice(0,n)].forEach(x=>add(x.symbol,x.symbol,x.changePct,x.price));
  return X};
 const tapeLink=x=>`<a href="#/asset/${encodeURIComponent(x.sym)}" data-s="${esc(x.sym)}" tabindex="-1"><span>${esc(x.nm)}</span><b>${fmt(x.px)}</b><span class="${x.pc>=0?'up':'dn'}">${x.pc>=0?'▲':'▼'} ${fmt(Math.abs(x.pc))}%</span></a>`;
-const tapeLoad=()=>{if(!QLIVE.market||document.hidden)return;jf('/api/markets').then(({ok,b})=>{if(!ok)return;const I=tapeItems(b);if(!I.length)return;let t=document.getElementById('tape');
+const tapeLoad=()=>{if(!QLIVE.market||document.hidden)return;jf('/api/markets').then(({ok,b})=>{if(!ok){if(!document.getElementById('tape'))setTimeout(tapeLoad,5000);return}const I=tapeItems(b);if(!I.length)return;let t=document.getElementById('tape');
   if(!t){document.querySelector('header').insertAdjacentHTML('beforeend','<div id="tape" aria-label="Live market prices"><div class="tt"></div></div>');t=document.getElementById('tape')}
   const sig=I.map(x=>x.sym).join();if(sig==TPSIG){I.forEach(x=>t.querySelectorAll(`a[data-s="${CSS.escape(x.sym)}"]`).forEach(a=>{const c=a.children;c[1].textContent=fmt(x.px);c[2].className=x.pc>=0?'up':'dn';c[2].textContent=(x.pc>=0?'▲ ':'▼ ')+fmt(Math.abs(x.pc))+'%'}));return}
-  TPSIG=sig;const h=I.map(tapeLink).join('');const tt=t.querySelector('.tt');tt.innerHTML=h+h;tt.style.setProperty('--tp',Math.max(45,I.length*4.5)+'s')}).catch(()=>{})};
-(function tw(n){if(QLIVE.ok){tapeLoad();setInterval(tapeLoad,60000);return}if(n<80)setTimeout(()=>tw(n+1),250)})(0);
+  TPSIG=sig;const h=I.map(tapeLink).join('');const tt=t.querySelector('.tt');tt.innerHTML=h+h;tt.style.setProperty('--tp',Math.max(45,I.length*4.5)+'s')}).catch(()=>{if(!document.getElementById('tape'))setTimeout(tapeLoad,5000)})};
+(function tw(n){if(QLIVE.ok){tapeLoad();setInterval(tapeLoad,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document.getElementById('tape'))tapeLoad()});return}if(n<400)setTimeout(()=>tw(n+1),250)})(0);
 /* ---------- research scorecard: plain rules anyone can check ---------- */
 const CLOSES=s=>(QLIVE.ohlc[s]||[]).map(x=>x.c).filter(v=>v!=null);
 const SCORE=(s,F)=>{const K=F.key||{},R=F.annual||[],H=CLOSES(s),px=(QLIVE.quote[s]&&QLIVE.quote[s].price)||F.price||H[H.length-1],pct=v=>v==null?'—':fmt(v*100,1)+'%',c=F.financialCurrency||F.currency,N=(l,v,r,ok)=>[l,v,r,v==null||v=='—'?null:ok];
