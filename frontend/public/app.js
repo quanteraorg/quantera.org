@@ -1650,9 +1650,11 @@ PAGES.trade=arg=>{track('view_trade');let sym=String(arg&&arg!='trade'?arg:LS('q
   const tp=side=='b'&&tpOn?+(($('#wtp')||{}).value||0):0,sl=side=='b'&&slOn?+(($('#wsl2')||{}).value||0):0;
   if(tp&&tp<=px)return qtoast('Take profit must be above the buy price.');if(sl&&sl>=px)return qtoast('Stop loss must be below the buy price.');
   const o={id:Date.now().toString(36),sym,side,type:otype,q,px,ccy:c,tp:tp||null,sl:sl||null,t:Date.now()};
+  const go_=()=>{const A=PTL();
   if(otype=='mkt'){const e=PTFILL(A,o,p);if(e)return qtoast(esc(e));PTS(A);RECEIPT({t:A.hist[A.hist.length-1].t,side,sym,name:(QLIVE.quote[sym]&&QLIVE.quote[sym].name)||'',q:o.q,px:p,ccy:c,usd:o.q*p*FXN(c),cash:A.cash,closed:!(QLIVE.marketOpen||c!='USD'),brk:!!(tp||sl),real:A.hist[A.hist.length-1].real});tab='pos'}
   else{if(side=='s'&&q>held())return qtoast('You only hold '+fmt(held(),4)+' '+esc(sym)+'.');A.ord.push(o);PTS(A);qtoast(`<b>${otype=='lmt'?'Limit':'Stop'} order placed</b><br>${side=='b'?'Buy':'Sell'} ${fmt(q,q%1?4:0)} ${esc(sym)} at ${PX(px,c)}. It fills automatically when the price gets there.`);tab='ord';PTCHECK()}
   track('paper_order');all()};
+  if(LS('q_review',1))ORDREVIEW({o,A,p,c,held:held(),name:(QLIVE.quote[sym]&&QLIVE.quote[sym].name)||''},go_);else go_()};
  window.WSC_=s=>{const A=PTL(),o=A.pos[s],p=LP(s);if(!o||p==null)return qtoast('No live price for '+esc(s)+' yet.');A.ord=A.ord.filter(x=>!(x.sym==s&&x.side=='s'));const e=PTFILL(A,{sym:s,side:'s',type:'mkt',q:o.q,ccy:o.ccy},p);if(e)return qtoast(esc(e));PTS(A);qtoast(`<b>Closed ${esc(s)}</b><br>Sold at ${PX(p,o.ccy)}`);all()};
  window.WSX_=id=>{const A=PTL();A.ord=A.ord.filter(o=>o.id!=id);PTS(A);bottom()};
  window.WSZ_=()=>{if(confirmReset_())return};
@@ -2335,7 +2337,7 @@ const as35=PAGES.asset;PAGES.asset=s=>{const ok=QLIVE.market&&/^\^?[A-Za-z0-9.=\
 const Yahoo_=s=>/[=^]|\.[A-Z]{1,3}$/.test(s)&&!/^[A-Z]+\.[AB]$/.test(s);
 addEventListener('hashchange',route);
 /* ===== Account menu + Settings page ===== */
-SYNC.push('q_name','q_avc');
+SYNC.push('q_name','q_avc','q_review');
 const LOGOUT_=async()=>{const tk=QAUTH.sess&&QAUTH.sess.access_token;await cloudPush().catch(()=>{});if(tk)aFetch('/auth/v1/logout',{},tk).catch(()=>{});aSet(null);track('logout');acctBtn();if(/^#\/(me|settings)/.test(location.hash))go('#/');else route()};
 document.head.insertAdjacentHTML('beforeend',`<style>
 #acct .av{flex:none}
@@ -2364,6 +2366,28 @@ window.ACCTMENU_=()=>{if(!QAUTH.user)return ACCT_();let m=document.getElementByI
   out=e=>{if(!m.contains(e.target)&&!b.contains(e.target))close()},key=e=>{if(e.key=='Escape'){close();b.focus()}};
  document.addEventListener('mousedown',out,true);document.addEventListener('keydown',key,true);addEventListener('hashchange',close);
  m.querySelectorAll('a').forEach(a=>a.onclick=()=>setTimeout(close,0));m.querySelector('[data-x="out"]').onclick=()=>{close();LOGOUT_()};m.querySelector('a').focus()};
+/* Order review (shown before every paper order unless turned off in Settings) */
+document.head.insertAdjacentHTML('beforeend',`<style>
+.orv .box{max-width:420px;width:100%}.orv h2{margin:0 0 2px;font-size:24px}.orv .sub{color:var(--mu);font-size:13px;margin:0 0 14px}
+.orv .rr{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--ln);font-variant-numeric:tabular-nums}.orv .rr span{color:var(--mu)}.orv .rr.tot{font-size:16px}.orv .rr.tot b{font-weight:700}
+.orv .nt{font-size:12.5px;color:var(--mu);background:rgba(var(--fgc),.04);border:1px solid var(--ln);border-radius:10px;padding:9px 11px;margin:12px 0 0}
+.orv .act{display:flex;gap:10px;margin-top:16px}.orv .act .btn{flex:1;margin:0;padding:13px;font-size:15px;text-align:center}
+.orv .ok.s{background:linear-gradient(135deg,var(--dn),#b9464f)!important;color:#fff!important;border:0!important}
+@media(max-width:800px){.orv{align-items:flex-end!important;padding:0!important}.orv .box{border-radius:20px 20px 0 0!important;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))!important}}
+</style>`);
+const ORDREVIEW=(x,go)=>{const {o,A,p,c,held,name}=x,b=o.side=='b',fx=FXN(c)||1,tot=o.q*o.px*fx,T={mkt:'Market',lmt:'Limit',stp:'Stop'}[o.type]||o.type,R=(k,v,cl='')=>`<div class="rr ${cl}"><span>${k}</span><b>${v}</b></div>`,d=document.createElement('div');
+ const cashAfter=b?A.cash-tot:A.cash+tot,closed=o.type=='mkt'&&!(QLIVE.marketOpen||c!='USD');
+ d.className='qm orv';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','orvh');
+ d.innerHTML=`<div class="box"><h2 id="orvh">Review ${b?'buy':'sell'}</h2><p class="sub">${esc(o.sym)}${name?' · '+esc(String(name).slice(0,40)):''}</p>
+ ${R('Order type',T+(o.type=='mkt'?'':' at '+PX(o.px,c)))}${R('Shares',fmt(o.q,o.q%1?4:0))}${R(o.type=='mkt'?'Market price':'Your price',PX(o.type=='mkt'?p:o.px,c))}
+ ${o.tp?R('Take profit',PX(o.tp,c)):''}${o.sl?R('Stop loss',PX(o.sl,c)):''}
+ ${R(b?'Estimated cost':'Estimated credit',D2(tot),'tot')}${R(b?'Cash after':'Cash after',D2(cashAfter))}${b?'':R('Shares left',fmt(Math.max(0,held-o.q),4).replace(/\.?0+$/,''))}
+ ${b&&cashAfter<0?`<div class="nt" style="color:var(--dn)">This costs more than your ${D2(A.cash)} cash. Lower the amount to place it.</div>`:''}
+ <div class="nt">${o.type=='mkt'?(closed?'The market is closed, so this fills at the latest price shown.':'Market orders fill at the latest price, which can move slightly.'):`Fills automatically if the price reaches ${PX(o.px,c)}.`} Paper trading: no real money is used.</div>
+ <div class="act"><button class="btn" data-x="edit" type="button">Edit</button><button class="btn p ok ${b?'':'s'}" data-x="ok" type="button"${b&&cashAfter<0?' disabled':''}>${b?'Buy':'Sell'} ${esc(o.sym)}</button></div></div>`;
+ document.body.appendChild(d);const close=()=>{d.remove();removeEventListener('keydown',key,true)},key=e=>{if(e.key=='Escape'){e.preventDefault();close()}};addEventListener('keydown',key,true);
+ d.onclick=e=>{if(e.target===d||e.target.closest('[data-x="edit"]'))close();else if(e.target.closest('[data-x="ok"]')&&!e.target.closest('[disabled]')){close();go()}};
+ const ok=d.querySelector('[data-x="ok"]');(ok.disabled?d.querySelector('[data-x="edit"]'):ok).focus();track('order_review')};
 /* Settings page */
 TT.settings=['Settings','Make Quantera yours.'];
 const CCact=(g,v)=>{if(g=='ccp'){const p=CCP[+v];if(p)CCset({bu:p[1],ou:p[1],wu:p[1],bd:p[2],od:p[2],wd:p[2]})}if(g=='cct'){const K=CCget(),o=v=='body'?'border':v=='border'?'body':null;if(K[v]&&o&&!K[o]){qtoast('Keep either the body or the borders on so the candles stay visible.');return false}CCset({[v]:K[v]?0:1})}if(g=='ccprev')CCset({prev:CCget().prev?0:1});if(g=='ccr')CCset({...CCD})};
@@ -2386,6 +2410,8 @@ PAGES.settings=sec=>{track('view_settings');const U=QAUTH.user,ch=(a,l,o,t)=>`<b
   <div class="row"><div><b>Experience</b><small>Simple shows the essentials with explanations. Pro shows every tool.</small></div>${SEG('mode',[['simple','Simple'],['pro','Pro']],MODE()||'pro')}</div></div>
  <div class="pan" id="st-charts"><h3>Charts</h3><div class="ccp"><div>${CCpanel(ch)}</div><div class="ccpv" id="stpv">${CCpreview()}</div></div>
   <div class="row"><div><b>Indicator settings</b><small>${Object.keys(tvp).length?`You’ve customised ${Object.keys(tvp).length} indicator${Object.keys(tvp).length>1?'s':''}.`:'All indicators use the standard settings.'}</small></div><button class="btn" id="sttvp" style="margin:0"${Object.keys(tvp).length?'':' disabled'}>Reset to standard</button></div></div>
+ <div class="pan" id="st-trade"><h3>Trading</h3>
+  <div class="row"><div><b>Review orders before placing</b><small>Show a summary with the estimated cost and your cash afterwards, and ask you to confirm.</small></div>${SEG('review',[['1','On'],['0','Off']],LS('q_review',1)?'1':'0')}</div></div>
  <div class="pan" id="st-alerts"><h3>Notifications</h3>
   <div class="row"><div><b>Price alert notifications</b><small>Get a notification on this device when one of your price alerts triggers, even with Quantera closed.</small></div><button class="btn ${push?'':'p'}" id="stpush" style="margin:0">${push?'Turn off':'Turn on'}</button></div></div>
  ${U?`<div class="pan" id="st-lb"><h3>Leaderboard</h3>${LBJOINBOX()}</div>`:''}
@@ -2395,7 +2421,7 @@ PAGES.settings=sec=>{track('view_settings');const U=QAUTH.user,ch=(a,l,o,t)=>`<b
  </div>`;
  const M=$('#m').querySelector('.st'),Q=s=>M.querySelector(s),again=()=>{const y=scrollY;route();scrollTo(0,y)};
  M.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.s=='theme'){setTheme_(t.dataset.v);return}if(t.dataset.s=='mode'){setMode_(t.dataset.v);return}
+  if(t.dataset.s=='theme'){setTheme_(t.dataset.v);return}if(t.dataset.s=='mode'){setMode_(t.dataset.v);return}if(t.dataset.s=='review'){SS('q_review',+t.dataset.v);again();return}
   if(t.dataset.av!=null){SS('q_avc',+t.dataset.av);acctBtn();try{if(QAUTH.user)cloudPush().catch(()=>{})}catch(x){}again();return}
   const g=t.dataset.g;if(g&&/^cc/.test(g)){if(CCact(g,t.dataset.v)!==false)again()}});
  M.addEventListener('input',e=>{const t=e.target;if(t.dataset.cc&&/^#[0-9a-f]{6}$/i.test(t.value)){CCset({[t.dataset.cc]:t.value.toLowerCase()});Q('#stpv').innerHTML=CCpreview()}});
