@@ -71,4 +71,32 @@ final class Store {
         if (on()) Thread.startVirtualThread(() -> { try { insert("events", Json.obj("name", name)); } catch (RuntimeException ignored) {} });
         return Json.obj("ok", true);
     }
+
+    static final Pattern TOKEN = Pattern.compile("^[A-Za-z0-9._\\-]{20,4096}$"), UID = Pattern.compile("^[0-9a-fA-F-]{8,64}$");
+
+    /** Supabase Auth call with the service key as apikey; bearer is either the user's own token (to verify it) or the service key (admin). */
+    private static HttpResponse<String> auth(String method, String path, String bearer) {
+        String key = cfg("SUPABASE_SERVICE_KEY", "").trim();
+        if (!key.matches("[A-Za-z0-9._\\-]+")) throw new UpstreamException("Storage is not configured correctly", 503);
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(cfg("SUPABASE_URL", "").replaceAll("/+$", "") + "/auth/v1/" + path)).timeout(Duration.ofSeconds(8)).header("apikey", key);
+        if (bearer != null) b.header("Authorization", "Bearer " + bearer);
+        b.method(method, HttpRequest.BodyPublishers.noBody());
+        try { return HTTP.send(b.build(), HttpResponse.BodyHandlers.ofString()); } catch (Exception e) { throw new UpstreamException("Storage error"); }
+    }
+
+    /** Deletes the signed-in person's account: verifies their own access token, removes their saved data and leaderboard row, then the login itself. */
+    static Map<String, Object> deleteAccount(Object body) {
+        String token = String.valueOf(map(body).getOrDefault("token", ""));
+        if (!TOKEN.matcher(token).matches()) throw new UpstreamException("Please log in again, then try once more.", 401);
+        if (!on()) throw new UpstreamException("Deleting accounts isn't available right now. Please try again later.", 503);
+        HttpResponse<String> me = auth("GET", "user", token);
+        if (me.statusCode() / 100 != 2) throw new UpstreamException("Please log in again, then try once more.", 401);
+        String id = String.valueOf(map(Json.parse(me.body())).getOrDefault("id", ""));
+        if (!UID.matcher(id).matches()) throw new UpstreamException("Please log in again, then try once more.", 401);
+        for (String t : List.of("user_data", "leaderboard")) try { rest("DELETE", t + "?user_id=eq." + id, null); } catch (UpstreamException ignored) { /* table may not exist on this project */ }
+        String key = cfg("SUPABASE_SERVICE_KEY", "").trim();
+        HttpResponse<String> del = auth("DELETE", "admin/users/" + id, key.startsWith("eyJ") ? key : null);
+        if (del.statusCode() / 100 != 2 && del.statusCode() != 404) throw new UpstreamException("Your account couldn't be deleted. Please try again.");
+        return Json.obj("ok", true);
+    }
 }

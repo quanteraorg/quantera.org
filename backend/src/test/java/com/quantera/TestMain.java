@@ -137,6 +137,9 @@ public class TestMain {
                 List<Object> out = new ArrayList<>(); for (Map<String, Object> r : pushRows) if (match.test(r)) out.add(r); reply(ex, 200, "application/json", Json.write(out)); }
         });
         fake.createContext("/push/", ex -> { pushed.add(new String[]{ex.getRequestHeaders().getFirst("Authorization"), ex.getRequestHeaders().getFirst("Content-Encoding"), Base64.getEncoder().encodeToString(ex.getRequestBody().readAllBytes())}); reply(ex, 201, "text/plain", ""); });
+        fake.createContext("/sb/auth/v1/user", ex -> { String authH = ex.getRequestHeaders().getFirst("Authorization"); upstreamCalls.add("supabase-auth user key=" + ex.getRequestHeaders().getFirst("apikey"));
+            if ("Bearer good-user-token-1234567890".equals(authH)) reply(ex, 200, "application/json", "{\"id\":\"0a1b2c3d-1111-2222-3333-444455556666\",\"email\":\"ada@example.com\"}"); else reply(ex, 401, "application/json", "{}"); });
+        fake.createContext("/sb/auth/v1/admin/users/", ex -> { upstreamCalls.add("supabase-admin " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath().substring("/sb/auth/v1/admin/users/".length()) + " key=" + ex.getRequestHeaders().getFirst("apikey")); reply(ex, 200, "application/json", "{}"); });
         fake.createContext("/sb/rest/v1/", ex -> {
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8), table = ex.getRequestURI().getPath().substring("/sb/rest/v1/".length());
             upstreamCalls.add("supabase " + table + " key=" + ex.getRequestHeaders().getFirst("apikey") + " " + body);
@@ -350,6 +353,11 @@ public class TestMain {
         t("event rejects bad name", call(p, "POST", "/api/events", "{\"name\":\"<x>\"}", ip()).code == 400);
         Main.MARKETS = Json.obj("movers", null, "indices", List.of(), "crypto", List.of(), "updated", "warm");
         t("markets served from background snapshot", "warm".equals(m(get(p, "/api/markets").body).get("updated"))); Main.MARKETS = null;
+        t("delete account: missing token -> 401", call(p, "POST", "/api/account/delete", "{}", ip()).code == 401);
+        t("delete account: token Supabase rejects -> 401, nothing deleted", call(p, "POST", "/api/account/delete", "{\"token\":\"bad-user-token-1234567890\"}", ip()).code == 401 && upstreamCalls.stream().noneMatch(u -> u.startsWith("supabase-admin")));
+        r = call(p, "POST", "/api/account/delete", "{\"token\":\"good-user-token-1234567890\"}", ip());
+        t("delete account: verifies the token, removes saved data + leaderboard, then the login", r.code == 200 && upstreamCalls.stream().anyMatch(u -> u.startsWith("supabase user_data")) && upstreamCalls.stream().anyMatch(u -> u.startsWith("supabase leaderboard")) && upstreamCalls.stream().anyMatch(u -> u.equals("supabase-admin DELETE 0a1b2c3d-1111-2222-3333-444455556666 key=sb-test")) && !r.raw.contains("sb-test"));
+        t("delete account rejects GET", get(p, "/api/account/delete").code == 405);
         System.setProperty("SUPABASE_SERVICE_KEY", "sb_secret_abc\n••••");
         r = call(p, "POST", "/api/waitlist", "{\"email\":\"masked@y.io\"}", ip());
         t("masked/multi-line storage key -> 503, key never echoed", r.code == 503 && !r.raw.contains("sb_secret"));
