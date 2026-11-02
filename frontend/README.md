@@ -1,6 +1,6 @@
 # Quantera website (Vercel)
 
-Static site in `public/` (index.html + two videos). All `/api/...` calls are proxied to the Java server by `vercel.json`.
+Static site in `public/`: `index.html` (page shell, early theme script, base styles) loads `app.js` (the whole app) as a normal script, so the 600 KB of code is cached by browsers instead of re-downloaded with every page view. Two videos sit alongside. All `/api/...` calls are proxied to the Java server by `vercel.json`.
 
 1. Deploy the `backend/` folder first (see backend/README.md) and copy its public address, e.g. `quantera-api.onrender.com`.
 2. In `vercel.json`, replace `YOUR-BACKEND-HOST` with that address (no https://, no trailing slash inside the destination except as shown).

@@ -97,6 +97,7 @@ public final class Main {
         ROUTES.put("/api/push/alerts", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.add(r.body()); }, 0, 30));
         ROUTES.put("/api/push/list", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.listFor(r.body()); }, 0, 30));
         ROUTES.put("/api/push/delete", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.remove(r.body()); }, 0, 30));
+        ROUTES.put("/api/account/delete", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Store.deleteAccount(r.body()); }, 0, 5));
         ROUTES.put("/api/push/test", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.test(r.body()); }, 0, 6));
         ROUTES.put("/api/screen", new Route(r -> {
             String c = r.query().getOrDefault("c", "us").toLowerCase(), sector = r.query().getOrDefault("sector", ""), sort = r.query().getOrDefault("sort", "cap");
