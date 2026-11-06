@@ -2528,7 +2528,7 @@ setTimeout(()=>{NAVDECO();TBAR();const n=document.getElementById('nav');if(n)new
 document.head.insertAdjacentHTML('beforeend',`<style>
 .sc.hx .in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:28px;align-items:center;max-width:1240px}
 .sc.hx h1.k{font-size:clamp(40px,5.4vw,78px)!important;line-height:1.02!important;letter-spacing:-.03em}
-.sc.hx .lead{font-size:clamp(16px,1.5vw,19px);line-height:1.6;color:var(--tx);opacity:.86;max-width:540px;margin:18px 0 22px}
+.sc.hx .cth{font-family:Fraunces,Georgia,serif;font-weight:300;font-size:clamp(34px,4.6vw,64px);line-height:1.04;letter-spacing:-.025em;margin:0}.sc.hx .lead{font-size:clamp(16px,1.5vw,19px);line-height:1.6;color:var(--tx);opacity:.86;max-width:540px;margin:18px 0 22px}
 .sc.hx .cta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.sc.hx .cta .btn.p{font-size:16px;padding:14px 22px}.sc.hx .cta .tl{color:var(--mu);font-size:15px}.sc.hx .cta .tl:hover{color:var(--tx)}
 .sc.hx .in>div:first-child{text-shadow:0 2px 14px rgba(var(--bgc),.95),0 0 2px rgba(var(--bgc),.8)}.sc.hx .nocard{font-size:13px;color:var(--mu);margin-top:10px}
 .prf{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:22px;font-size:13px;color:var(--mu)}.prf b{color:var(--tx);font-weight:600}
@@ -2593,15 +2593,18 @@ const Q3D=(wrap,items)=>{const cv=wrap.querySelector('canvas'),x=cv.getContext('
  cv.addEventListener('pointerleave',()=>{hov=null;tip.style.display='none'});
  new ResizeObserver(rs).observe(cv);if('IntersectionObserver' in window)new IntersectionObserver(es=>{vis=es[0].isIntersecting}).observe(cv);rs();raf=requestAnimationFrame(loop)};
 
-const hm36=PAGES.home;PAGES.home=()=>{hm36();const s=document.querySelector('#m .sc');if(!s)return;s.classList.add('hx');s.querySelector('.in').innerHTML=`<div>
- <h1 class="k"><span style="transition-delay:0ms">Learn to invest</span> <span style="transition-delay:90ms">by doing.</span></h1>
- <p class="lead">Practise with $100,000 of paper money on live prices, read any stock in plain English, and learn as you go. No real money, no card.</p>
- <div class="cta"><a class="btn p" href="#/trade" onclick="track('hero_start')">Start with $100,000 in paper money</a><a class="tl" href="#/markets">See today’s market →</a></div>
- <div class="nocard">Free. Try everything first; create an account only if you want to save it.</div>
+const hm36=PAGES.home;PAGES.home=()=>{hm36();const s=document.querySelector('#m .sc');if(!s)return;
+ /* the opening screen: the wordmark, one promise, one action */
+ s.querySelector('.in').innerHTML=`<h1 class="k"><span style="transition-delay:0ms">QUANTERA</span></h1><p>Learn to invest by doing.<br>Practise with $100,000 of paper money on live prices.</p><div><a class="btn p" href="#/trade" onclick="track('hero_start')">Start with $100,000</a></div><div class="mu" style="font-size:13px;margin-top:12px">Free. No card, no sign-up needed to start.</div><div class="ex"><div class="cue" style="margin-top:36px">Scroll ↓</div></div>`;
+ requestAnimationFrame(()=>s.classList.add('on'));
+ /* further down: the market as a 3D city, and the first steps */
+ const lastSc=[...document.querySelectorAll('#m .sc')].pop();lastSc.insertAdjacentHTML('afterend',`<section class="sc hx on" id="city"><div class="in"><div>
+ <h2 class="cth">Today’s market,<br>as a city.</h2>
+ <p class="lead">Every building is one of the world’s biggest companies. Height is its size, colour is today’s move. Drag to turn it and click any building to open that company.</p>
  <div class="prf"><span><b>44</b> countries of live prices</span><span><b>38</b> free lessons</span><span><b>Financials</b> for every stock</span><span><b>105</b> private company valuations</span></div>
  ${FST()}</div>
- <div class="q3w"><canvas aria-label="3D map of the biggest companies: building height is company size, colour is today's price move"></canvas><div class="q3tip"></div><div class="q3load">Building today’s market…</div><div class="q3cap"><b>Today’s market as a city.</b> Height = company size · green up, red down · drag to turn, click a building</div></div>`;
- requestAnimationFrame(()=>s.classList.add('on'));const w=s.querySelector('.q3w');
+ <div class="q3w"><canvas aria-label="3D map of the biggest companies: building height is company size, colour is today's price move"></canvas><div class="q3tip"></div><div class="q3load">Building today’s market…</div><div class="q3cap">Height = company size · green up, red down</div></div></div></section>`);
+ const w=document.querySelector('#city .q3w');
  const go3=L=>{const it=L.filter(i=>i.type=='EQUITY'&&i.marketCap>0&&i.changePct!=null&&i.sector&&!/International|ETF/i.test(i.sector)).map(i=>({sym:i.symbol,name:i.name||i.symbol,sector:i.sector,cap:i.marketCap,pc:i.changePct,price:i.price}));if(it.length<12){w.remove();return}const ld=w.querySelector('.q3load');if(ld)ld.remove();Q3D(w,it)};
  if(!QLIVE.market){w.remove();return}jf('/api/popular?list=popular').then(({ok,b})=>{if(!document.body.contains(w))return;if(ok&&b.items)go3(b.items);else w.remove()}).catch(()=>w.remove())};
 if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML='<div class="mu" style="padding:60px 32px">Loading live markets…</div>';setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();
