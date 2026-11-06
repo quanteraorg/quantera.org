@@ -1757,7 +1757,7 @@ let simpT=0;const simpSweep=()=>{if(!isSimple())return;const m=document.getEleme
 document.addEventListener('click',e=>{const q=e.target.closest('.qh');if(q){e.preventDefault();e.stopPropagation();qtoast(q.dataset.h)}},true);
 new MutationObserver(()=>{clearTimeout(simpT);simpT=setTimeout(simpSweep,120)}).observe(document.getElementById('m'),{childList:true,subtree:true});
 const rt26=route;route=function(){applyMode();rt26()};
-setTimeout(()=>{applyMode();if(!MODE())setTimeout(modeWelcome,1200)},0);
+setTimeout(()=>{applyMode();if(!MODE())MODENUDGE()},0);
 /* Light / dark theme toggle in the header. The choice is saved and synced like Simple/Pro */
 document.head.insertAdjacentHTML('beforeend','<style>.thm{flex:none;width:32px;height:32px;margin-left:8px;padding:0;border:1px solid var(--ln);border-radius:99px;background:none;color:var(--mu);display:grid;place-items:center;cursor:pointer;transition:color .15s,border-color .15s}.thm:hover{color:var(--ac3);border-color:rgba(var(--acc),.5)}.thm svg{width:16px;height:16px;display:block}</style>');
 SYNC.push('q_theme','q_cc','q_dr','q_tvs','q_tvp','q_tpl');
@@ -2524,4 +2524,84 @@ const TBAR=()=>{let t=document.getElementById('tbar');const m=location.hash.matc
  t.classList.toggle('on',!!sym);document.body.classList.toggle('has-tbar',!!sym);if(sym)t.innerHTML=`<a href="#/trade/${encodeURIComponent(sym)}">Trade ${esc(sym)} <span>· paper money</span></a>`};
 addEventListener('hashchange',()=>setTimeout(TBAR,0));
 setTimeout(()=>{NAVDECO();TBAR();const n=document.getElementById('nav');if(n)new MutationObserver(()=>{if(n.querySelector('a[data-r]:not(:has(.ni))')||!n.querySelector('.nmore'))NAVDECO()}).observe(n,{childList:true})},0);
+/* ===== v36: first visit that leads with value, a 3D market city, first-steps checklist, and sign-up asked at the right moment ===== */
+document.head.insertAdjacentHTML('beforeend',`<style>
+.sc.hx .in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:28px;align-items:center;max-width:1240px}
+.sc.hx h1.k{font-size:clamp(40px,5.4vw,78px)!important;line-height:1.02!important;letter-spacing:-.03em}
+.sc.hx .lead{font-size:clamp(16px,1.5vw,19px);line-height:1.6;color:var(--tx);opacity:.86;max-width:540px;margin:18px 0 22px}
+.sc.hx .cta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.sc.hx .cta .btn.p{font-size:16px;padding:14px 22px}.sc.hx .cta .tl{color:var(--mu);font-size:15px}.sc.hx .cta .tl:hover{color:var(--tx)}
+.sc.hx .in>div:first-child{text-shadow:0 2px 14px rgba(var(--bgc),.95),0 0 2px rgba(var(--bgc),.8)}.sc.hx .nocard{font-size:13px;color:var(--mu);margin-top:10px}
+.prf{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:22px;font-size:13px;color:var(--mu)}.prf b{color:var(--tx);font-weight:600}
+.q3w{position:relative;min-width:0;border-radius:22px;background:radial-gradient(120% 90% at 50% 60%,rgba(var(--bgc),.92),rgba(var(--bgc),.55) 70%,transparent);box-shadow:inset 0 0 0 1px rgba(var(--fgc),.05)}.q3w canvas{width:100%;height:clamp(300px,52vh,520px);display:block;cursor:grab;touch-action:pan-y}.q3w canvas:active{cursor:grabbing}
+.q3cap{font-size:12.5px;color:var(--mu);text-align:center;margin-top:6px}.q3cap b{color:var(--tx);font-weight:500}
+.q3tip{position:absolute;pointer-events:none;z-index:5;background:var(--s1);border:1px solid rgba(var(--acc),.45);border-radius:10px;padding:8px 11px;font-size:13px;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none}.q3tip b{display:block}
+.q3load{position:absolute;inset:0;display:grid;place-items:center;color:var(--mu);font-size:13px}
+.fst{margin-top:24px;border:1px solid var(--ln);border-radius:14px;padding:14px 16px;background:rgba(var(--bgc),.55);backdrop-filter:blur(8px);max-width:540px}.fst h4{margin:0 0 10px;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mu);font-weight:600;display:flex;justify-content:space-between}
+.fst a{display:flex;align-items:center;gap:10px;padding:7px 0;color:var(--tx);font-size:14.5px}.fst a i{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--ln);display:grid;place-items:center;font-style:normal;font-size:12px;color:var(--mu)}.fst a.ok i{background:var(--up);border-color:var(--up);color:var(--bg)}.fst a.ok span{color:var(--mu);text-decoration:line-through}.fst a:hover span{color:var(--ac3)}
+@media(max-width:900px){.sc.hx .in{grid-template-columns:1fr;gap:10px}.q3w canvas{height:300px}.sc.hx{padding-top:84px}}
+.qsheet{position:fixed;right:20px;bottom:20px;z-index:80;width:min(380px,calc(100vw - 32px));background:var(--s1);border:1px solid rgba(var(--acc),.4);border-radius:16px;padding:18px 18px 16px;box-shadow:0 22px 60px rgba(0,0,0,.45);animation:qsin .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes qsin{from{transform:translateY(16px);opacity:0}}.qsheet h4{margin:0 0 6px;font-size:16px}.qsheet p{margin:0 0 14px;color:var(--mu);font-size:14px;line-height:1.55}.qsheet .row{display:flex;gap:8px;flex-wrap:wrap}.qsheet .x{position:absolute;top:8px;right:10px;background:none;border:0;color:var(--mu);font-size:18px;cursor:pointer;padding:4px 8px}
+.qsheet .mopt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}.qsheet .mopt button{text-align:left;border:1px solid var(--ln);background:var(--s2);color:var(--tx);border-radius:12px;padding:11px 12px;cursor:pointer;font:inherit;font-size:13.5px;line-height:1.35}.qsheet .mopt button:hover{border-color:rgba(var(--acc),.6)}.qsheet .mopt small{display:block;color:var(--mu);font-size:12px;margin-top:3px}
+@media(max-width:800px){.qsheet{left:16px;right:16px;width:auto;bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
+@media(prefers-reduced-motion:reduce){.qsheet{animation:none}}
+@media(min-width:801px){body.cine header .sw{flex:0 1 300px!important;margin-left:auto!important}}@media(min-width:801px) and (max-width:1499px){body.cine header .sw{display:none!important}body.cine header #modet{margin-left:auto!important}}
+@media(max-width:800px){header{flex-wrap:wrap!important;row-gap:0!important}header .sw{flex:1 1 auto!important;min-width:0!important}#tape{order:9;flex:0 0 100%!important;width:auto!important;margin:8px 0 -10px!important}}
+html.is-phone header{flex-wrap:wrap!important;row-gap:0!important}html.is-phone header .sw{flex:1 1 auto!important;min-width:0!important}html.is-phone #tape{order:9;flex:0 0 100%!important;width:auto!important;margin:8px 0 -10px!important}
+</style>`);
+
+/* ---------- small non-blocking cards, one at a time ---------- */
+const QSHEET=(html,onAct)=>{if(document.querySelector('.qsheet')||document.querySelector('.qm'))return false;const d=document.createElement('div');d.className='qsheet';d.setAttribute('role','dialog');d.setAttribute('aria-live','polite');d.innerHTML='<button class="x" aria-label="Close">×</button>'+html;document.body.appendChild(d);d.onclick=e=>{const b=e.target.closest('button,a');if(!b)return;if(b.classList.contains('x')){d.remove();onAct&&onAct('close');return}const a=b.dataset.a;if(a){d.remove();onAct&&onAct(a)}};return true};
+
+/* ---------- ask "new or experienced" after the visitor has looked around, not before ---------- */
+let mnSeen=0;const MODENUDGE=()=>{if(MODE()||LS('q_mnd',0)>=2)return;const ask=()=>{if(MODE()||document.querySelector('.qsheet,.qm'))return;QSHEET(`<h4>How much do you know about investing?</h4><p>We’ll set Quantera up to match. You can change it any time.</p><div class="mopt"><button data-a="simple">🌱 I’m new<small>Simple: plain English, just Buy and Sell</small></button><button data-a="pro">📈 I know the basics<small>Pro: every indicator and order type</small></button></div>`,a=>{if(a=='simple'||a=='pro'){setMode_(a);track('mode_pick_'+a)}else SS('q_mnd',LS('q_mnd',0)+1)})};addEventListener('hashchange',()=>{if(++mnSeen==2)setTimeout(ask,1500)});setTimeout(ask,45000)};
+
+/* ---------- sign-up, offered right after something worth keeping ---------- */
+const SUN=(()=>{const cnt=()=>{const S=STATS();return {trade:S.trades,lesson:S.lessons,watch:LS('q_wl',[]).length,note:Object.keys(LS('q_rs',{})).length}};let base=null,shown=0;
+ const T={trade:['Your first trade is in 🎉','Create a free account to keep your portfolio, trades and progress on every device.'],lesson:['Lesson complete ✓','Create a free account to keep your progress and streak on every device.'],watch:['Added to your watchlist','Create a free account so your watchlist follows you to your phone and laptop.'],note:['Your notes are saved here','Create a free account to keep your research notes on every device.']};
+ const tick=()=>{if(QAUTH.user||shown||LS('q_sun',0)>=3)return;const c=cnt();if(!base){base=c;return}const k=Object.keys(c).find(k=>c[k]>base[k]);base=c;if(!k)return;setTimeout(()=>{if(QSHEET(`<h4>${T[k][0]}</h4><p>${T[k][1]} It’s free.</p><div class="row"><button class="btn p" data-a="up" style="margin:0">Create free account</button><button class="btn" data-a="later" style="margin:0">Not now</button></div>`,a=>{if(a=='up'){ACCT_('up');track('signup_nudge_'+k)}}) ){shown=1;SS('q_sun',LS('q_sun',0)+1);track('signup_prompt_'+k)}},900)};
+ setInterval(()=>{try{tick()}catch(e){}},3000);return {}})();
+
+/* ---------- first five minutes: the steps that make Quantera click ---------- */
+addEventListener('hashchange',()=>{if(/^#\/(asset|trade)\//.test(location.hash))SS('q_seen1',1)});
+const FST=()=>{const S=STATS(),st=[[!!LS('q_seen1',0),'Open any stock and read it in plain English','#/asset/AAPL'],[S.trades>=1,'Make a paper trade with $100,000 of practice money','#/trade'],[S.lessons>=1,'Finish a 3-minute lesson','#/lesson/stock']],d=st.filter(x=>x[0]).length;if(d==st.length&&QAUTH.user)return '';
+ return `<div class="fst"><h4><span>Your first 5 minutes</span><span>${d} of ${st.length}</span></h4>${st.map((x,i)=>`<a href="${x[2]}" class="${x[0]?'ok':''}"><i>${x[0]?'✓':i+1}</i><span>${x[1]}</span></a>`).join('')}${d==st.length?`<a onclick="ACCT_('up')"><i>★</i><b>All set. Create a free account to keep it →</b></a>`:''}</div>`};
+
+/* ---------- the 3D market city: height = company size, colour = today's move ---------- */
+const Q3D=(wrap,items)=>{const cv=wrap.querySelector('canvas'),x=cv.getContext('2d'),tip=wrap.querySelector('.q3tip'),dpr=Math.min(devicePixelRatio||1,2);
+ const sec={};items.forEach(i=>(sec[i.sector]=sec[i.sector]||[]).push(i));const rows=Object.entries(sec).map(([k,v])=>[k,v.sort((a,b)=>b.cap-a.cap).slice(0,7)]).sort((a,b)=>b[1].reduce((s,i)=>s+i.cap,0)-a[1].reduce((s,i)=>s+i.cap,0)).slice(0,7);
+ const caps=rows.flatMap(r=>r[1].map(i=>Math.log(i.cap))),lo=Math.min(...caps),hi=Math.max(...caps),B=[],sp=1.25,nz=rows.length,nx=Math.max(...rows.map(r=>r[1].length));
+ rows.forEach(([name,L],z)=>L.forEach((it,c)=>B.push({...it,x:(c-(nx-1)/2)*sp,z:(z-(nz-1)/2)*sp,h:.35+3.1*(Math.log(it.cap)-lo)/((hi-lo)||1),w:.42})));
+ let W,H,yaw=.62,pitch=.62,drag=null,hov=null,raf=0,vis=true,spin=1,last=0;const css=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+ const rs=()=>{const r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0)};
+ const P=(px,py,pz)=>{const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp2=Math.sin(pitch);let X=px*cy-pz*sy,Z=px*sy+pz*cy,Y=py;const Y2=Y*cp-Z*sp2,Z2=Y*sp2+Z*cp+22,f=Math.min(W,H*1.35)*1.55/Z2;return [W/2+X*f,H*.66-Y2*f,Z2]};
+ const faces=b=>{const {x:bx,z:bz,w,h}=b,v=[[-w,0,-w],[w,0,-w],[w,0,w],[-w,0,w],[-w,h,-w],[w,h,-w],[w,h,w],[-w,h,w]].map(q=>P(bx+q[0],q[1],bz+q[2]));
+  const F=[[[4,5,6,7],1.15],[[0,1,5,4],.62],[[1,2,6,5],.8],[[2,3,7,6],.62],[[3,0,4,7],.8]],out=[];F.forEach(([ix,sh])=>{const p=ix.map(i=>v[i]),a=(p[1][0]-p[0][0])*(p[2][1]-p[0][1])-(p[1][1]-p[0][1])*(p[2][0]-p[0][0]);if(a>0)out.push([p,sh])});return {out,depth:P(bx,h/2,bz)[2],top:P(bx,h,bz)}};
+ const inPoly=(p,q)=>{let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){if((p[i][1]>q[1])!=(p[j][1]>q[1])&&q[0]<(p[j][0]-p[i][0])*(q[1]-p[i][1])/(p[j][1]-p[i][1])+p[i][0])c=!c}return c};
+ let drawn=[];
+ const draw=()=>{x.clearRect(0,0,W,H);const up=css('--upc')||'79,209,165',dn=css('--dnc')||'240,112,122',fg=css('--fgc')||'255,255,255',ac=css('--acc')||'200,169,106';
+  x.strokeStyle=`rgba(${fg},.07)`;x.lineWidth=1;for(let i=-nx/2-1;i<=nx/2+1;i++){const a=P(i*sp,0,-(nz/2+1)*sp),b=P(i*sp,0,(nz/2+1)*sp);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke()}for(let k=-nz/2-1;k<=nz/2+1;k++){const a=P(-(nx/2+1)*sp,0,k*sp),b=P((nx/2+1)*sp,0,k*sp);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke()}
+  
+  drawn=B.map(b=>({b,...faces(b)})).sort((a,b)=>b.depth-a.depth);
+  drawn.forEach(({b,out})=>{const c=b.pc>=0?up:dn,s=Math.min(1,Math.abs(b.pc)/3.5),al=.28+.6*s,h=b===hov;out.forEach(([p,sh])=>{x.beginPath();p.forEach((q,i)=>i?x.lineTo(q[0],q[1]):x.moveTo(q[0],q[1]));x.closePath();const [r,g,bl]=c.split(',').map(Number);x.fillStyle=`rgba(${Math.round(r*sh)},${Math.round(g*sh)},${Math.round(bl*sh)},${h?.95:al})`;x.fill();x.strokeStyle=h?`rgba(${ac},1)`:`rgba(${fg},.12)`;x.lineWidth=h?1.6:.7;x.stroke()})});
+  x.font='600 10.5px Manrope,sans-serif';x.textAlign='center';[...drawn].sort((a,b)=>b.b.cap-a.b.cap).slice(0,6).forEach(({b,top})=>{x.fillStyle=`rgba(${fg},.85)`;x.fillText(b.sym,top[0],top[1]-6)});x.textAlign='left'};
+ const loop=t=>{raf=requestAnimationFrame(loop);if(!cv.isConnected){cancelAnimationFrame(raf);return}if(!vis||document.hidden)return;if(spin&&!drag&&!hov)yaw+=Math.min(50,t-last||16)*.00012;last=t;draw()};
+ const pick=(cx,cy)=>{for(let i=drawn.length-1;i>=0;i--)if(drawn[i].out.some(([p])=>inPoly(p,[cx,cy])))return drawn[i].b;return null};
+ const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
+ cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,yaw,pitch,moved:0}});
+ addEventListener('pointerup',e=>{if(!drag)return;const d=drag;drag=null;if(d.moved<6&&e.target===cv){const b=pick(...pos(e));if(b){track('city_open');go('#/asset/'+encodeURIComponent(b.sym))}}});
+ cv.addEventListener('pointermove',e=>{if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.moved=Math.max(drag.moved,Math.abs(dx)+Math.abs(dy));if(e.pointerType!='touch'||Math.abs(dx)>Math.abs(dy)){yaw=drag.yaw+dx*.008;pitch=Math.max(.28,Math.min(1.05,drag.pitch+dy*.004))}hov=null;tip.style.display='none';return}const [mx,my]=pos(e),b=pick(mx,my);hov=b;cv.style.cursor=b?'pointer':'grab';if(b){tip.innerHTML=`<b>${esc(b.name)}</b>${esc(b.sym)} · ${fmt(b.price)} <span class="${b.pc>=0?'up':'dn'}">${b.pc>=0?'▲':'▼'} ${fmt(Math.abs(b.pc))}%</span><br><span class="mu">${esc(b.sector)} · worth ${FM(b.cap,'USD')}</span>`;tip.style.display='block';tip.style.left=Math.min(mx+14,W-tip.offsetWidth-4)+'px';tip.style.top=Math.max(4,my-tip.offsetHeight-10)+'px'}else tip.style.display='none'});
+ cv.addEventListener('pointerleave',()=>{hov=null;tip.style.display='none'});
+ new ResizeObserver(rs).observe(cv);if('IntersectionObserver' in window)new IntersectionObserver(es=>{vis=es[0].isIntersecting}).observe(cv);rs();raf=requestAnimationFrame(loop)};
+
+const hm36=PAGES.home;PAGES.home=()=>{hm36();const s=document.querySelector('#m .sc');if(!s)return;s.classList.add('hx');s.querySelector('.in').innerHTML=`<div>
+ <h1 class="k"><span style="transition-delay:0ms">Learn to invest</span> <span style="transition-delay:90ms">by doing.</span></h1>
+ <p class="lead">Practise with $100,000 of paper money on live prices, read any stock in plain English, and learn as you go. No real money, no card.</p>
+ <div class="cta"><a class="btn p" href="#/trade" onclick="track('hero_start')">Start with $100,000 in paper money</a><a class="tl" href="#/markets">See today’s market →</a></div>
+ <div class="nocard">Free. Try everything first; create an account only if you want to save it.</div>
+ <div class="prf"><span><b>44</b> countries of live prices</span><span><b>38</b> free lessons</span><span><b>Financials</b> for every stock</span><span><b>105</b> private company valuations</span></div>
+ ${FST()}</div>
+ <div class="q3w"><canvas aria-label="3D map of the biggest companies: building height is company size, colour is today's price move"></canvas><div class="q3tip"></div><div class="q3load">Building today’s market…</div><div class="q3cap"><b>Today’s market as a city.</b> Height = company size · green up, red down · drag to turn, click a building</div></div>`;
+ requestAnimationFrame(()=>s.classList.add('on'));const w=s.querySelector('.q3w');
+ const go3=L=>{const it=L.filter(i=>i.type=='EQUITY'&&i.marketCap>0&&i.changePct!=null&&i.sector&&!/International|ETF/i.test(i.sector)).map(i=>({sym:i.symbol,name:i.name||i.symbol,sector:i.sector,cap:i.marketCap,pc:i.changePct,price:i.price}));if(it.length<12){w.remove();return}const ld=w.querySelector('.q3load');if(ld)ld.remove();Q3D(w,it)};
+ if(!QLIVE.market){w.remove();return}jf('/api/popular?list=popular').then(({ok,b})=>{if(!document.body.contains(w))return;if(ok&&b.items)go3(b.items);else w.remove()}).catch(()=>w.remove())};
 if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML='<div class="mu" style="padding:60px 32px">Loading live markets…</div>';setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();
