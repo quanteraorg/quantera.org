@@ -2,6 +2,8 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>https://quanteraorg.vercel.app/</loc></url>
 <url><loc>https://quanteraorg.vercel.app/learn</loc></url>
+<url><loc>https://quanteraorg.vercel.app/privacy</loc></url>
+<url><loc>https://quanteraorg.vercel.app/terms</loc></url>
 <url><loc>https://quanteraorg.vercel.app/learn/compound</loc></url>
 <url><loc>https://quanteraorg.vercel.app/learn/rates</loc></url>
 <url><loc>https://quanteraorg.vercel.app/learn/divers</loc></url>
