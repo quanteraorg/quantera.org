@@ -28,7 +28,7 @@ final class Gemini {
             if (r.statusCode() == 429 || status.equals("RESOURCE_EXHAUSTED")) throw new UpstreamException("The AI is busy right now (free daily limit). Please try again later.", 429);
             if (msg.contains("API key") || status.equals("UNAUTHENTICATED")) throw Anthropic.aiProblem(new UpstreamException("The AI service key is invalid. The site owner needs to update GEMINI_API_KEY.", 503));
             if (r.statusCode() == 404) throw Anthropic.aiProblem(new UpstreamException("The AI model setting is not available. The site owner needs to update GEMINI_MODEL.", 503));
-            if (r.statusCode() == 403) throw new UpstreamException("The AI service key does not have access to this model.", 503);
+            if (r.statusCode() == 403) throw Anthropic.aiProblem(new UpstreamException("Google refused the Gemini key (permission denied). Create the key at aistudio.google.com/apikey so the Gemini API is enabled for it, and remove any API restrictions.", 503));
             throw new UpstreamException("AI provider error");
         }
         try { return map(Json.parse(r.body())); } catch (IllegalArgumentException e) { throw new UpstreamException("AI provider error"); }

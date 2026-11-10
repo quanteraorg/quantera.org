@@ -86,6 +86,7 @@ public class TestMain {
         fake.createContext("/gm/v1beta/models/", ex -> {
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             upstreamCalls.add("gemini " + ex.getRequestURI().getPath() + " key=" + ex.getRequestHeaders().getFirst("x-goog-api-key") + (body.contains("\"OBJECT\"") ? " schema-ok" : ""));
+            if (body.contains("DENIEDKEY")) { reply(ex, 403, "application/json", "{\"error\":{\"code\":403,\"message\":\"Permission denied on the service.\",\"status\":\"PERMISSION_DENIED\"}}"); return; }
             if (body.contains("BADKEY")) { reply(ex, 400, "application/json", "{\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\",\"status\":\"INVALID_ARGUMENT\"}}"); return; }
             String txt = body.contains("functionResponse") ? "**Data** Apple is $226 [[asset:AAPL]]" : body.contains("Task: ") ? "- **What**: chips rose" : null;
             reply(ex, 200, "application/json", txt != null ? "{\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"" + txt.replace("\"", "\\\"") + "\"}]}}]}"
@@ -303,6 +304,10 @@ public class TestMain {
         t("Gemini explains a story", r.code == 200 && String.valueOf(m(r.body).get("text")).contains("chips rose"));
         r = call(p, "POST", "/api/explain", "{\"lens\":\"eli5\",\"title\":\"BADKEY\"}", ip());
         t("Gemini invalid key -> clear 503 message", r.code == 503 && r.raw.contains("GEMINI_API_KEY"));
+        Anthropic.AI_PROBLEM = null;
+        r = call(p, "POST", "/api/explain", "{\"lens\":\"eli5\",\"title\":\"DENIEDKEY\"}", ip());
+        t("Gemini permission denied -> says how to fix it and shows on /api/status", r.code == 503 && r.raw.contains("aistudio.google.com") && Anthropic.AI_PROBLEM != null && Anthropic.AI_PROBLEM.contains("permission denied"));
+        Anthropic.AI_PROBLEM = null;
         System.setProperty("AI_PROVIDER", "anthropic");
         t("AI_PROVIDER=anthropic switches back to Claude", "anthropic".equals(m(get(p, "/api/health").body).get("aiProvider")));
         System.clearProperty("AI_PROVIDER"); System.clearProperty("GEMINI_API_KEY");
