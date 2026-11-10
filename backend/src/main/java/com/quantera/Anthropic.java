@@ -66,6 +66,11 @@ final class Anthropic {
         } catch (RuntimeException e) { return Json.obj("error", e.getMessage()); }
     }
 
+    /** Last configuration problem with the AI provider (bad key, no credits, wrong model) and when it happened, for /api/status. */
+    static volatile String AI_PROBLEM = null;
+    static volatile long AI_PROBLEM_AT = 0;
+    static UpstreamException aiProblem(UpstreamException e) { AI_PROBLEM = e.getMessage(); AI_PROBLEM_AT = System.currentTimeMillis(); return e; }
+
     /** Turns an Anthropic error response into a clear message (logged too); never includes the key. */
     static UpstreamException apiError(HttpResponse<String> r) {
         String type = "", msg = "";
@@ -73,10 +78,10 @@ final class Anthropic {
         System.out.println("Anthropic API error " + r.statusCode() + " " + type + ": " + (msg.length() > 200 ? msg.substring(0, 200) : msg));
         String low = msg.toLowerCase();
         if (r.statusCode() == 429 || r.statusCode() == 529) return new UpstreamException("The AI is busy. Please try again shortly.", 429);
-        if (r.statusCode() == 401 || type.equals("authentication_error")) return new UpstreamException("The AI service key is invalid. The site owner needs to update ANTHROPIC_API_KEY.", 503);
-        if (low.contains("credit balance") || low.contains("billing")) return new UpstreamException("The AI service is out of credits. The site owner needs to add credits in the Anthropic Console.", 503);
-        if (r.statusCode() == 403 || type.equals("permission_error")) return new UpstreamException("The AI service key does not have access to this model.", 503);
-        if (r.statusCode() == 404 || type.equals("not_found_error")) return new UpstreamException("The AI model setting is not available. The site owner needs to update ANTHROPIC_MODEL.", 503);
+        if (r.statusCode() == 401 || type.equals("authentication_error")) return aiProblem(new UpstreamException("The AI service key is invalid. The site owner needs to update ANTHROPIC_API_KEY.", 503));
+        if (low.contains("credit balance") || low.contains("billing")) return aiProblem(new UpstreamException("The AI service is out of credits. The site owner needs to add credits in the Anthropic Console.", 503));
+        if (r.statusCode() == 403 || type.equals("permission_error")) return aiProblem(new UpstreamException("The AI service key does not have access to this model.", 503));
+        if (r.statusCode() == 404 || type.equals("not_found_error")) return aiProblem(new UpstreamException("The AI model setting is not available. The site owner needs to update ANTHROPIC_MODEL.", 503));
         return new UpstreamException("AI provider error");
     }
 
@@ -131,7 +136,7 @@ final class Anthropic {
                         .header("x-api-key", key).header("anthropic-version", "2023-06-01").header("content-type", "application/json").POST(HttpRequest.BodyPublishers.ofString(req)).build(), HttpResponse.BodyHandlers.ofString());
             } catch (Exception e) { throw new UpstreamException("AI provider error"); }
 
-            if (r.statusCode() != 200) throw apiError(r);
+            if (r.statusCode() != 200) throw apiError(r); AI_PROBLEM = null;
             StringBuilder t = new StringBuilder();
             try { for (Object o : list(map(Json.parse(r.body())).get("content"))) if ("text".equals(map(o).get("type"))) t.append(str(map(o).get("text"))); }
             catch (IllegalArgumentException e) { throw new UpstreamException("AI provider error"); }
@@ -154,7 +159,7 @@ final class Anthropic {
                         .header("x-api-key", key).header("anthropic-version", "2023-06-01").header("content-type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
             } catch (Exception e) { throw new UpstreamException("AI provider error"); }
 
-            if (r.statusCode() != 200) throw apiError(r);
+            if (r.statusCode() != 200) throw apiError(r); AI_PROBLEM = null;
             Map<String, Object> j;
             try { j = map(Json.parse(r.body())); } catch (IllegalArgumentException e) { throw new UpstreamException("AI provider error"); }
             List<Object> content = list(j.get("content"));

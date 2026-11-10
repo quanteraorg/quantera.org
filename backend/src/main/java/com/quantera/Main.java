@@ -15,6 +15,17 @@ import static com.quantera.Support.*;
 public final class Main {
     interface Handler { Object handle(Req r) throws Exception; }
     record Req(String method, Map<String, String> query, Object body) {}
+    /** Strict status for uptime monitors: 200 when every configured part works, 503 naming what's broken. /api/health stays lenient because Render uses it to decide whether the server is alive. */
+    static Object status() {
+        List<String> bad = new ArrayList<>();
+        String k = Store.keyProblem(); if (k != null && Store.on()) bad.add(k);
+        String p = Store.pingProblem(); if (p != null) bad.add(p);
+        if (Anthropic.AI_PROBLEM != null && System.currentTimeMillis() - Anthropic.AI_PROBLEM_AT < 3_600_000) bad.add("AI: " + Anthropic.AI_PROBLEM);
+        if (Push.on() && System.currentTimeMillis() - Push.STARTED > 5 * 60_000 && System.currentTimeMillis() - Push.LAST_OK > 5 * 60_000) bad.add("price alerts have not run successfully in the last 5 minutes" + (Push.LAST_ERR == null ? "" : " (" + Push.LAST_ERR.replaceAll("^[0-9T:\\-]+ ", "") + ")"));
+        if (!bad.isEmpty()) throw new UpstreamException("Degraded: " + String.join("; ", bad), 503);
+        return Json.obj("ok", true, "storage", Store.on(), "ai", Providers.aiOn(), "alerts", Push.on());
+    }
+
     record Route(Handler h, int ttlSec, int maxPerMin) {}
     /** Optional numeric screener filter; empty means no filter. */
     private static Double screenNum(Req r, String k) {
@@ -97,6 +108,7 @@ public final class Main {
         ROUTES.put("/api/push/alerts", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.add(r.body()); }, 0, 30));
         ROUTES.put("/api/push/list", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.listFor(r.body()); }, 0, 30));
         ROUTES.put("/api/push/delete", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.remove(r.body()); }, 0, 30));
+        ROUTES.put("/api/status", new Route(r -> status(), 0, 120));
         ROUTES.put("/api/account/delete", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Store.deleteAccount(r.body()); }, 0, 5));
         ROUTES.put("/api/push/test", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.test(r.body()); }, 0, 6));
         ROUTES.put("/api/screen", new Route(r -> {
