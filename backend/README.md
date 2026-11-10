@@ -102,3 +102,8 @@ Note: Vercel itself does not run long-lived Java servers, which is why the API i
 - Cache and rate limiter live in memory per instance. Use Redis if you run several instances.
 - Not built yet: user accounts, Academy progress and Market Lab storage.
 - Free Alpha Vantage / Marketaux plans are tiny; check their terms before showing data publicly.
+
+## Uptime monitoring
+- `/api/health` is lenient on purpose: Render uses it to decide whether the server is alive, so it stays 200 while the server runs.
+- `/api/status` is strict, for uptime monitors (e.g. Better Stack): 200 when everything configured works, 503 naming what's broken (malformed storage key, Supabase project paused or unreachable, AI key rejected or out of credits, price alerts not running). It never includes keys.
+- Set `ALERTS_HEARTBEAT_URL` to a heartbeat URL and the price-alert checker pings it after every successful run (about once a minute), so a stopped checker raises an alert.

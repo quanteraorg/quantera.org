@@ -26,8 +26,8 @@ final class Gemini {
             try { Map<String, Object> e = map(map(Json.parse(r.body())).get("error")); status = String.valueOf(e.getOrDefault("status", "")); msg = String.valueOf(e.getOrDefault("message", "")); } catch (RuntimeException ignored) {}
             System.out.println("Gemini API error " + r.statusCode() + " " + status + ": " + (msg.length() > 200 ? msg.substring(0, 200) : msg));
             if (r.statusCode() == 429 || status.equals("RESOURCE_EXHAUSTED")) throw new UpstreamException("The AI is busy right now (free daily limit). Please try again later.", 429);
-            if (msg.contains("API key") || status.equals("UNAUTHENTICATED")) throw new UpstreamException("The AI service key is invalid. The site owner needs to update GEMINI_API_KEY.", 503);
-            if (r.statusCode() == 404) throw new UpstreamException("The AI model setting is not available. The site owner needs to update GEMINI_MODEL.", 503);
+            if (msg.contains("API key") || status.equals("UNAUTHENTICATED")) throw Anthropic.aiProblem(new UpstreamException("The AI service key is invalid. The site owner needs to update GEMINI_API_KEY.", 503));
+            if (r.statusCode() == 404) throw Anthropic.aiProblem(new UpstreamException("The AI model setting is not available. The site owner needs to update GEMINI_MODEL.", 503));
             if (r.statusCode() == 403) throw new UpstreamException("The AI service key does not have access to this model.", 503);
             throw new UpstreamException("AI provider error");
         }

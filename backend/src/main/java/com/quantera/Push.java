@@ -144,6 +144,16 @@ final class Push {
     }
 
     /** Every minute: price-check active alerts, notify the ones that triggered, mark them fired, and drop dead subscriptions. */
+    static volatile long LAST_OK = 0;
+    static final long STARTED = System.currentTimeMillis();
+
+    /** After a run that worked, tell the uptime service (ALERTS_HEARTBEAT_URL, https only) that the checker is alive. Best effort. */
+    static void heartbeat() {
+        String u = cfg("ALERTS_HEARTBEAT_URL", "").trim();
+        if (!u.startsWith("https://") && !(u.startsWith("http://127.0.0.1") && cfg("PUSH_ALLOW_LOCAL", null) != null)) return;
+        Thread.startVirtualThread(() -> { try { HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(8)).GET().build(), HttpResponse.BodyHandlers.discarding()); } catch (Exception ignored) {} });
+    }
+
     static void check() {
         if (!on()) return;
         List<Object> rows;
@@ -166,6 +176,8 @@ final class Push {
                 else if (code / 100 == 2) Store.rest("PATCH", "push_alerts?id=eq." + num(a.get("id")).longValue(), Json.obj("fired_at", Instant.now().toString(), "fired_price", p));
             } catch (RuntimeException ignored) {}
         }
+        LAST_OK = System.currentTimeMillis();
+        heartbeat();
     }
 
     static void start() {

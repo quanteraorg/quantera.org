@@ -84,6 +84,24 @@ final class Store {
         try { return HTTP.send(b.build(), HttpResponse.BodyHandlers.ofString()); } catch (Exception e) { throw new UpstreamException("Storage error"); }
     }
 
+    /** Why storage can't work, or null if it looks fine: not configured, or a key pasted with extra characters. Never includes the key. */
+    static String keyProblem() {
+        if (!on()) return "storage is not configured (SUPABASE_URL / SUPABASE_SERVICE_KEY)";
+        return cfg("SUPABASE_SERVICE_KEY", "").trim().matches("[A-Za-z0-9._\\-]+") ? null : "SUPABASE_SERVICE_KEY is malformed: paste the full key again, with no quotes, spaces or line breaks";
+    }
+    private static volatile long pingAt = 0;
+    private static volatile String pingProblem = null;
+    static void resetPing() { pingAt = 0; pingProblem = null; }
+    /** Asks Supabase Auth's health endpoint whether the project is up (catches a paused project). Cached for 60 seconds. */
+    static String pingProblem() {
+        if (keyProblem() != null) return null;
+        if (System.currentTimeMillis() - pingAt < 60_000) return pingProblem;
+        String p;
+        try { int c = auth("GET", "health", null).statusCode(); p = c / 100 == 2 ? null : "the Supabase project is not answering (HTTP " + c + "); check it isn't paused"; }
+        catch (UpstreamException e) { p = "the Supabase project can't be reached; check it isn't paused"; }
+        pingProblem = p; pingAt = System.currentTimeMillis(); return p;
+    }
+
     /** Deletes the signed-in person's account: verifies their own access token, removes their saved data and leaderboard row, then the login itself. */
     static Map<String, Object> deleteAccount(Object body) {
         String token = String.valueOf(map(body).getOrDefault("token", ""));

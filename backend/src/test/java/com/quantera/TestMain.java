@@ -137,6 +137,9 @@ public class TestMain {
                 List<Object> out = new ArrayList<>(); for (Map<String, Object> r : pushRows) if (match.test(r)) out.add(r); reply(ex, 200, "application/json", Json.write(out)); }
         });
         fake.createContext("/push/", ex -> { pushed.add(new String[]{ex.getRequestHeaders().getFirst("Authorization"), ex.getRequestHeaders().getFirst("Content-Encoding"), Base64.getEncoder().encodeToString(ex.getRequestBody().readAllBytes())}); reply(ex, 201, "text/plain", ""); });
+        java.util.concurrent.atomic.AtomicInteger heartbeats = new java.util.concurrent.atomic.AtomicInteger();
+        fake.createContext("/hb", ex -> { heartbeats.incrementAndGet(); reply(ex, 200, "text/plain", "OK"); });
+        fake.createContext("/sb/auth/v1/health", ex -> reply(ex, 200, "application/json", "{\"name\":\"GoTrue\"}"));
         fake.createContext("/sb/auth/v1/user", ex -> { String authH = ex.getRequestHeaders().getFirst("Authorization"); upstreamCalls.add("supabase-auth user key=" + ex.getRequestHeaders().getFirst("apikey"));
             if ("Bearer good-user-token-1234567890".equals(authH)) reply(ex, 200, "application/json", "{\"id\":\"0a1b2c3d-1111-2222-3333-444455556666\",\"email\":\"ada@example.com\"}"); else reply(ex, 401, "application/json", "{}"); });
         fake.createContext("/sb/auth/v1/admin/users/", ex -> { upstreamCalls.add("supabase-admin " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath().substring("/sb/auth/v1/admin/users/".length()) + " key=" + ex.getRequestHeaders().getFirst("apikey")); reply(ex, 200, "application/json", "{}"); });
@@ -353,6 +356,17 @@ public class TestMain {
         t("event rejects bad name", call(p, "POST", "/api/events", "{\"name\":\"<x>\"}", ip()).code == 400);
         Main.MARKETS = Json.obj("movers", null, "indices", List.of(), "crypto", List.of(), "updated", "warm");
         t("markets served from background snapshot", "warm".equals(m(get(p, "/api/markets").body).get("updated"))); Main.MARKETS = null;
+        Anthropic.AI_PROBLEM = null; Store.resetPing();
+        r = get(p, "/api/status");
+        t("status: everything configured and answering -> 200", r.code == 200 && Boolean.TRUE.equals(m(r.body).get("ok")));
+        System.setProperty("SUPABASE_URL", base + "/nosb/"); Store.resetPing();
+        r = get(p, "/api/status");
+        t("status: paused / unreachable Supabase project -> 503 naming it", r.code == 503 && r.raw.contains("Supabase project"));
+        System.setProperty("SUPABASE_URL", base + "/sb/"); Store.resetPing();
+        Anthropic.AI_PROBLEM = "The AI service key is invalid."; Anthropic.AI_PROBLEM_AT = System.currentTimeMillis();
+        r = get(p, "/api/status");
+        t("status: rejected AI key -> 503 naming it", r.code == 503 && r.raw.contains("AI: The AI service key is invalid"));
+        Anthropic.AI_PROBLEM = null;
         t("delete account: missing token -> 401", call(p, "POST", "/api/account/delete", "{}", ip()).code == 401);
         t("delete account: token Supabase rejects -> 401, nothing deleted", call(p, "POST", "/api/account/delete", "{\"token\":\"bad-user-token-1234567890\"}", ip()).code == 401 && upstreamCalls.stream().noneMatch(u -> u.startsWith("supabase-admin")));
         r = call(p, "POST", "/api/account/delete", "{\"token\":\"good-user-token-1234567890\"}", ip());
@@ -360,6 +374,8 @@ public class TestMain {
         t("delete account rejects GET", get(p, "/api/account/delete").code == 405);
         System.setProperty("SUPABASE_SERVICE_KEY", "sb_secret_abc\n••••");
         r = call(p, "POST", "/api/waitlist", "{\"email\":\"masked@y.io\"}", ip());
+        HttpResponse<String> st = C.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + p + "/api/status")).build(), HttpResponse.BodyHandlers.ofString());
+        t("status: malformed storage key -> 503 that says so, key never echoed", st.statusCode() == 503 && st.body().contains("SUPABASE_SERVICE_KEY is malformed") && !st.body().contains("sb_secret"));
         t("masked/multi-line storage key -> 503, key never echoed", r.code == 503 && !r.raw.contains("sb_secret"));
         System.clearProperty("SUPABASE_URL"); System.clearProperty("SUPABASE_SERVICE_KEY");
         r = get(p, "/api/health");
@@ -502,7 +518,11 @@ public class TestMain {
         r = call(p, "POST", "/api/push/alerts", "{\"subscription\":" + subJ + ",\"symbol\":\"aapl\",\"op\":\">\",\"price\":1}", ip());
         t("push: alert saved for this device", r.code == 200 && pushRows.size() == 1 && "AAPL".equals(pushRows.get(0).get("symbol")));
         t("push: bad subscription rejected", call(p, "POST", "/api/push/alerts", "{\"subscription\":{\"endpoint\":\"javascript:x\"},\"symbol\":\"AAPL\",\"op\":\">\",\"price\":1}", ip()).code == 400);
+        System.setProperty("ALERTS_HEARTBEAT_URL", base + "/hb");
         Push.check();
+        Thread.sleep(400);
+        t("alerts checker pings the heartbeat after a good run", heartbeats.get() >= 1 && Push.LAST_OK > 0);
+        System.clearProperty("ALERTS_HEARTBEAT_URL");
         boolean decrypted = false, signed = false;
         if (!pushed.isEmpty()) {
             byte[] bodyB = Base64.getDecoder().decode(pushed.get(0)[2]); byte[] salt = Arrays.copyOfRange(bodyB, 0, 16), asPub = Arrays.copyOfRange(bodyB, 21, 86), ct = Arrays.copyOfRange(bodyB, 86, bodyB.length);
