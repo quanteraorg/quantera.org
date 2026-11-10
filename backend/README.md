@@ -24,6 +24,7 @@ GET /api/health · /api/markets · /api/quote?symbol= · /api/quotes?symbols=A,B
         alter table events enable row level security;
 
    Row level security with no policies keeps both tables closed to the public; the server uses the service key.
+3. For sign-in sync (watchlist, paper trades, settings), run supabase-user-data.sql. It creates `user_data` with row level security so each person can only read and write their own row, and ends with a check that every Quantera table has row level security on.
 2. Set SUPABASE_URL (Project Settings -> API -> Project URL) and SUPABASE_SERVICE_KEY (the service_role key) on the server.
 3. /api/health then reports "storage":true. Without them, /api/waitlist answers 503 and events are dropped.
 
