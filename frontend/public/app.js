@@ -2577,7 +2577,7 @@ const Q3D=(wrap,items)=>{const cv=wrap.querySelector('canvas'),x=cv.getContext('
  const sec={};items.forEach(i=>(sec[i.sector]=sec[i.sector]||[]).push(i));const rows=Object.entries(sec).map(([k,v])=>[k,v.sort((a,b)=>b.cap-a.cap).slice(0,7)]).sort((a,b)=>b[1].reduce((s,i)=>s+i.cap,0)-a[1].reduce((s,i)=>s+i.cap,0)).slice(0,7);
  const caps=rows.flatMap(r=>r[1].map(i=>Math.log(i.cap))),lo=Math.min(...caps),hi=Math.max(...caps),B=[],sp=1.25,nz=rows.length,nx=Math.max(...rows.map(r=>r[1].length));
  rows.forEach(([name,L],z)=>L.forEach((it,c)=>B.push({...it,x:(c-(nx-1)/2)*sp,z:(z-(nz-1)/2)*sp,h:.35+3.1*(Math.log(it.cap)-lo)/((hi-lo)||1),w:.42})));
- let W,H,yaw=.62,pitch=.62,drag=null,hov=null,raf=0,vis=true,spin=1,last=0;const css=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+ let W,H,yaw=.62,pitch=.62,drag=null,hov=null,raf=0,vis=true,spin=1,last=0,focus=null;const css=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
  const rs=()=>{const r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0)};
  const P=(px,py,pz)=>{const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp2=Math.sin(pitch);let X=px*cy-pz*sy,Z=px*sy+pz*cy,Y=py;const Y2=Y*cp-Z*sp2,Z2=Y*sp2+Z*cp+22,f=Math.min(W,H*1.35)*1.55/Z2;return [W/2+X*f,H*.66-Y2*f,Z2]};
  const faces=b=>{const {x:bx,z:bz,w,h}=b,v=[[-w,0,-w],[w,0,-w],[w,0,w],[-w,0,w],[-w,h,-w],[w,h,-w],[w,h,w],[-w,h,w]].map(q=>P(bx+q[0],q[1],bz+q[2]));
@@ -2588,8 +2588,8 @@ const Q3D=(wrap,items)=>{const cv=wrap.querySelector('canvas'),x=cv.getContext('
   x.strokeStyle=`rgba(${fg},.07)`;x.lineWidth=1;for(let i=-nx/2-1;i<=nx/2+1;i++){const a=P(i*sp,0,-(nz/2+1)*sp),b=P(i*sp,0,(nz/2+1)*sp);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke()}for(let k=-nz/2-1;k<=nz/2+1;k++){const a=P(-(nx/2+1)*sp,0,k*sp),b=P((nx/2+1)*sp,0,k*sp);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke()}
   
   drawn=B.map(b=>({b,...faces(b)})).sort((a,b)=>b.depth-a.depth);
-  drawn.forEach(({b,out})=>{const c=b.pc>=0?up:dn,s=Math.min(1,Math.abs(b.pc)/3.5),al=.28+.6*s,h=b===hov;out.forEach(([p,sh])=>{x.beginPath();p.forEach((q,i)=>i?x.lineTo(q[0],q[1]):x.moveTo(q[0],q[1]));x.closePath();const [r,g,bl]=c.split(',').map(Number);x.fillStyle=`rgba(${Math.round(r*sh)},${Math.round(g*sh)},${Math.round(bl*sh)},${h?.95:al})`;x.fill();x.strokeStyle=h?`rgba(${ac},1)`:`rgba(${fg},.12)`;x.lineWidth=h?1.6:.7;x.stroke()})});
-  x.font='600 10.5px Manrope,sans-serif';x.textAlign='center';[...drawn].sort((a,b)=>b.b.cap-a.b.cap).slice(0,6).forEach(({b,top})=>{x.fillStyle=`rgba(${fg},.85)`;x.fillText(b.sym,top[0],top[1]-6)});x.textAlign='left'};
+  drawn.forEach(({b,out})=>{const c=b.pc>=0?up:dn,s=Math.min(1,Math.abs(b.pc)/3.5),h=b===hov,al=(.28+.6*s)*(focus&&b.sector!==focus?.16:1);out.forEach(([p,sh])=>{x.beginPath();p.forEach((q,i)=>i?x.lineTo(q[0],q[1]):x.moveTo(q[0],q[1]));x.closePath();const [r,g,bl]=c.split(',').map(Number);x.fillStyle=`rgba(${Math.round(r*sh)},${Math.round(g*sh)},${Math.round(bl*sh)},${h?.95:al})`;x.fill();x.strokeStyle=h?`rgba(${ac},1)`:`rgba(${fg},.12)`;x.lineWidth=h?1.6:.7;x.stroke()})});
+  x.font='600 10.5px Manrope,sans-serif';x.textAlign='center';(focus?drawn.filter(d=>d.b.sector===focus):[...drawn].sort((a,b)=>b.b.cap-a.b.cap).slice(0,8)).forEach(({b,top})=>{x.fillStyle=`rgba(${fg},.9)`;x.fillText(b.sym,top[0],top[1]-6)});x.textAlign='left'};
  const loop=t=>{raf=requestAnimationFrame(loop);if(!cv.isConnected){cancelAnimationFrame(raf);return}if(!vis||document.hidden)return;if(spin&&!drag&&!hov)yaw+=Math.min(50,t-last||16)*.00012;last=t;draw()};
  const pick=(cx,cy)=>{for(let i=drawn.length-1;i>=0;i--)if(drawn[i].out.some(([p])=>inPoly(p,[cx,cy])))return drawn[i].b;return null};
  const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
@@ -2597,7 +2597,8 @@ const Q3D=(wrap,items)=>{const cv=wrap.querySelector('canvas'),x=cv.getContext('
  addEventListener('pointerup',e=>{if(!drag)return;const d=drag;drag=null;if(d.moved<6&&e.target===cv){const b=pick(...pos(e));if(b){track('city_open');go('#/asset/'+encodeURIComponent(b.sym))}}});
  cv.addEventListener('pointermove',e=>{if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.moved=Math.max(drag.moved,Math.abs(dx)+Math.abs(dy));if(e.pointerType!='touch'||Math.abs(dx)>Math.abs(dy)){yaw=drag.yaw+dx*.008;pitch=Math.max(.28,Math.min(1.05,drag.pitch+dy*.004))}hov=null;tip.style.display='none';return}const [mx,my]=pos(e),b=pick(mx,my);hov=b;cv.style.cursor=b?'pointer':'grab';if(b){tip.innerHTML=`<b>${esc(b.name)}</b>${esc(b.sym)} · ${fmt(b.price)} <span class="${b.pc>=0?'up':'dn'}">${b.pc>=0?'▲':'▼'} ${fmt(Math.abs(b.pc))}%</span><br><span class="mu">${esc(b.sector)} · worth ${FM(b.cap,'USD')}</span>`;tip.style.display='block';tip.style.left=Math.min(mx+14,W-tip.offsetWidth-4)+'px';tip.style.top=Math.max(4,my-tip.offsetHeight-10)+'px'}else tip.style.display='none'});
  cv.addEventListener('pointerleave',()=>{hov=null;tip.style.display='none'});
- new ResizeObserver(rs).observe(cv);if('IntersectionObserver' in window)new IntersectionObserver(es=>{vis=es[0].isIntersecting}).observe(cv);rs();raf=requestAnimationFrame(loop)};
+ new ResizeObserver(rs).observe(cv);if('IntersectionObserver' in window)new IntersectionObserver(es=>{vis=es[0].isIntersecting}).observe(cv);rs();raf=requestAnimationFrame(loop);
+ wrap._q3={rows,setFocus:f=>{focus=f},getFocus:()=>focus,setSpin:v=>{spin=v?1:0},reset:()=>{yaw=.62;pitch=.62;focus=null}};return wrap._q3};
 
 const hm36=PAGES.home;PAGES.home=()=>{hm36();const s=document.querySelector('#m .sc');if(!s)return;
  /* the opening screen: the wordmark, one promise, one action */
@@ -2717,7 +2718,7 @@ Object.assign(TT,{about:['About','Who builds Quantera and why.'],ai:['Ask Quante
  screener:['Screener','Filter stocks by size, valuation, growth and dividends.'],settings:['Settings','Display, chart and account settings.'],social:['Follow Quantera','Where we post lessons and market explainers.'],
  terminal:['Terminal','A workspace with several charts side by side.'],valuation:['Valuation','Estimate what a company could be worth.']});
 document.head.insertAdjacentHTML('beforeend','<style>'+
-'.hm{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:110px 32px 40px}.hm section{margin:0 0 64px;width:100%;max-width:none}body.cine header{background:rgb(var(--bgc))!important;border-bottom:1px solid var(--ln)!important}'+
+'.hm{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:110px 32px 40px}.hm section{margin:0 0 64px;width:100%;max-width:none}'+
 '.hm-hero{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;min-height:min(640px,calc(100vh - 150px))}'+
 '.hm h1{font-size:clamp(34px,4.6vw,58px);line-height:1.06;margin:0 0 18px;font-weight:400}.hm .lead{font-size:18px;line-height:1.6;color:var(--mu);margin:0 0 26px;max-width:560px}'+
 '.hm .cta{display:flex;gap:10px;flex-wrap:wrap}.hm .cta .btn{margin:0;padding:12px 20px;font-size:15px}.hm .fine{font-size:13px;color:var(--mu);margin-top:14px}'+
@@ -2737,41 +2738,95 @@ const HNM=n=>{const SP={JPMORGAN:'JPMorgan',PAYPAL:'PayPal',EBAY:'eBay',BLACKROC
  let t=n.replace(/\s*-\s*(sp\s*adr|adr|cl\s*[a-z]|class\s*[a-z]|[a-z])$/i,'').trim();for(let i=0;i<3;i++)t=t.replace(/[\s,]+(inc|corp|corporation|plc|co|ltd|company|holdings? inc)\.?$/i,'').replace(/\s*&$/,'').trim();
  return t.split(' ').map(w=>{const U=w.toUpperCase();if(SP[U])return SP[U];if(UP.test(U)||w.includes('&'))return U;const l=w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();return /^Mc[a-z]/.test(l)?'Mc'+l.charAt(2).toUpperCase()+l.slice(3):l}).join(' ')};
 const HCH=c=>c==null?'':`<small class="${c>=0?'up':'dn'}">${c>=0?'+':'−'}${fmt(Math.abs(c),2)}%</small>`;
-PAGES.home=()=>{try{SETBG('none')}catch(e){}
+PAGES.home=()=>{setTimeout(()=>{try{SETBG('candles')}catch(e){}},0);
  $('#m').innerHTML=`<div class="hm">
- <section class="hm-hero"><div>
-  <h1>Practise investing with $100,000 of virtual money.</h1>
-  <p class="lead">Buy and sell real stocks, ETFs and commodities at live prices without risking any of your own money. Look up any company in plain English and learn the basics as you go.</p>
+ <section class="hm-open"><div>
+  <h1 class="hmk">QUANTERA</h1>
+  <p class="lead">Practise investing with $100,000 of virtual money on live prices. Look up any company in plain English and learn the basics as you go.</p>
   <div class="cta"><a class="btn p" href="#/trade" onclick="track('hero_start')">Start paper trading</a><a class="btn" href="#/markets">See today’s markets</a></div>
   <div class="fine">Free. No card and no sign-up needed to start. For education, not investment advice.</div></div>
-  <div class="pan hl" id="hml"><div class="hl-h"><b>Markets today</b><span>Loading live prices…</span></div></div></section>
+  <a class="hm-cue" href="#hm-now" onclick="event.preventDefault();document.getElementById('hm-now').scrollIntoView({behavior:'smooth'})">Today’s markets ↓</a></section>
+ <section id="hm-now"><div class="hm-two"><div class="pan hl" id="hml"><div class="hl-h"><b>Markets today</b><span>Loading live prices…</span></div></div>
+  <div id="hmv" class="pan hmv"><div class="hl-h"><b>Biggest moves today</b><span>Largest US companies</span></div><div class="hm-mv"><div class="mu" style="padding:18px 0">Loading…</div></div></div></div></section>
  <section><h2>What you can do here</h2><p class="sub">All of it is free to use.</p><div class="hm-do">
   <a class="pan" href="#/trade"><b>Paper trade</b><span>Start with $100,000 of virtual cash. Set a stop-loss or take-profit and follow every position.</span><i>Open Trade →</i></a>
   <a class="pan" href="#/stocks"><b>Look up any stock</b><span>More than 80,000 companies in 44 countries, with prices, financials and analyst targets explained simply.</span><i>Browse stocks →</i></a>
   <a class="pan" href="#/learn"><b>Learn the basics</b><span>38 short lessons, from compound interest to reading a chart. Most take about three minutes.</span><i>Open Academy →</i></a>
   <a class="pan" href="#/screener"><b>Screen and compare</b><span>Filter stocks by size, valuation, growth and dividends, then compare a few side by side.</span><i>Open Screener →</i></a></div></section>
- <section id="hmv" style="display:none"><h2>Biggest moves today</h2><p class="sub" id="hmvs">Among the largest US companies.</p><div class="hm-mv"></div></section>
- <section id="city" class="hx"><h2>The largest companies today</h2><p class="sub">Each block is a company. Taller means bigger, green is up today and red is down. Drag to turn it and click a block to open that company.</p>
-  <div class="q3w"><canvas aria-label="3D map of the largest companies: block height is company size, colour is today's price move"></canvas><div class="q3tip"></div><div class="q3load">Loading today’s market…</div><div class="q3cap">Height = company size · green up, red down</div></div></section>
+ <section id="city"><h2>The largest companies today</h2><p class="sub">Each block is a company, grouped by sector. Taller means bigger. Green is up today, red is down, and stronger colour means a bigger move.</p>
+  <div class="cty"><div class="q3w"><canvas aria-label="3D map of the largest companies by sector: block height is company size, colour is today's price move"></canvas><div class="q3tip"></div><div class="q3load">Loading today’s market…</div>
+   <div class="q3bar"><button class="btn" data-q="spin">Pause rotation</button><button class="btn" data-q="reset">Reset view</button><span class="mu">Drag to turn · click a block to open it</span></div></div>
+   <aside class="pan cpn" id="cpn"><div class="mu">Loading…</div></aside></div></section>
  <section>${FST()}</section></div>`;
- /* real social proof only: the count of people on the public paper-trading leaderboard, shown once it is meaningful (25+) */
+ /* the candles fade once you scroll past the opening screen, so panels stay readable */
+ const tr=document.getElementById('tr'),fade=()=>{if(location.hash.replace(/^#\/?/,'')!=''){document.body.classList.remove('hm-bg');if(tr)tr.style.opacity='';removeEventListener('scroll',fade);removeEventListener('hashchange',fade);return}document.body.classList.add('hm-bg');if(tr)tr.style.opacity=String(Math.max(.12,.72-scrollY/(innerHeight*.8)))};addEventListener('scroll',fade,{passive:true});addEventListener('hashchange',fade);fade();
+ /* real social proof only: people on the public leaderboard, shown once there are HPROOF_MIN or more */
  try{fetch(QAUTH.url+'/rest/v1/leaderboard?select=user_id',{method:'HEAD',headers:{apikey:QAUTH.key,Prefer:'count=exact',Range:'0-0'}}).then(r=>{const n=+((r.headers.get('content-range')||'').split('/')[1]||0),f=document.querySelector('.hm .fine');
-  if(n>=HPROOF_MIN&&f&&!document.querySelector('.hm .proof'))f.insertAdjacentHTML('beforebegin',`<div class="proof" style="margin-top:16px;font-size:14px"><b>${n.toLocaleString('en-US')}</b> people are paper trading on Quantera. <a href="#/leaderboard" style="color:var(--ac)">See the leaderboard →</a></div>`)}).catch(()=>{})}catch(e){}
- const P=$('#hml');
- jf('/api/markets').then(({ok,b})=>{if(!document.body.contains(P))return;if(!ok||!b){P.querySelector('.hl-h span').textContent='Live prices are unavailable right now.';return}
+  if(n>=HPROOF_MIN&&f&&!document.querySelector('.hm .proof'))f.insertAdjacentHTML('beforebegin',`<div class="proof"><b>${n.toLocaleString('en-US')}</b> people are paper trading on Quantera. <a href="#/leaderboard">See the leaderboard →</a></div>`)}).catch(()=>{})}catch(e){}
+ const P=$('#hml'),V=$('#hmv'),drop=el=>{if(el&&el.parentNode)el.parentNode.removeChild(el)};
+ jf('/api/markets').then(({ok,b})=>{if(!document.body.contains(P))return;if(!ok||!b){P.querySelector('.hl-h span').textContent='Live prices are unavailable right now.';drop(V);return}
   const NM={'^GSPC':'S&P 500','^NDX':'Nasdaq 100','^DJI':'Dow Jones','^RUT':'Russell 2000'},R=[];
   (b.indices||[]).forEach(i=>{if(i.level&&NM[i.levelSymbol])R.push({n:NM[i.levelSymbol],h:'#/asset/'+encodeURIComponent(i.symbol),p:i.level,c:i.levelChangePct,s:i.levelSpark})});
   (b.crypto||[]).slice(0,1).forEach(c=>R.push({n:c.name,h:'#/asset/'+c.from+'-USD',p:c.rate,c:c.changePct,s:c.spark,d:'$'}));
   (b.assets||[]).filter(a=>a.symbol=='GC=F').forEach(a=>R.push({n:'Gold',h:'#/asset/GC%3DF',p:a.price,c:a.changePct,d:'$'}));
   const t=b.updated?new Date(b.updated).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
   P.innerHTML=`<div class="hl-h"><b>Markets today</b><span><span class="dot"></span>Live${t?' · updated '+t:''}</span></div>`+R.slice(0,6).map(r=>`<a href="${r.h}"><span class="n">${esc(r.n)}</span><span class="p">${r.d||''}${fmt(r.p,2)}${HCH(r.c)}</span>${HSP(r.s,r.c>=0?'var(--up)':'var(--dn)')}</a>`).join('')+
-   `<div class="hl-f"><span>Prices from Finnhub and Yahoo Finance. Some are delayed up to 15 minutes.</span><a href="#/markets" style="color:var(--ac)">All markets →</a></div>`;
-  const M=b.movers;if(M&&(M.gainers||[]).length){const L=(a)=>a.slice(0,4).map(x=>`<a href="#/asset/${encodeURIComponent(x.symbol)}"><span><b>${esc(x.symbol)}</b> <span class="mu">${esc(HNM(x.name||''))}</span></span><span>$${fmt(x.price,2)} ${HCH(x.changePct)}</span></a>`).join('');
-   const v=$('#hmv');v.querySelector('.hm-mv').innerHTML=`<div class="pan"><h3>Up the most</h3>${L(M.gainers)}</div><div class="pan"><h3>Down the most</h3>${L(M.losers||[])}</div>`;v.style.display=''}
- }).catch(()=>{P.querySelector('.hl-h span').textContent='Live prices are unavailable right now.'});
- const w=document.querySelector('#city .q3w');
- if(!QLIVE.market){document.getElementById('city').remove();return}
+   `<div class="hl-f"><span>Prices from Finnhub and Yahoo Finance. Some are delayed up to 15 minutes.</span><a href="#/markets">All markets →</a></div>`;
+  const M=b.movers;if(M&&(M.gainers||[]).length){const L=a=>a.slice(0,4).map(x=>`<a href="#/asset/${encodeURIComponent(x.symbol)}"><span class="nm"><b>${esc(x.symbol)}</b> <span class="mu">${esc(HNM(x.name||''))}</span></span><span class="p">$${fmt(x.price,2)}${HCH(x.changePct)}</span></a>`).join('');
+   V.querySelector('.hm-mv').innerHTML=`<h3>Up the most</h3>${L(M.gainers)}<h3>Down the most</h3>${L(M.losers||[])}`}else drop(V)
+ }).catch(()=>{P.querySelector('.hl-h span').textContent='Live prices are unavailable right now.';drop(V)});
+ const city=document.getElementById('city'),w=city.querySelector('.q3w'),pn=$('#cpn');
+ if(!QLIVE.market){drop(city);return}
  jf('/api/popular?list=popular').then(({ok,b})=>{if(!document.body.contains(w))return;const it=ok&&b.items?b.items.filter(i=>i.type=='EQUITY'&&i.marketCap>0&&i.changePct!=null&&i.sector&&!/International|ETF/i.test(i.sector)).map(i=>({sym:i.symbol,name:i.name||i.symbol,sector:i.sector,cap:i.marketCap,pc:i.changePct,price:i.price})):[];
-  if(it.length<12){document.getElementById('city').remove();return}const ld=w.querySelector('.q3load');if(ld)ld.remove();Q3D(w,it)}).catch(()=>document.getElementById('city').remove())};
+  if(it.length<12){drop(city);return}drop(w.querySelector('.q3load'));const Q=Q3D(w,it);
+  /* side panel: today's breadth, every sector's size-weighted move (click to highlight it), and a colour legend */
+  const shown=Q.rows.flatMap(r=>r[1]),up=shown.filter(i=>i.pc>=0).length,S=Q.rows.map(([n,L])=>{const c=L.reduce((a,i)=>a+i.cap,0);return {n,pc:L.reduce((a,i)=>a+i.pc*i.cap,0)/c,k:L.length,top:L[0]}}).sort((a,b)=>b.pc-a.pc),mx=Math.max(1,...S.map(x=>Math.abs(x.pc)));
+  pn.innerHTML=`<div class="cpn-h"><b>${up} of ${shown.length}</b> are up today</div><div class="cpn-bar"><i class="u" style="width:${up/shown.length*100}%"></i><i class="d" style="width:${100-up/shown.length*100}%"></i></div>
+   <h4>By sector <span class="mu">size-weighted</span></h4><div class="cpn-s">${S.map(x=>`<button type="button" data-s="${esc(x.n)}" title="Highlight ${esc(x.n)}"><span class="sn">${esc(x.n)}<small>${x.k} companies · biggest ${esc(x.top.sym)}</small></span><span class="sb"><i class="${x.pc>=0?'u':'d'}" style="width:${Math.abs(x.pc)/mx*100}%"></i></span><span class="${x.pc>=0?'up':'dn'} sv">${x.pc>=0?'+':'−'}${fmt(Math.abs(x.pc),2)}%</span></button>`).join('')}</div>
+   <div class="cpn-l"><span>−3%</span><i></i><span>+3%</span></div><div class="mu cpn-n">Height shows company value. Point at a sector to highlight it, or click to keep it highlighted.</div>`;
+  const mark=()=>pn.querySelectorAll('[data-s]').forEach(b=>b.classList.toggle('on',b.dataset.s===Q.getFocus()));
+  let pin=null;pn.querySelectorAll('[data-s]').forEach(b=>{b.onclick=()=>{pin=pin===b.dataset.s?null:b.dataset.s;Q.setFocus(pin);mark();track('city_sector')};b.onmouseenter=()=>Q.setFocus(b.dataset.s);b.onmouseleave=()=>Q.setFocus(pin)});
+  let spinOn=true;const sb=w.querySelector('[data-q=spin]');sb.onclick=()=>{spinOn=!spinOn;Q.setSpin(spinOn);sb.textContent=spinOn?'Pause rotation':'Rotate'};
+  w.querySelector('[data-q=reset]').onclick=()=>{pin=null;Q.reset();mark()};
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){spinOn=false;Q.setSpin(false);sb.textContent='Rotate'}
+ }).catch(()=>drop(city))};
+
+/* ===== v44: opening page with the wordmark back, a clearer company map, and Apple-style interface pieces in Quantera's gold ===== */
+document.head.insertAdjacentHTML('beforeend','<style id="v44">'+
+/* opening page */
+'body.cine.hm-bg #tr{display:block!important}body.cine.hm-bg #m{overflow-x:clip}:root[data-theme="light"] body.cine.hm-bg #tr{filter:opacity(.45)}.hm{padding-top:0!important}.hm .pan{background:rgba(var(--bgc),.9)!important}'+
+'.hm-open::before{content:"";position:absolute;top:0;bottom:0;left:-50vw;right:-50vw;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 55% 62% at 38% 56%,rgba(var(--bgc),.86),rgba(var(--bgc),.5) 62%,rgba(var(--bgc),.12))}'+
+'.hm-open{position:relative;display:flex;flex-direction:column;justify-content:center;min-height:min(calc(100svh - 64px),900px);padding:120px 0 72px}'+
+'.hmk{font:300 clamp(64px,12.5vw,184px)/.92 Fraunces,Georgia,serif!important;letter-spacing:-.035em!important;margin:0 0 26px!important;color:var(--tx)}'+
+'.hm-open .lead{max-width:700px;font-size:clamp(17px,1.55vw,21px);color:rgba(var(--fgc),.82)}.hm-open .cta{margin-top:4px}'+
+'.hm-cue{position:absolute;left:0;bottom:22px;color:var(--mu);font-size:14px;animation:cu 1.8s infinite}.hm-cue:hover{color:var(--ac)}@media(prefers-reduced-motion:reduce){.hm-cue{animation:none}}'+
+'.proof{margin-top:16px;font-size:14px}.proof a,.hl-f a{color:var(--ac)}'+
+'.hm-two{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;align-items:start}'+
+'.hmv{padding:18px 18px 10px}.hmv .hm-mv{display:block}.hmv h3{margin:12px 0 2px;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);font-weight:600}'+
+'.hmv a{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid var(--ln)}.hmv a:last-of-type{border-bottom:0}.hmv a:hover{background:rgba(var(--fgc),.03)}.hmv .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hmv .p{text-align:right;white-space:nowrap}.hmv .p small{margin-left:8px;display:inline}'+
+/* company map */
+'.cty{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:stretch}.cty .q3w{display:flex;flex-direction:column}.cty .q3w canvas{flex:1;min-height:clamp(320px,54vh,540px)}'+
+'.q3bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 14px 14px;font-size:12.5px}.q3bar .btn{margin:0;padding:6px 12px;font-size:13px}'+
+'.cpn{padding:18px!important}.cpn-h{font-size:15px;color:var(--mu)}.cpn-h b{font:400 26px Fraunces,Georgia,serif;color:var(--tx);margin-right:4px}'+
+'.cpn-bar{display:flex;height:8px;border-radius:99px;overflow:hidden;margin:10px 0 20px;background:var(--s2)}.cpn-bar .u{background:var(--up)}.cpn-bar .d{background:var(--dn)}'+
+'.cpn h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);font-weight:600;display:flex;justify-content:space-between}.cpn h4 .mu{text-transform:none;letter-spacing:0;font-weight:400}'+
+'.cpn-s button{display:grid;grid-template-columns:minmax(0,1fr) 64px 62px;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:8px;color:var(--tx);cursor:pointer;font:inherit}'+
+'.cpn-s button:hover{background:rgba(var(--fgc),.05)}.cpn-s button.on{background:rgba(var(--acc),.13);box-shadow:inset 0 0 0 1px rgba(var(--acc),.5)}'+
+'.cpn .sn{font-size:14px;min-width:0}.cpn .sn small{display:block;color:var(--mu);font-size:11.5px;white-space:normal}'+
+'.cpn .sb{height:6px;border-radius:99px;background:var(--s2);position:relative;overflow:hidden}.cpn .sb i{position:absolute;top:0;bottom:0;left:0;border-radius:99px}.cpn .sb .u{background:var(--up)}.cpn .sb .d{background:var(--dn)}.cpn .sv{text-align:right;font-size:13px;font-variant-numeric:tabular-nums}'+
+'.cpn-l{display:flex;align-items:center;gap:8px;margin-top:18px;font-size:12px;color:var(--mu)}.cpn-l i{flex:1;height:8px;border-radius:99px;background:linear-gradient(90deg,rgba(var(--dnc),.95),rgba(var(--dnc),.22),rgba(var(--upc),.22),rgba(var(--upc),.95))}.cpn-n{font-size:12px;margin-top:10px;line-height:1.5}'+
+'@media(max-width:900px){.hm-open{padding:132px 0 64px;min-height:calc(100svh - 40px)}.hm-two,.cty{grid-template-columns:1fr}.cty .q3w canvas{min-height:300px}}'+
+/* Apple-style interface pieces, keeping the gold palette and fonts: frosted bars, flat rounded cards, pill controls, solid badges, filled inputs */
+'header{background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border-bottom:1px solid rgba(var(--fgc),.08)!important}body.cine header{background:transparent!important}'+
+'header::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:rgba(var(--bgc),.74);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}'+
+'nav{background:rgba(var(--bgc),.74)!important;-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}nav a{border-radius:10px!important}'+
+'.pan{border-radius:16px!important;box-shadow:none!important;border:1px solid rgba(var(--fgc),.07)!important}'+
+'.btn,.chip,.tabs button{border-radius:980px!important}.tabs button.on,.chip.on{border-color:transparent!important;background:rgba(var(--acc),.15)!important}'+
+'.pill{border-radius:7px!important;font-weight:600}.pill.u{background:var(--up)!important;color:rgb(var(--bgc))!important}.pill.d{background:var(--dn)!important;color:rgb(var(--bgc))!important}:root[data-theme="light"] .pill.u,:root[data-theme="light"] .pill.d{color:#fff!important}'+
+'input:not([type=range]):not([type=checkbox]):not([type=radio]),select,textarea{background:rgba(var(--fgc),.06)!important;border:1px solid transparent!important;border-radius:10px!important}'+
+'input:focus,select:focus,textarea:focus{outline:none!important;border-color:rgba(var(--acc),.7)!important;box-shadow:0 0 0 3px rgba(var(--acc),.22)!important}'+
+'td,th{border-bottom-color:rgba(var(--fgc),.07)!important}#res{border-radius:14px!important;box-shadow:0 18px 50px rgba(0,0,0,.35)!important}'+
+'a:focus-visible,button:focus-visible{outline:2px solid rgba(var(--acc),.8);outline-offset:2px}'+
+'</style>');
 
 if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML=SKEL();setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();
