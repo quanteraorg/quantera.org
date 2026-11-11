@@ -2902,7 +2902,7 @@ document.head.insertAdjacentHTML('beforeend','<style id="v46">'+
 '[data-qt].qhide{display:none!important}.mk1{grid-template-columns:1fr!important}.mkov{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px;align-items:start}'+
 '.mvcap table tr:nth-of-type(n+27){display:none}.mvmore{display:block;margin:12px auto 0!important}'+
 '.nwmore{display:block;margin:14px auto 0!important}#nl>.qnh{display:none!important}'+
-'@media(max-width:900px){.mkov{grid-template-columns:1fr}.qtabs{top:var(--qtop,108px)}}'+
+'@media(max-width:900px){.mkov{grid-template-columns:1fr}}'+
 '</style>');
 const QTABS=(host,tabs,key,onShow)=>{let cur=LS(key,tabs[0][0]);if(!tabs.some(t=>t[0]==cur))cur=tabs[0][0];const bar=document.createElement('div');bar.className='qtabs';bar.setAttribute('role','tablist');
  bar.innerHTML=tabs.map(t=>`<button class="chip" role="tab" data-t="${t[0]}">${t[1]}${t[2]!=null?`<small>${t[2]}</small>`:''}</button>`).join('');
@@ -2954,5 +2954,114 @@ const lr48=PAGES.learn;PAGES.learn=a=>{lr48(a);
   const vis=[...G.children].filter(c=>c.style.display!='none'&&!c.hidden);vis.forEach((c,i)=>c.classList.toggle('qover',i>=8));
   btn.style.display=window.PHONE&&PHONE()&&vis.length>8?'':'none';btn.textContent=G.classList.contains('qall')?'Show fewer lessons':`Show all ${vis.length} lessons`;return true};
  QWAIT(()=>fix()?1:0,()=>{const G=document.getElementById('lg');if(!G)return;const mo=new MutationObserver(()=>{if(!document.body.contains(G)){mo.disconnect();return}mo.disconnect();fix();mo.observe(G,{childList:true,attributes:true,subtree:true,attributeFilter:['style']})});mo.observe(G,{childList:true,attributes:true,subtree:true,attributeFilter:['style']})})};
+
+/* ===== v49: Quantera design system: tokens, Liquid Glass materials on the navigation layer, motion, command palette, FAQ, accessibility =====
+   Principles (Apple HIG, Materials): glass is for controls and navigation that float above content, never for the content itself.
+   Regular glass = blurred and tinted, used for bars, menus and dialogs. Solid fallbacks when blur is unsupported, transparency is reduced or contrast is raised. */
+document.head.insertAdjacentHTML('beforeend','<style id="ds">'+
+/* tokens */
+':root{--r-xs:6px;--r-sm:10px;--r-md:14px;--r-lg:18px;--r-xl:24px;--r-pill:980px;'+
+'--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;--sp-7:48px;--sp-8:64px;'+
+'--dur-1:.12s;--dur-2:.22s;--dur-3:.34s;--ease-out:cubic-bezier(.22,1,.36,1);--ease-io:cubic-bezier(.65,0,.35,1);'+
+'--ease-spring:linear(0,.009,.035 2.1%,.141 4.4%,.723 12.9%,.938 16.7%,1.017 20.5%,1.043 24.5%,1.035 28.4%,1.007 36%,.997 41.1%,1.001 59.1%,1);'+
+'--glass-bg:rgba(var(--bgc),.62);--glass-bg-strong:rgba(var(--bgc),.8);--glass-blur:saturate(180%) blur(22px);'+
+'--glass-edge:inset 0 1px 0 rgba(var(--fgc),.14),inset 0 0 0 1px rgba(var(--fgc),.07);--glass-shadow:0 18px 50px -12px rgba(var(--shc),calc(.55*var(--sha))),0 2px 8px rgba(var(--shc),calc(.25*var(--sha)))}'+
+':root[data-theme="light"]{--glass-bg:rgba(255,255,255,.62);--glass-bg-strong:rgba(255,255,255,.82);--glass-edge:inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(17,24,39,.08)}'+
+/* the material: a tinted, blurred layer with a specular top edge and a faint gold sheen */
+'.glass,header::before,nav#nav,.mm,#res,.qcp-box,.qm .box,.qsheet,.qt{-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)}'+
+'header::before{background:linear-gradient(180deg,rgba(var(--acc),.05),transparent 70%),var(--glass-bg)!important;box-shadow:inset 0 -1px 0 rgba(var(--fgc),.07)}'+
+'.mm,#res,.qcp-box,.qsheet{background:linear-gradient(180deg,rgba(var(--fgc),.06),transparent 40%),var(--glass-bg-strong)!important;border:0!important;box-shadow:var(--glass-edge),var(--glass-shadow)!important;border-radius:var(--r-lg)!important}'+
+'.qm .box{background:linear-gradient(180deg,rgba(var(--fgc),.05),transparent 40%),var(--glass-bg-strong)!important;border:0!important;box-shadow:var(--glass-edge),var(--glass-shadow)!important;border-radius:var(--r-xl)!important;animation:qpop var(--dur-3) var(--ease-spring)}'+
+'.qm{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:qfade var(--dur-2) var(--ease-out)}'+
+'@media(min-width:801px){nav#nav{background:linear-gradient(90deg,transparent,rgba(var(--fgc),.025)),var(--glass-bg)!important;box-shadow:inset -1px 0 0 rgba(var(--fgc),.07)}}'+
+/* phone: a floating glass tab bar with a pill behind the active tab */
+'@media(max-width:800px),(pointer:coarse) and (max-height:500px){nav#nav{left:10px!important;right:10px!important;bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;border-radius:26px!important;border:0!important;padding:5px!important;background:var(--glass-bg-strong)!important;box-shadow:var(--glass-edge),var(--glass-shadow)!important}'+
+' nav#nav a,nav#nav .nmore{border-radius:20px!important;transition:background var(--dur-2) var(--ease-out),color var(--dur-2)}nav#nav a.on{background:rgba(var(--acc),.16)!important}main{padding-bottom:104px!important}}'+
+/* fallbacks: no blur support, reduced transparency, more contrast */
+'@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){header::before,nav#nav,.mm,#res,.qcp-box,.qm .box,.qsheet{background:rgb(var(--bgc))!important}}'+
+'@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){header::before,nav#nav,.mm,#res,.qcp-box,.qm .box,.qsheet,.qt{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgb(var(--bgc))!important;box-shadow:inset 0 0 0 1px var(--ln)!important}}'+
+/* motion: one timing system */
+'.btn,.chip,.tabs button,nav a,.thm,.pan.card,.hm-do a,.hm-do2 a,.hm-news a{transition:transform var(--dur-1) var(--ease-out),background-color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}'+
+'.btn:active,.chip:active,.tabs button:active,.thm:active,nav a:active{transform:scale(.96)}.hm-do a:hover,.hm-do2 a:hover,.hm-news a:hover,.pan.card:hover{transform:translateY(-2px)}'+
+'.mm.on{animation:qdrop var(--dur-2) var(--ease-out)!important}#res{animation:qdrop var(--dur-2) var(--ease-out)}'+
+'#m.qpg>*{animation:qpage var(--dur-3) var(--ease-out) both}'+
+'@keyframes qpage{from{opacity:0;transform:translateY(8px)}}@keyframes qdrop{from{opacity:0;transform:translateY(-6px) scale(.98)}}@keyframes qpop{from{opacity:0;transform:translateY(10px) scale(.97)}}@keyframes qfade{from{opacity:0}}'+
+'@media(prefers-reduced-motion:reduce){#m.qpg>*,.mm.on,#res,.qm,.qm .box,.qcp,.qcp-box{animation:none!important}.btn:active,.chip:active,.hm-do a:hover,.hm-do2 a:hover,.hm-news a:hover,.pan.card:hover{transform:none}}'+
+/* focus that is always visible on keyboard use */
+':focus-visible{outline:2px solid rgba(var(--acc),.9)!important;outline-offset:2px!important;border-radius:var(--r-xs)}'+
+'p a,.lead a,.mu a,.cmps a,.sub a,.hl-f a,#nl a.up,#nl a.dn{text-decoration:underline;text-decoration-color:rgba(var(--acc),.45);text-underline-offset:3px}'+
+/* command palette */
+'.qcp{position:fixed;inset:0;z-index:200;display:flex;justify-content:center;align-items:flex-start;padding:12vh 16px 16px;background:rgba(var(--shc),calc(.38*var(--sha)));animation:qfade var(--dur-2) var(--ease-out)}'+
+'.qcp-box{width:min(640px,100%);overflow:hidden;animation:qpop var(--dur-3) var(--ease-spring)}'+
+'.qcp-in{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(var(--fgc),.08)}.qcp-in svg{width:18px;height:18px;color:var(--mu);flex:none}'+
+'.qcp .qcp-in input:not([type=range]):not([type=checkbox]):not([type=radio]){flex:1;background:none!important;border:0!important;box-shadow:none!important;outline:none!important;font:inherit;font-size:17px;color:var(--tx);padding:4px 0}.qcp kbd{font:11px Manrope,sans-serif;color:var(--mu);border:1px solid rgba(var(--fgc),.15);border-radius:5px;padding:1px 6px}'+
+'.qcp-l{max-height:min(420px,58vh);overflow:auto;padding:6px}.qcp-l h6{margin:10px 12px 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);font-weight:600}'+
+'.qcp-o{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-sm);cursor:pointer;color:var(--tx)}.qcp-o[aria-selected=true]{background:rgba(var(--acc),.16)}.qcp-o .ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:rgba(var(--fgc),.06);color:var(--ac);font-size:13px;flex:none}'+
+'.qcp-o .tt{flex:1;min-width:0}.qcp-o .tt small{display:block;color:var(--mu);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qcp-o .k{color:var(--mu);font-size:12px}'+
+'.qcp-f{display:flex;gap:16px;padding:9px 16px;border-top:1px solid rgba(var(--fgc),.08);font-size:12px;color:var(--mu)}.qcp-e{padding:22px;color:var(--mu);text-align:center}'+
+'.qcpk{position:absolute;right:9px;top:50%;transform:translateY(-50%);font:11px Manrope,sans-serif;color:var(--mu);border:1px solid rgba(var(--fgc),.15);border-radius:5px;padding:1px 6px;background:none;cursor:pointer}.sw input:focus~.qcpk,.sw input:not(:placeholder-shown)~.qcpk{display:none}@media(max-width:800px){.qcpk{display:none}}'+
+/* FAQ */
+'.faq{max-width:860px;padding:4px 22px!important}.faq details:last-child{border-bottom:0}'+
+'.qtabs{background:var(--glass-bg-strong)!important;-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);border-radius:var(--r-pill);padding:6px!important;width:max-content;max-width:100%;box-shadow:var(--glass-edge),var(--glass-shadow)}html.is-phone .qtabs{width:auto;border-radius:0;margin-top:0;box-shadow:inset 0 -1px 0 rgba(var(--fgc),.08)}@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){.qtabs{backdrop-filter:none!important;background:rgb(var(--bgc))!important}}'+
+'.faq details{border-bottom:1px solid var(--ln)}.faq summary{list-style:none;cursor:pointer;padding:18px 36px 18px 2px;font-size:16.5px;font-weight:500;position:relative}.faq summary::-webkit-details-marker{display:none}'+
+'.faq summary::after{content:"+";position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:22px;color:var(--ac);transition:transform var(--dur-2) var(--ease-out)}.faq details[open] summary::after{transform:translateY(-50%) rotate(45deg)}'+
+'.faq details p{margin:0 0 18px;color:var(--mu);line-height:1.65;max-width:720px}.trust{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 22px}.trust span{padding:7px 13px;border-radius:var(--r-pill);background:rgba(var(--fgc),.05);font-size:13.5px}.trust b{color:var(--ac);font-weight:600}'+
+'</style>');
+
+/* sticky bars sit exactly under the real header height */
+const QTOP=()=>{const h=document.querySelector('header');if(h)document.documentElement.style.setProperty('--qtop',Math.round(h.getBoundingClientRect().bottom)+'px')};addEventListener('resize',QTOP);addEventListener('hashchange',()=>setTimeout(QTOP,300));setTimeout(QTOP,500);setTimeout(QTOP,2500);
+/* page transitions: content eases in after each route change */
+addEventListener('hashchange',()=>{const m=document.getElementById('m');if(!m)return;m.classList.remove('qpg');void m.offsetWidth;m.classList.add('qpg')});
+
+/* ---------- command palette (Cmd/Ctrl+K) ---------- */
+const QCP_PAGES=[['markets','Markets','Indexes, crypto, commodities and currencies','↗'],['brief','Daily brief','Today’s biggest moves in a one-minute read','◷'],['world','World markets','Every country, plus gold, oil and bonds','◎'],['macro','Economy','Inflation, jobs, growth and rates','%'],['calendar','Calendar','Earnings, IPOs and economic releases','▦'],['news','News','Market news with the stocks each story moves','≡'],
+ ['stocks','All stocks','Browse 80,000+ listed companies','$'],['screener','Screener','Filter stocks by size, value, growth, dividends','⚲'],['compare','Compare','Compare up to five stocks side by side','⇄'],['ipos','IPOs','Companies going public','✦'],['private','Private companies','OpenAI, Stripe and 100+ more','◆'],
+ ['trade','Paper trade','Practise with $100,000 of virtual money','⇅'],['plan','Trade planner','Know what you could lose before you buy','⚖'],['portfolio','Portfolio','How a mix would have done','◔'],['planner','Goal planner','How much to invest each month','◎'],['leaderboard','Leaderboard','Paper-trading returns','★'],
+ ['learn','Academy','38 short lessons','✎'],['practice','Chart Gym','Practise reading real charts','▲'],['chartschool','How to read a chart','Candles, volume and trends','▥'],['glossary','Glossary','Finance words in plain English','Aa'],['ai','Ask Quantera','Questions about any stock or concept','✧'],
+ ['settings','Settings','Display, chart and account settings','⚙'],['about','About','Who builds Quantera and why','i'],['pricing','Pricing','Free now, Pro later','◇']];
+const QCP_ACT=()=>[['theme','Switch to '+(THEME()=='light'?'dark':'light')+' mode','Appearance · dark light theme colour','◐',()=>setTheme_(THEME()=='light'?'dark':'light')],['simple','Use Simple mode','Plain English, just Buy and Sell','🌱',()=>setMode_('simple')],['pro','Use Pro mode','Every indicator and order type','📈',()=>setMode_('pro')],['faq','Common questions','Is it free? Where does the data come from? help faq','?',()=>{go('#/');setTimeout(()=>{const f=document.getElementById('faq');f&&f.scrollIntoView({behavior:'smooth'})},500)}]];
+const qcpNorm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,''),qcpScore=(q,t)=>{t=qcpNorm(t);if(!q)return 1;if(t.startsWith(q))return 3;if(t.includes(' '+q)||t.includes(q))return 2;if(q.length<4)return 0;let i=0;for(const c of t)if(c===q[i])i++;return i===q.length?.5:0};
+let QCP_OPEN=null;
+const QCP=()=>{if(QCP_OPEN)return;const prev=document.activeElement;const d=document.createElement('div');d.className='qcp';d.innerHTML=`<div class="qcp-box" role="dialog" aria-modal="true" aria-label="Command menu"><div class="qcp-in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" role="combobox" aria-expanded="true" aria-controls="qcp-l" aria-autocomplete="list" placeholder="Search stocks, pages and actions" autocomplete="off" spellcheck="false"><kbd>Esc</kbd></div><div class="qcp-l" id="qcp-l" role="listbox"></div><div class="qcp-f"><span>↑↓ to move</span><span>↵ to open</span><span>Esc to close</span></div></div>`;
+ document.body.appendChild(d);QCP_OPEN=d;const inp=d.querySelector('input'),L=d.querySelector('.qcp-l');let items=[],sel=0,live=[],tm,seq=0;
+ const recent=LS('q_cpr',[]);
+ const close=()=>{d.remove();QCP_OPEN=null;try{prev&&prev.focus&&prev.focus()}catch(e){}};
+ const run=it=>{close();track('cp_'+it.k);if(it.sym){SS('q_cpr',[it.sym,...recent.filter(x=>x!==it.sym)].slice(0,5));go('#/asset/'+encodeURIComponent(it.sym))}else if(it.fn)it.fn();else go('#/'+it.r)};
+ const draw=()=>{const q=qcpNorm(inp.value.trim()),G=[];
+  const sy=(q?live:recent.map(s=>({symbol:s,name:'Recently opened'}))).slice(0,6).map(x=>{const sl=qcpNorm(x.symbol);return {k:'stock',sym:x.symbol,t:x.symbol,s:[x.name,x.type,x.region].filter(Boolean).join(' · '),ic:'$',sc:!q?1:sl===q?4:sl.startsWith(q)?3:qcpNorm(x.name).startsWith(q)?2.5:1.5}});if(sy.length)G.push([q?'Stocks and funds':'Recent',sy]);
+  const pg=QCP_PAGES.map(p=>({k:'page',r:p[0],t:p[1],s:p[2],ic:p[3],sc:Math.max(qcpScore(q,p[1]),qcpScore(q,p[2])*.6)})).filter(x=>x.sc>0).sort((a,b)=>b.sc-a.sc).slice(0,q?6:8);if(pg.length)G.push(['Go to',pg]);
+  const ac=QCP_ACT().map(a=>({k:'act',t:a[1],s:a[2].split(' · ')[0],ic:a[3],fn:a[4],sc:Math.max(qcpScore(q,a[1]),q&&qcpNorm(a[2]).split(' ').some(w=>w.startsWith(q))?3.2:0,qcpScore(q,a[2])*.6)})).filter(x=>x.sc>0).slice(0,4);if(ac.length)G.push(['Actions',ac]);
+  if(q)G.sort((a,b)=>Math.max(...b[1].map(x=>x.sc||0))-Math.max(...a[1].map(x=>x.sc||0)));items=G.flatMap(g=>g[1]);sel=Math.min(sel,Math.max(0,items.length-1));let n=0;
+  L.innerHTML=items.length?G.map(g=>`<h6>${g[0]}</h6>`+g[1].map(it=>{const i=n++;return `<div class="qcp-o" role="option" id="qcp-${i}" data-i="${i}" aria-selected="${i===sel}"><span class="ic">${esc(it.ic)}</span><span class="tt">${esc(it.t)}<small>${esc(it.s||'')}</small></span>${i===sel?'<span class="k">↵</span>':''}</div>`}).join('')).join(''):`<div class="qcp-e">No matches. Try a ticker like AAPL, or a page like “screener”.</div>`;
+  inp.setAttribute('aria-activedescendant',items.length?'qcp-'+sel:'');const e=L.querySelector('[aria-selected=true]');e&&e.scrollIntoView({block:'nearest'})};
+ const look=()=>{clearTimeout(tm);const q=inp.value.trim(),my=++seq;if(q.length<1){live=[];draw();return}tm=setTimeout(async()=>{let r=[];if(QLIVE.market){try{r=((await jf('/api/search?q='+encodeURIComponent(q))).b.results||[])}catch(e){}}else r=Object.values(Data.search(q)).flat().slice(0,6).map(x=>({symbol:x.t.split(' ')[0],name:x.t.split('  ')[1]||''}));if(my===seq){live=r;draw()}},140)};
+ inp.oninput=()=>{sel=0;draw();look()};
+ inp.onkeydown=e=>{if(e.key=='ArrowDown'){e.preventDefault();sel=(sel+1)%Math.max(1,items.length);draw()}else if(e.key=='ArrowUp'){e.preventDefault();sel=(sel-1+items.length)%Math.max(1,items.length);draw()}else if(e.key=='Enter'){e.preventDefault();const q=inp.value.trim();if(items[sel])run(items[sel]);else if(q){close();go('#/asset/'+encodeURIComponent(q.toUpperCase()))}}else if(e.key=='Escape'){e.preventDefault();close()}else if(e.key=='Tab'){e.preventDefault()}};
+ L.onmousemove=e=>{const o=e.target.closest('.qcp-o');if(o&&+o.dataset.i!==sel){sel=+o.dataset.i;draw()}};L.onclick=e=>{const o=e.target.closest('.qcp-o');if(o)run(items[+o.dataset.i])};
+ d.onmousedown=e=>{if(e.target===d)close()};draw();inp.focus();track('cp_open')};
+addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&!e.altKey&&(e.key=='k'||e.key=='K')){e.preventDefault();QCP_OPEN?(QCP_OPEN.remove(),QCP_OPEN=null):QCP()}});
+(()=>{const sw=document.querySelector('header .sw');if(sw&&!sw.querySelector('.qcpk')){const mac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent);sw.insertAdjacentHTML('beforeend',`<button type="button" class="qcpk" title="Open the command menu" aria-label="Open the command menu (${mac?'Command':'Control'} K)">${mac?'⌘':'Ctrl'} K</button>`);sw.querySelector('.qcpk').onclick=()=>QCP()}})();
+
+/* ---------- home: trust facts and common questions (facts from the privacy policy) ---------- */
+const QFAQ=[['Is Quantera free?','Yes. Everything on Quantera is free to use, there are no ads, and you don’t need an account to start. Planned Pro features are listed on the Pricing page; nothing is charged today.'],
+ ['Can I lose real money?','No. Quantera is for practice. You trade with $100,000 of virtual money at real prices, and nothing real is ever bought or sold. Quantera is for education, not investment advice.'],
+ ['Where do the prices and figures come from?','From market data providers including Finnhub, Twelve Data, Yahoo Finance, SEC EDGAR and FRED. Some prices are delayed by up to 15 minutes, and most pages show which source they use.'],
+ ['Do I need an account?','No. Your watchlist, paper portfolio, notes and lesson progress are saved in your browser. An optional free account copies them to every device you use. You must be 13 or older to create one.'],
+ ['What do you do with my data?','As little as possible. We never sell your data and we show no ads. Page views are counted without cookies. If you create an account, we store your email address and a copy of your progress.'],
+ ['I’m completely new. Where should I start?','Try the 3-minute lesson on compound interest, then open any company you know, like Apple, and read it in plain English. When you’re ready, make your first paper trade.']];
+const hm49=PAGES.home;PAGES.home=()=>{hm49();const hm=document.querySelector('.hm');if(!hm||document.getElementById('faq'))return;
+ const sec=document.createElement('section');sec.id='faq';sec.innerHTML=`<h2>Common questions</h2><p class="sub">The short answers. More detail is in our <a href="/privacy">privacy policy</a> and <a href="/terms">terms</a>.</p>
+  <div class="trust"><span><b>Free</b> to use</span><span><b>No ads</b>, ever</span><span>We <b>never sell</b> your data</span><span><b>No account</b> needed</span><span>Practice money, <b>real prices</b></span></div>
+  <div class="faq pan">${QFAQ.map((q,i)=>`<details${i==0?' open':''}><summary>${q[0]}</summary><p>${q[1]}</p></details>`).join('')}</div>`;
+ const last=[...hm.children].pop();hm.insertBefore(sec,last)};
+
+/* ---------- accessibility: label unnamed fields, make mouse-only controls keyboard-operable, focusable scroll areas ---------- */
+const A11Y=root=>{root=root||document;
+ root.querySelectorAll('input:not([type=hidden]):not([aria-label]):not([aria-labelledby]),select:not([aria-label]):not([aria-labelledby]),textarea:not([aria-label])').forEach(f=>{if(f.id&&document.querySelector(`label[for="${CSS.escape(f.id)}"]`))return;if(f.closest('label'))return;
+  let t=f.getAttribute('placeholder')||f.title;if(!t){const p=f.previousElementSibling;if(p&&p.textContent.trim().length<60)t=p.textContent.trim()}if(!t&&f.type=='checkbox'){const h=f.closest('[onclick]')||f.parentElement;t=h&&(h.querySelector('b')||h).textContent.trim().slice(0,60)}if(!t){const c=f.parentElement,q=c&&(c.previousElementSibling||c.parentElement&&c.parentElement.previousElementSibling);if(q&&q.textContent.trim().length<60)t=q.textContent.trim()}if(!t&&f.tagName=='SELECT'){const o=f.options[0];t=o?'Choose: '+o.text:'Choose an option'}if(t)f.setAttribute('aria-label',t)});
+ root.querySelectorAll('[onclick]:not(a):not(button):not(input):not(select):not(label):not([tabindex])').forEach(e=>{if(e.querySelector('a,button,input,select,textarea'))return;e.tabIndex=0;if(!e.getAttribute('role'))e.setAttribute('role',e.tagName=='TR'?'link':'button')});
+ root.querySelectorAll('.ov,.tvt,.cmpt').forEach(e=>{if(e.scrollWidth>e.clientWidth+4&&!e.hasAttribute('tabindex')){e.tabIndex=0;if(!e.getAttribute('aria-label'))e.setAttribute('aria-label','Scrollable table')}})};
+addEventListener('keydown',e=>{if((e.key=='Enter'||e.key==' ')&&e.target&&e.target.matches&&e.target.matches('[onclick][role=button],[onclick][role=link]')&&!/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){e.preventDefault();e.target.click()}});
+(()=>{let t;const mo=new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>A11Y(document.getElementById('m')),120)});const m=document.getElementById('m');if(m)mo.observe(m,{childList:true,subtree:true});setTimeout(()=>A11Y(document),800)})();
 
 if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML=SKEL();setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();
