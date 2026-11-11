@@ -368,12 +368,13 @@ let SETBG;(()=>{const cv=$('#tr'),x=cv.getContext('2d'),dpr=Math.min(devicePixel
  const D={candles:t=>{const w=W<800?9:14,off=t*30+scrollY*.15,i0=Math.floor(off/w),n=Math.ceil(W/w)+2;let mn=1e9,mx=0;for(let i=0;i<n;i++){const c=cn[(i0+i)%700];mn=Math.min(mn,c[3]);mx=Math.max(mx,c[2])}const Y=v=>H*.1+(1-(v-mn)/(mx-mn))*H*.72;x.strokeStyle='rgba(143,150,170,.09)';x.lineWidth=1;for(let g=1;g<6;g++){x.beginPath();x.moveTo(0,H*g/6);x.lineTo(W,H*g/6);x.stroke()}
   for(let i=0;i<n;i++){const c=cn[(i0+i)%700],X=i*w-(off%w);x.fillStyle='rgba(143,150,170,.16)';const vh=(c[2]-c[3])/c[3]*H*5;x.fillRect(X,H-vh,w-3,vh);x.fillStyle=x.strokeStyle=c[1]>=c[0]?'#4fd1a5':'#f0707a';x.lineWidth=1.5;x.beginPath();x.moveTo(X+w/2-1,Y(c[2]));x.lineTo(X+w/2-1,Y(c[3]));x.stroke();x.fillRect(X,Math.min(Y(c[0]),Y(c[1])),w-3,Math.max(2,Math.abs(Y(c[0])-Y(c[1]))))}
   x.strokeStyle='#c8a96a';x.lineWidth=2;x.beginPath();for(let i=0;i<n;i++){let q=0;for(let k=0;k<10;k++)q+=cn[(i0+i-k+700)%700][1];const X=i*w-(off%w)+w/2,y=Y(q/10);i?x.lineTo(X,y):x.moveTo(X,y)}x.stroke()},
- ticker:t=>{x.font='13px Manrope,sans-serif';for(let c=0;c<Math.ceil(W/110);c++){const y0=(t*(30+(c%4)*18)+c*173)%(H+400);for(let k=0;k<9;k++){const a=SY[(c*7+k)%SY.length];x.globalAlpha=A*Math.max(0,.9-k*.1)*.6;x.fillStyle=hash(a.sym+c)%2?'#4fd1a5':'#f0707a';x.fillText(a.sym+' '+fmt(a.px),c*110+20,y0-k*34-100)}}},
+ ticker:t=>{x.font='13px Manrope,sans-serif';for(let c=0;c<Math.ceil(W/110);c++){const y0=(t*(30+(c%4)*18)+c*173)%(H+400);for(let k=0;k<9;k++){const LT=(window.BGTK&&BGTK.length)?BGTK:SY,a=LT[(c*7+k)%LT.length];x.globalAlpha=A*Math.max(0,.9-k*.1)*.6;x.fillStyle=a.pc!=null?(a.pc>=0?'#4fd1a5':'#f0707a'):(hash(a.sym+c)%2?'#4fd1a5':'#f0707a');x.fillText(a.sym+' '+fmt(a.px),c*110+20,y0-k*34-100)}}},
  network:t=>{const P=nd.map(n=>[(n.x+Math.sin(t*n.s+n.p)*.04)*W,(n.y+Math.cos(t*n.s*.8+n.p)*.04)*H]);x.lineWidth=1;for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){const d=Math.hypot(P[i][0]-P[j][0],P[i][1]-P[j][1]);if(d<170){x.strokeStyle=`rgba(200,169,106,${(1-d/170)*.4})`;x.beginPath();x.moveTo(P[i][0],P[i][1]);x.lineTo(P[j][0],P[j][1]);x.stroke()}}x.fillStyle='#c8a96a';P.forEach(p=>{x.beginPath();x.arc(p[0],p[1],2.4,0,7);x.fill()})},
  ribbons:t=>{for(let k=0;k<16;k++){x.strokeStyle=`rgba(${200-k*8},${169+k*3},${106+k*4},${.5-k*.02})`;x.beginPath();for(let X=0;X<=W;X+=8){const y=H*(.3+k*.03)+Math.sin(X/190+t*.35+k*.45)*(34+k*5)+Math.sin(X/70+t*.6+k)*8;X?x.lineTo(X,y):x.moveTo(X,y)}x.stroke()}},
  bars:t=>{const bw=16;for(let i=0;i*bw<W;i++){const h=H*(.12+.36*Math.abs(Math.sin(i*.3+t*.8)*Math.cos(i*.11-t*.5)))+i*bw/W*H*.18,g=x.createLinearGradient(0,H-h,0,H);g.addColorStop(0,'rgba(200,169,106,.7)');g.addColorStop(1,'rgba(200,169,106,.02)');x.fillStyle=g;x.fillRect(i*bw,H-h,bw-5,h)}}};
  SETBG=m=>{if(m!=cur){prev=cur;cur=m;fa=0}};
- let dirty=1;addEventListener('resize',()=>dirty=1);const loop=()=>{if(!document.hidden&&(dirty||fa<1)&&!document.body.classList.contains('cine')){dirty=0;const t=performance.now()/1000;x.clearRect(0,0,W,H);if(fa<1)fa=Math.min(1,fa+.03);[[prev,1-fa],[cur,fa]].forEach(([m,a])=>{if(m&&D[m]&&a>.01){x.save();A=a;x.globalAlpha=a*.85;D[m](t);x.restore()}})}requestAnimationFrame(loop)};loop()})();
+ /* animated again (capped frame rate, paused in hidden tabs, still for reduced-motion users); it was frozen to a single frame on 2026-10-31 */
+ let dirty=1,lastF=0;addEventListener('resize',()=>dirty=1);const RM=matchMedia('(prefers-reduced-motion: reduce)'),FPS=()=>(window.PHONE&&PHONE()?20:30);const loop=()=>{const now=performance.now(),B=document.body.classList,on=!B.contains('cine')||B.contains('hm-bg'),go=RM.matches?(dirty||fa<1):(now-lastF>=1000/FPS());if(!document.hidden&&on&&go){lastF=now;dirty=0;const t=now/1000;x.clearRect(0,0,W,H);if(fa<1)fa=Math.min(1,fa+.03);[[prev,1-fa],[cur,fa]].forEach(([m,a])=>{if(m&&D[m]&&a>.01){x.save();A=a;x.globalAlpha=a*.85;D[m](t);x.restore()}})}requestAnimationFrame(loop)};loop()})();
 const BGM={markets:'candles',chartlab:'candles',asset:'candles',screener:'ticker',compare:'ticker',terminal:'ticker',valuation:'bars',planner:'bars',learn:'bars',options:'ribbons',portfolio:'ribbons',lesson:'ribbons',ai:'network',brain:'network',globe:'network'};
 document.body.insertAdjacentHTML('afterbegin','<div style="position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 30% 55%,rgba(var(--bgc),.1),rgba(var(--bgc),.78) 90%)"></div>');
 addEventListener('scroll',()=>document.documentElement.style.setProperty('--sy',scrollY),{passive:true});
@@ -2761,7 +2762,7 @@ PAGES.home=()=>{setTimeout(()=>{try{SETBG('candles')}catch(e){}},0);
    <aside class="pan cpn" id="cpn"><div class="mu">Loading…</div></aside></div></section>
  <section>${FST()}</section></div>`;
  /* the candles fade once you scroll past the opening screen, so panels stay readable */
- const tr=document.getElementById('tr'),fade=()=>{if(location.hash.replace(/^#\/?/,'')!=''){document.body.classList.remove('hm-bg');if(tr)tr.style.opacity='';removeEventListener('scroll',fade);removeEventListener('hashchange',fade);return}document.body.classList.add('hm-bg');if(tr)tr.style.opacity=String(Math.max(.12,.72-scrollY/(innerHeight*.8)))};addEventListener('scroll',fade,{passive:true});addEventListener('hashchange',fade);fade();
+ const tr=document.getElementById('tr'),fade=()=>{if(location.hash.replace(/^#\/?/,'')!=''){document.body.classList.remove('hm-bg');if(tr)tr.style.opacity='';removeEventListener('scroll',fade);removeEventListener('hashchange',fade);return}document.body.classList.add('hm-bg');if(tr)tr.style.opacity=String(Math.max(.4,.72-scrollY/(innerHeight*.8)))};addEventListener('scroll',fade,{passive:true});addEventListener('hashchange',fade);fade();
  /* real social proof only: people on the public leaderboard, shown once there are HPROOF_MIN or more */
  try{fetch(QAUTH.url+'/rest/v1/leaderboard?select=user_id',{method:'HEAD',headers:{apikey:QAUTH.key,Prefer:'count=exact',Range:'0-0'}}).then(r=>{const n=+((r.headers.get('content-range')||'').split('/')[1]||0),f=document.querySelector('.hm .fine');
   if(n>=HPROOF_MIN&&f&&!document.querySelector('.hm .proof'))f.insertAdjacentHTML('beforebegin',`<div class="proof"><b>${n.toLocaleString('en-US')}</b> people are paper trading on Quantera. <a href="#/leaderboard">See the leaderboard →</a></div>`)}).catch(()=>{})}catch(e){}
@@ -2881,5 +2882,47 @@ PAGES.compare=()=>{let sel=LS('q_cmp',['NVDA','AMD','AVGO']).slice(0,5),rg=LS('q
  document.querySelectorAll('#m [data-r]').forEach(b=>b.onclick=()=>{rg=b.dataset.r;draw()});
  document.querySelectorAll('#m [data-p]').forEach(b=>b.onclick=()=>{sel=b.dataset.p.split(',');track('compare_pair');draw()});
  draw()};
+
+/* ===== v46: Markets and News split into tabs; the opening page's background changes scene as you scroll, with live prices in the ticker ===== */
+document.head.insertAdjacentHTML('beforeend','<style id="v46">'+
+'.qtabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 18px;position:sticky;top:var(--qtop,64px);z-index:6;padding:8px 0;background:linear-gradient(rgb(var(--bgc)) 75%,transparent)}.qtabs button{margin:0}.qtabs button small{color:var(--mu);margin-left:6px;font-size:12px}.qtabs button.on small{color:inherit}'+
+'[data-qt].qhide{display:none!important}.mk1{grid-template-columns:1fr!important}.mkov{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px;align-items:start}'+
+'.mvcap table tr:nth-of-type(n+27){display:none}.mvmore{display:block;margin:12px auto 0!important}'+
+'.nwmore{display:block;margin:14px auto 0!important}#nl>.qnh{display:none!important}'+
+'@media(max-width:900px){.mkov{grid-template-columns:1fr}.qtabs{top:var(--qtop,108px)}}'+
+'</style>');
+const QTABS=(host,tabs,key,onShow)=>{let cur=LS(key,tabs[0][0]);if(!tabs.some(t=>t[0]==cur))cur=tabs[0][0];const bar=document.createElement('div');bar.className='qtabs';bar.setAttribute('role','tablist');
+ bar.innerHTML=tabs.map(t=>`<button class="chip" role="tab" data-t="${t[0]}">${t[1]}${t[2]!=null?`<small>${t[2]}</small>`:''}</button>`).join('');
+ const show=v=>{cur=v;SS(key,v);bar.querySelectorAll('[data-t]').forEach(b=>{b.classList.toggle('on',b.dataset.t==v);b.setAttribute('aria-selected',b.dataset.t==v)});host.querySelectorAll('[data-qt]').forEach(e=>e.classList.toggle('qhide',!e.dataset.qt.split(' ').includes(v)));onShow&&onShow(v)};
+ bar.onclick=e=>{const b=e.target.closest('[data-t]');if(b){show(b.dataset.t);track('tab_'+key+'_'+b.dataset.t)}};return {bar,show:()=>show(cur)}};
+const QWAIT=(test,fn,ms=20000)=>{const t0=Date.now(),h=location.hash;const tick=()=>{if(location.hash!==h)return;const r=test();if(r)fn(r);else if(Date.now()-t0<ms)setTimeout(tick,250)};tick()};
+
+/* Markets: Overview / Movers / Breadth & map */
+const mk46=PAGES.markets;PAGES.markets=a=>{mk46(a);
+ const apply=()=>{const B=document.querySelector('#m .body')||$('#m');if(!B||B.querySelector('.qtabs'))return;const mi=B.querySelector('#mi'),grids=[...B.querySelectorAll(':scope > .mkg')];if(!mi||grids.length<2)return false;
+  const [g0,g1]=grids,brd=g0.children[0],sec=B.querySelector('#msx'),mv=g1.children[0],side=g1.children[1];if(!brd||!sec||!mv||!side)return false;
+  const ov=document.createElement('div');ov.className='mkov';ov.dataset.qt='ov';ov.append(side,sec);
+  [...B.children].forEach(c=>{if(!c.dataset.qt)c.dataset.qt='ov'});g0.dataset.qt='br';g0.classList.add('mk1');g1.dataset.qt='mv';g1.classList.add('mk1');
+  const ww=B.querySelector('#mww');(ww||mi).after(ov);
+  mv.classList.add('mvcap');const more=document.createElement('button');more.className='btn mvmore';more.textContent='Show all rows';more.onclick=()=>{const c=mv.classList.toggle('mvcap');more.textContent=c?'Show all rows':'Show fewer rows'};mv.after(more);
+  const T=QTABS(B,[['ov','Overview'],['mv','Movers'],['br','Breadth & map']],'q_mtab',v=>{if(v!='ov')scrollTo({top:Math.min(scrollY,B.offsetTop-80)})});const hd=B.querySelector('.mkh');(hd||mi).before(T.bar);T.show();return true};
+ QWAIT(()=>apply()?1:0,()=>{})};
+
+/* News: the page already has topic chips; show 12 stories at a time, re-applied whenever the list is redrawn */
+const nw46=PAGES.news;PAGES.news=a=>{nw46(a);let lim=12,seen=0;
+ const cap=()=>{const L=document.getElementById('nl');if(!L)return;const items=[...L.children].filter(c=>c.classList.contains('pan'));const sig=items.length+'|'+(items[0]?items[0].textContent.slice(0,40):'');if(sig!==L.dataset.qn){L.dataset.qn=sig;lim=12}
+  items.forEach((c,i)=>{c.style.display=i<lim?'':'none'});let more=L.parentNode.querySelector('.nwmore');if(!more){more=document.createElement('button');more.className='btn nwmore';more.onclick=()=>{lim+=12;cap();track('news_more')};L.after(more)}
+  more.style.display=items.length>lim?'':'none';more.textContent=`Show more stories (${Math.max(0,items.length-lim)} more)`};
+ QWAIT(()=>document.getElementById('nl')&&[...document.getElementById('nl').children].some(c=>c.classList.contains('pan')),()=>{cap();const L=document.getElementById('nl');
+  const mo=new MutationObserver(()=>{if(!document.body.contains(L)||!location.hash.startsWith('#/news')){mo.disconnect();return}cap()});mo.observe(L,{childList:true})})};
+
+/* Opening page: background scenes follow the sections, and the ticker scene uses live prices */
+window.BGTK=window.BGTK||[];
+const hm46=PAGES.home;PAGES.home=()=>{hm46();
+ jf('/api/markets').then(({ok,b})=>{if(!ok||!b)return;const T=[],NM={'^GSPC':'S&P 500','^NDX':'NASDAQ 100','^DJI':'DOW','^RUT':'RUSSELL'};(b.indices||[]).forEach(i=>i.level&&T.push({sym:NM[i.levelSymbol]||i.symbol,px:i.level,pc:i.levelChangePct}));(b.crypto||[]).forEach(c=>T.push({sym:c.from,px:c.rate,pc:c.changePct}));
+  (b.assets||[]).forEach(a=>T.push({sym:(a.name||a.symbol).toUpperCase().slice(0,12),px:a.price,pc:a.changePct}));const M=b.movers||{};[...(M.gainers||[]),...(M.losers||[]),...(M.active||[])].forEach(x=>T.push({sym:x.symbol,px:x.price,pc:x.changePct}));if(T.length>8)window.BGTK=T}).catch(()=>{});
+ const scenes=[['.hm-open','candles'],['#hm-now','ticker'],['.hm-do','network'],['#hmn','ribbons'],['#city','bars']];let cur='candles';
+ if('IntersectionObserver' in window){const io=new IntersectionObserver(es=>{if(location.hash.replace(/^#\/?/,'')!=''){io.disconnect();return}es.forEach(e=>{if(e.isIntersecting){const m=e.target.dataset.bg;if(m&&m!=cur){cur=m;try{SETBG(m)}catch(x){}}}})},{rootMargin:'-45% 0px -45% 0px'});
+  setTimeout(()=>scenes.forEach(([q,m])=>{const el=document.querySelector(q);const s=el&&(el.closest('section')||el);if(s){s.dataset.bg=m;io.observe(s)}}),50)}};
 
 if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML=SKEL();setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();
