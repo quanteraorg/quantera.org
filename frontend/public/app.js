@@ -2692,6 +2692,7 @@ document.head.insertAdjacentHTML('beforeend','<style>.mch{display:flex;gap:24px;
    2 on phones the market cards sit two across instead of one per row
    3 first visit shows a page skeleton instead of a bare "Loading" line while the server wakes up */
 document.head.insertAdjacentHTML('beforeend','<style>'+
+'html.is-phone table.wtb{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}'+
 '@media(max-width:800px){.g.g4:has(>.card){grid-template-columns:1fr 1fr!important;gap:10px}.g4>.card{padding:12px}.g4>.card .big{font-size:22px}}'+
 '.skel{padding:28px 32px}.skel i{display:block;border-radius:10px;background:linear-gradient(90deg,var(--s1),var(--s2),var(--s1));background-size:200% 100%;animation:skl 1.3s ease-in-out infinite}.skel .sg{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:22px 0}.skel .sr{height:44px;margin-top:10px}'+
 '@keyframes skl{to{background-position:-200% 0}}@media(prefers-reduced-motion:reduce){.skel i{animation:none}}@media(max-width:800px){.skel{padding:20px 14px}.skel .sg{grid-template-columns:1fr 1fr;gap:10px}}'+
