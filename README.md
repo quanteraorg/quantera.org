@@ -14,6 +14,12 @@ Static site in `public/` plus serverless JavaScript routes in `api/` that call A
 
 If a service is not configured or hits its limit, the site quietly falls back to its built-in sample data and tells the user.
 
+## Files
+- `public/index.html` page shell: meta tags, header and video slots
+- `public/styles.css` base theme styles
+- `public/app.js` the app: data layer, router and every page. It is built in layers (`v5` to `v15`), each one patching the ones before it, so add new changes as a new layer at the end, just above the final `route()` call
+- `public/og.png` link-preview image; `*-poster.jpg` video thumbnails
+
 ## Routes
 GET `/api/health` · `/api/quote?symbol=` · `/api/history?symbol=&full=1` · `/api/overview?symbol=` · `/api/search?q=` · `/api/news?symbols=` · POST `/api/ai` with `{messages:[{role,content}]}`
 
