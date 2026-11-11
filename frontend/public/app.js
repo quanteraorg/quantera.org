@@ -2700,4 +2700,68 @@ document.head.insertAdjacentHTML('beforeend','<style>'+
 const SKEL=()=>`<div class="skel" role="status" aria-label="Loading live markets"><i style="width:120px;height:12px"></i><i style="width:min(420px,70%);height:34px;margin-top:12px"></i><div class="sg">${'<i style="height:150px"></i>'.repeat(8)}</div>${'<i class="sr"></i>'.repeat(5)}<span class="mu" style="display:block;margin-top:14px;font-size:12px">Connecting to live market data…</span></div>`;
 addEventListener('keydown',e=>{const a=document.activeElement,q=$('#q');if(!q)return;if(e.key=='/'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&!a.isContentEditable){e.preventDefault();q.focus();q.select()}else if(e.key=='Escape'&&a==q){q.blur();const r=$('#res');if(r)r.style.display='none'}});
 
+/* ===== v43: plain-English page titles and a simpler opening page =====
+   Research notes: say what the site is in the first screen (a 5-second test), show real product and real numbers,
+   avoid full-screen scroll scenes that hide what is below, and write specific sentences instead of slogans. */
+Object.assign(TT,{about:['About','Who builds Quantera and why.'],ai:['Ask Quantera','Ask about any stock or money topic. Answers show the numbers they use.'],analyze:['Analyze','Deeper analysis tools for one stock.'],
+ brain:['Concept map','How interest rates, inflation, oil and stocks affect each other.'],brief:['Daily brief','Today’s biggest market moves in a one-minute read.'],calendar:['Calendar','Upcoming earnings, IPOs and economic releases.'],
+ chartlab:['Chart lab','Practise reading price charts.'],compare:['Compare','Compare stocks on price, growth and value.'],globe:['Globe','Markets around the world on a map.'],
+ learn:['Academy','38 short lessons, from compound interest to options.'],markets:['Markets','Today’s prices for stock indexes, crypto, commodities and currencies.'],news:['News','Market news, with the stocks each story affects.'],
+ options:['Options','See how an options trade pays off at different prices.'],planner:['Goal planner','See how much to invest each month to reach a goal.'],portfolio:['Portfolio','Your paper-trading holdings, returns and risk.'],
+ screener:['Screener','Filter stocks by size, valuation, growth and dividends.'],settings:['Settings','Display, chart and account settings.'],social:['Follow Quantera','Where we post lessons and market explainers.'],
+ terminal:['Terminal','A workspace with several charts side by side.'],valuation:['Valuation','Estimate what a company could be worth.']});
+document.head.insertAdjacentHTML('beforeend','<style>'+
+'.hm{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:110px 32px 40px}.hm section{margin:0 0 64px;width:100%;max-width:none}body.cine header{background:rgb(var(--bgc))!important;border-bottom:1px solid var(--ln)!important}'+
+'.hm-hero{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;min-height:min(640px,calc(100vh - 150px))}'+
+'.hm h1{font-size:clamp(34px,4.6vw,58px);line-height:1.06;margin:0 0 18px;font-weight:400}.hm .lead{font-size:18px;line-height:1.6;color:var(--mu);margin:0 0 26px;max-width:560px}'+
+'.hm .cta{display:flex;gap:10px;flex-wrap:wrap}.hm .cta .btn{margin:0;padding:12px 20px;font-size:15px}.hm .fine{font-size:13px;color:var(--mu);margin-top:14px}'+
+'.hm h2{font-size:clamp(24px,2.6vw,32px);margin:0 0 6px}.hm .sub{color:var(--mu);margin:0 0 20px;max-width:640px}'+
+'.hl{padding:18px 18px 14px}.hl-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.hl-h b{font-size:15px;font-weight:600}.hl-h span{font-size:12px;color:var(--mu)}'+
+'.hl a{display:grid;grid-template-columns:1fr auto 76px;gap:14px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--ln)}.hl a:last-of-type{border-bottom:0}.hl a:hover{background:rgba(var(--fgc),.03)}'+
+'.hl .n{font-weight:500}.hl .p{text-align:right;font-variant-numeric:tabular-nums}.hl .p small{display:block;font-size:12.5px}.hl svg{width:76px;height:26px;display:block}.hl-f{font-size:12px;color:var(--mu);margin-top:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}'+
+'.hm-do{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.hm-do a{display:block;padding:18px}.hm-do a:hover{border-color:var(--ac)}.hm-do b{display:block;font-size:16px;font-weight:600;margin-bottom:6px}.hm-do span{color:var(--mu);font-size:14px;line-height:1.55}.hm-do i{display:block;font-style:normal;color:var(--ac);font-size:13.5px;margin-top:12px}'+
+'.hm-mv{display:grid;grid-template-columns:1fr 1fr;gap:14px}.hm-mv .pan{padding:8px 18px}.hm-mv h3{margin:10px 0 4px;font-size:14px;color:var(--mu);font-weight:500}.hm-mv a{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--ln)}.hm-mv a:last-child{border-bottom:0}.hm-mv a span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+'.hm .hx{min-height:0!important;padding:0!important;display:block!important}.hm .hx .in{max-width:none!important}'+
+'@media(max-width:900px){.hm{padding:118px 16px 24px}.hm section{margin-bottom:44px}.hm-hero{grid-template-columns:1fr;gap:28px;min-height:0}.hm-do{grid-template-columns:1fr 1fr}.hm-mv{grid-template-columns:1fr}.hm .lead{font-size:16.5px}}'+
+'@media(max-width:560px){.hm-do{grid-template-columns:1fr}}'+
+'</style>');
+const HSP=(a,c)=>{if(!a||a.length<3)return'';const mn=Math.min(...a),mx=Math.max(...a),n=a.length;return `<svg viewBox="0 0 76 26" preserveAspectRatio="none"><path d="${a.map((v,i)=>(i?'L':'M')+(i/(n-1)*76).toFixed(1)+' '+(23-(v-mn)/((mx-mn)||1)*20).toFixed(1)).join('')}" fill="none" stroke="${c}" stroke-width="1.6"/></svg>`};
+const HNM=n=>{const SP={JPMORGAN:'JPMorgan',PAYPAL:'PayPal',EBAY:'eBay',BLACKROCK:'BlackRock',EXXONMOBIL:'ExxonMobil',SALESFORCE:'Salesforce',MASTERCARD:'Mastercard',CROWDSTRIKE:'CrowdStrike',ALPHABET:'Alphabet',NVIDIA:'NVIDIA',SPDR:'SPDR',ISHARES:'iShares'},UP=/^(ETF|IBM|AMD|ASML|TSMC|UPS|CVS|HP|AMC|AIG|BHP|ADR|USA|US|UK|II|III|IV|GE|NXP|KLA|ARK|BP|AB|NV|SA|AG|SE)$/;
+ let t=n.replace(/\s*-\s*(sp\s*adr|adr|cl\s*[a-z]|class\s*[a-z]|[a-z])$/i,'').trim();for(let i=0;i<3;i++)t=t.replace(/[\s,]+(inc|corp|corporation|plc|co|ltd|company|holdings? inc)\.?$/i,'').replace(/\s*&$/,'').trim();
+ return t.split(' ').map(w=>{const U=w.toUpperCase();if(SP[U])return SP[U];if(UP.test(U)||w.includes('&'))return U;const l=w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();return /^Mc[a-z]/.test(l)?'Mc'+l.charAt(2).toUpperCase()+l.slice(3):l}).join(' ')};
+const HCH=c=>c==null?'':`<small class="${c>=0?'up':'dn'}">${c>=0?'+':'−'}${fmt(Math.abs(c),2)}%</small>`;
+PAGES.home=()=>{try{SETBG('none')}catch(e){}
+ $('#m').innerHTML=`<div class="hm">
+ <section class="hm-hero"><div>
+  <h1>Practise investing with $100,000 of virtual money.</h1>
+  <p class="lead">Buy and sell real stocks, ETFs and commodities at live prices without risking any of your own money. Look up any company in plain English and learn the basics as you go.</p>
+  <div class="cta"><a class="btn p" href="#/trade" onclick="track('hero_start')">Start paper trading</a><a class="btn" href="#/markets">See today’s markets</a></div>
+  <div class="fine">Free. No card and no sign-up needed to start. For education, not investment advice.</div></div>
+  <div class="pan hl" id="hml"><div class="hl-h"><b>Markets today</b><span>Loading live prices…</span></div></div></section>
+ <section><h2>What you can do here</h2><p class="sub">All of it is free to use.</p><div class="hm-do">
+  <a class="pan" href="#/trade"><b>Paper trade</b><span>Start with $100,000 of virtual cash. Set a stop-loss or take-profit and follow every position.</span><i>Open Trade →</i></a>
+  <a class="pan" href="#/stocks"><b>Look up any stock</b><span>More than 80,000 companies in 44 countries, with prices, financials and analyst targets explained simply.</span><i>Browse stocks →</i></a>
+  <a class="pan" href="#/learn"><b>Learn the basics</b><span>38 short lessons, from compound interest to reading a chart. Most take about three minutes.</span><i>Open Academy →</i></a>
+  <a class="pan" href="#/screener"><b>Screen and compare</b><span>Filter stocks by size, valuation, growth and dividends, then compare a few side by side.</span><i>Open Screener →</i></a></div></section>
+ <section id="hmv" style="display:none"><h2>Biggest moves today</h2><p class="sub" id="hmvs">Among the largest US companies.</p><div class="hm-mv"></div></section>
+ <section id="city" class="hx"><h2>The largest companies today</h2><p class="sub">Each block is a company. Taller means bigger, green is up today and red is down. Drag to turn it and click a block to open that company.</p>
+  <div class="q3w"><canvas aria-label="3D map of the largest companies: block height is company size, colour is today's price move"></canvas><div class="q3tip"></div><div class="q3load">Loading today’s market…</div><div class="q3cap">Height = company size · green up, red down</div></div></section>
+ <section>${FST()}</section></div>`;
+ const P=$('#hml');
+ jf('/api/markets').then(({ok,b})=>{if(!document.body.contains(P))return;if(!ok||!b){P.querySelector('.hl-h span').textContent='Live prices are unavailable right now.';return}
+  const NM={'^GSPC':'S&P 500','^NDX':'Nasdaq 100','^DJI':'Dow Jones','^RUT':'Russell 2000'},R=[];
+  (b.indices||[]).forEach(i=>{if(i.level&&NM[i.levelSymbol])R.push({n:NM[i.levelSymbol],h:'#/asset/'+encodeURIComponent(i.symbol),p:i.level,c:i.levelChangePct,s:i.levelSpark})});
+  (b.crypto||[]).slice(0,1).forEach(c=>R.push({n:c.name,h:'#/asset/'+c.from+'-USD',p:c.rate,c:c.changePct,s:c.spark,d:'$'}));
+  (b.assets||[]).filter(a=>a.symbol=='GC=F').forEach(a=>R.push({n:'Gold',h:'#/asset/GC%3DF',p:a.price,c:a.changePct,d:'$'}));
+  const t=b.updated?new Date(b.updated).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
+  P.innerHTML=`<div class="hl-h"><b>Markets today</b><span><span class="dot"></span>Live${t?' · updated '+t:''}</span></div>`+R.slice(0,6).map(r=>`<a href="${r.h}"><span class="n">${esc(r.n)}</span><span class="p">${r.d||''}${fmt(r.p,2)}${HCH(r.c)}</span>${HSP(r.s,r.c>=0?'var(--up)':'var(--dn)')}</a>`).join('')+
+   `<div class="hl-f"><span>Prices from Finnhub and Yahoo Finance. Some are delayed up to 15 minutes.</span><a href="#/markets" style="color:var(--ac)">All markets →</a></div>`;
+  const M=b.movers;if(M&&(M.gainers||[]).length){const L=(a)=>a.slice(0,4).map(x=>`<a href="#/asset/${encodeURIComponent(x.symbol)}"><span><b>${esc(x.symbol)}</b> <span class="mu">${esc(HNM(x.name||''))}</span></span><span>$${fmt(x.price,2)} ${HCH(x.changePct)}</span></a>`).join('');
+   const v=$('#hmv');v.querySelector('.hm-mv').innerHTML=`<div class="pan"><h3>Up the most</h3>${L(M.gainers)}</div><div class="pan"><h3>Down the most</h3>${L(M.losers||[])}</div>`;v.style.display=''}
+ }).catch(()=>{P.querySelector('.hl-h span').textContent='Live prices are unavailable right now.'});
+ const w=document.querySelector('#city .q3w');
+ if(!QLIVE.market){document.getElementById('city').remove();return}
+ jf('/api/popular?list=popular').then(({ok,b})=>{if(!document.body.contains(w))return;const it=ok&&b.items?b.items.filter(i=>i.type=='EQUITY'&&i.marketCap>0&&i.changePct!=null&&i.sector&&!/International|ETF/i.test(i.sector)).map(i=>({sym:i.symbol,name:i.name||i.symbol,sector:i.sector,cap:i.marketCap,pc:i.changePct,price:i.price})):[];
+  if(it.length<12){document.getElementById('city').remove();return}const ld=w.querySelector('.q3load');if(ld)ld.remove();Q3D(w,it)}).catch(()=>document.getElementById('city').remove())};
+
 if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML=SKEL();setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();
