@@ -1,12 +1,12 @@
 <!DOCTYPE html><html lang="en" data-theme="dark" style="color-scheme:dark"><head><meta charset="utf-8"><meta name="google-site-verification" content="lNPoxtOmtijixt1CqPwl5ribk7MWL-xMutv7iIib8tU"><script>/* Theme: apply the saved choice before first paint (default dark). In light mode, canvas charts translate the dark palette's colours */
 (()=>{const D=document.documentElement;let t='dark';try{t=JSON.parse(localStorage.getItem('q_theme'))||'dark'}catch(e){}if(t=='system')t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';if(t!='light')t='dark';D.dataset.theme=t;D.style.colorScheme=t;
- const M={'#c8a96a':'#9a7735','#c9b27a':'#9a7735','#d4b98a':'#9a7735','#d4b57a':'#9a7735','#e8c77a':'#a7801f','#f5e6c4':'#7a5d22','#4fd1a5':'#0f9a6c','#5fb89a':'#0f9a6c','#34d399':'#0f9a6c','#7ad39a':'#2f9a5a','#f0707a':'#d0414e','#d9726b':'#d0414e','#7aa6e8':'#2f6fc4','#8fb4e8':'#2f6fc4','#60a5fa':'#2f6fc4','#5aa9ff':'#2f6fc4','#8fd3e8':'#16879f','#7dd3fc':'#16879f','#22d3ee':'#16879f','#b79ae8':'#7451c4','#a78bfa':'#7451c4','#c4b5fd':'#7451c4','#e8a07a':'#c4612a','#f0a35e':'#c4612a','#fb923c':'#c4612a','#ff9f43':'#c4612a','#e8eef8':'#2a3140','#f2eee6':'#2a3140','#eceef2':'#2a3140','#8e97a8':'#566070','#8b93a3':'#566070','#9aa6b8':'#566070','#9aa4b5':'#566070','#94a3b8':'#566070','#a9b8d6':'#4d5a75','#6b7585':'#566070','#06080c':'#f4f5f7','#0a0c10':'#f4f5f7','#0d1118':'#ffffff'},
-  R={'8,11,16':'255,255,255','6,8,12':'246,244,239','5,7,11':'246,244,239','18,26,40':'255,255,255','13,17,24':'255,255,255','143,150,170':'90,98,114','255,255,255':'22,27,38','210,220,235':'22,27,38','230,235,245':'22,27,38','200,169,106':'154,119,53','212,181,122':'154,119,53','79,209,165':'15,154,108','95,184,154':'15,154,108','240,112,122':'208,65,78','122,166,232':'47,111,196','143,180,232':'47,111,196','143,211,232':'22,135,159'};
+ const M={'#ff9f0a':'#c93400','#ffd60a':'#b25000','#30d158':'#248a3d','#ff453a':'#d70015','#0a84ff':'#007aff','#64d2ff':'#0071a4','#bf5af2':'#8944ab','#000000':'#f2f2f7','#1c1c1e':'#ffffff','#c8a96a':'#9a7735','#c9b27a':'#9a7735','#d4b98a':'#9a7735','#d4b57a':'#9a7735','#e8c77a':'#a7801f','#f5e6c4':'#7a5d22','#4fd1a5':'#0f9a6c','#5fb89a':'#0f9a6c','#34d399':'#0f9a6c','#7ad39a':'#2f9a5a','#f0707a':'#d0414e','#d9726b':'#d0414e','#7aa6e8':'#2f6fc4','#8fb4e8':'#2f6fc4','#60a5fa':'#2f6fc4','#5aa9ff':'#2f6fc4','#8fd3e8':'#16879f','#7dd3fc':'#16879f','#22d3ee':'#16879f','#b79ae8':'#7451c4','#a78bfa':'#7451c4','#c4b5fd':'#7451c4','#e8a07a':'#c4612a','#f0a35e':'#c4612a','#fb923c':'#c4612a','#ff9f43':'#c4612a','#e8eef8':'#2a3140','#f2eee6':'#2a3140','#eceef2':'#2a3140','#8e97a8':'#566070','#8b93a3':'#566070','#9aa6b8':'#566070','#9aa4b5':'#566070','#94a3b8':'#566070','#a9b8d6':'#4d5a75','#6b7585':'#566070','#06080c':'#f4f5f7','#0a0c10':'#f4f5f7','#0d1118':'#ffffff'},
+  R={'255,159,10':'201,52,0','48,209,88':'36,138,61','255,69,58':'215,0,21','10,132,255':'0,122,255','8,11,16':'255,255,255','6,8,12':'246,244,239','5,7,11':'246,244,239','18,26,40':'255,255,255','13,17,24':'255,255,255','143,150,170':'90,98,114','255,255,255':'22,27,38','210,220,235':'22,27,38','230,235,245':'22,27,38','200,169,106':'154,119,53','212,181,122':'154,119,53','79,209,165':'15,154,108','95,184,154':'15,154,108','240,112,122':'208,65,78','122,166,232':'47,111,196','143,180,232':'47,111,196','143,211,232':'22,135,159'};
  const tr=v=>{if(typeof v!='string'||D.dataset.theme!='light')return v;const l=v.trim().toLowerCase();if(l[0]=='#'&&l.length>=7){const m=M[l.slice(0,7)];return m?m+l.slice(7):v}if(l[0]=='#'&&l.length==4)return v;const r=l.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/);if(r){const m=R[r[1]+','+r[2]+','+r[3]];if(m)return `rgba(${m},${r[4]??1})`}return v};
  window.QTC=tr;const PQ=matchMedia('(max-width:800px),(pointer:coarse) and (max-height:500px)');window.PHONE=()=>PQ.matches;const DV=()=>{D.classList.toggle('is-phone',PQ.matches);D.classList.toggle('is-touch',matchMedia('(pointer:coarse)').matches)};DV();try{PQ.addEventListener('change',DV)}catch(e){}const C=window.CanvasRenderingContext2D&&CanvasRenderingContext2D.prototype;if(C)['fillStyle','strokeStyle','shadowColor'].forEach(p=>{const d=Object.getOwnPropertyDescriptor(C,p);if(d&&d.set)Object.defineProperty(C,p,{configurable:true,enumerable:d.enumerable,get:d.get,set(v){d.set.call(this,tr(v))}})});
  const G=window.CanvasGradient&&CanvasGradient.prototype;if(G){const a=G.addColorStop;G.addColorStop=function(o,c){return a.call(this,o,tr(c))}}})();</script><title>Quantera — Live markets, pro charts and plain-English research</title>
 <meta name="description" content="Quantera brings live US stock, ETF and crypto prices, TradingView-style charts with 20+ indicators, market heatmaps, paper trading and AI explanations into one free research workspace.">
-<meta name="theme-color" content="#06080c">
+<meta name="theme-color" content="#000000">
 <script>/* Error reporting (Sentry): errors only, no personal data, no replays or tracing; login tokens are scrubbed; off on local test servers */window.sentryOnLoad=function(){var R=/(access_token|refresh_token|provider_token|id_token|token)=[^&"#\s]+/g;Sentry.init({enabled:!/^(localhost|127\.|0\.0\.0\.0)/.test(location.hostname),environment:location.hostname=="quanteraorg.vercel.app"?"production":"preview",sendDefaultPii:false,tracesSampleRate:0,replaysSessionSampleRate:0,replaysOnErrorSampleRate:0,beforeSend:function(e){try{return JSON.parse(JSON.stringify(e).replace(R,"$1=[redacted]"))}catch(x){return e}},beforeBreadcrumb:function(b){try{return JSON.parse(JSON.stringify(b).replace(R,"$1=[redacted]"))}catch(x){return b}}})};</script><script src="https://js.sentry-cdn.com/c377bd874f823bbd9173f01a79d39984.min.js" crossorigin="anonymous"></script>
 
 <link rel="manifest" href="/manifest.json"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Quantera"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="format-detection" content="telephone=no">
@@ -21,21 +21,22 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
 <style id="qtokens">/* Colour tokens: every colour on the site comes from here. Dark is the default; light is opt-in via the header toggle */
-:root{--bg:#06080c;--s1:#0d1118;--s2:#171e2a;--ln:#1e2632;--tx:#f2eee6;--mu:#8e97a8;--ac:#c8a96a;--ac2:#dcc08a;--ac3:#f5e6c4;--ink:#1a1408;--up:#4fd1a5;--dn:#f0707a;--glow:#16243a;
- --g-hi:#f5e6c4;--g-mid:#d4b57a;--g-lo:#a8884e;
- --acc:200,169,106;--upc:79,209,165;--dnc:240,112,122;--fgc:255,255,255;--bgc:6,8,12;--muc:143,150,170;--shc:0,0,0;--sha:1;--hk:1;--c3:#7aa6e8;--c4:#b79ae8;--scrim:rgba(0,0,0,.58)}
-:root[data-theme="light"]{--bg:#f4f5f7;--s1:#ffffff;--s2:#eef0f3;--ln:#e1e4ea;--tx:#111827;--mu:#566070;--ac:#8a6a24;--ac2:#7a5c1e;--ac3:#5b4413;--up:#0a7c55;--dn:#c62f3d;--glow:#f2e9d6;
- --acc:150,114,40;--upc:10,124,85;--dnc:198,47,61;--fgc:17,24,39;--bgc:244,245,247;--muc:86,96,112;--shc:16,24,40;--sha:.18;--hk:.62;--c3:#2f6fc4;--c4:#7451c4;--scrim:rgba(17,24,39,.34)}
+/* Apple system palette (iOS/macOS dark): black base, grouped greys, system blue accent, system green/red for moves */
+:root{--bg:#000000;--s1:#1c1c1e;--s2:#2c2c2e;--ln:#38383a;--tx:#ffffff;--mu:#98989f;--ac:#0a84ff;--ac2:#409cff;--ac3:#a6d0ff;--ink:#ffffff;--up:#30d158;--dn:#ff453a;--glow:transparent;
+ --g-hi:#409cff;--g-mid:#0a84ff;--g-lo:#0a84ff;--fill:rgba(118,118,128,.24);--sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Inter,system-ui,sans-serif;
+ --acc:10,132,255;--upc:48,209,88;--dnc:255,69,58;--fgc:255,255,255;--bgc:0,0,0;--muc:152,152,159;--shc:0,0,0;--sha:1;--hk:1;--c3:#64d2ff;--c4:#bf5af2;--scrim:rgba(0,0,0,.58)}
+:root[data-theme="light"]{--bg:#f2f2f7;--s1:#ffffff;--s2:#e9e9ee;--ln:#d8d8dc;--tx:#1d1d1f;--mu:#6e6e73;--ac:#007aff;--ac2:#0062cc;--ac3:#004a99;--ink:#ffffff;--up:#248a3d;--dn:#d70015;--glow:transparent;
+ --g-hi:#007aff;--g-mid:#007aff;--g-lo:#007aff;--fill:rgba(118,118,128,.12);
+ --acc:0,122,255;--upc:36,138,61;--dnc:215,0,21;--fgc:29,29,31;--bgc:242,242,247;--muc:110,110,115;--shc:16,24,40;--sha:.12;--hk:.62;--c3:#0071a4;--c4:#8944ab;--scrim:rgba(17,24,39,.34)}
 :root[data-theme="light"] .heat a{color:var(--tx)}
 </style>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 Manrope,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.47 var(--sf);font-variant-numeric:tabular-nums}
 a{color:inherit;text-decoration:none;cursor:pointer}button,input,select{font:inherit;color:inherit}
 header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--ln);display:flex;align-items:center;gap:20px;padding:10px 24px}
 .logo{font-weight:600;letter-spacing:.14em;font-size:15px}
@@ -62,10 +63,9 @@ input[type=range]{width:100%;accent-color:var(--ac)}label{display:block;margin:1
 .tag{font-size:12px;border:1px solid var(--ln);border-radius:4px;padding:1px 6px;color:var(--mu)}
 @media(max-width:800px),(pointer:coarse) and (max-height:500px){.g2,.g3,.g4{grid-template-columns:1fr}header{flex-wrap:wrap;padding:10px 14px}.sw{width:100%;order:3}main{padding:20px 14px 80px}.hero{margin:-20px -14px 0}.hero .t{left:20px;bottom:36px}.heat{grid-template-columns:repeat(4,1fr)}}
 </style>
-<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Manrope:wght@400;500;600&display=swap">
 <style>
-body{font-family:'Manrope',system-ui,sans-serif;background:radial-gradient(1100px 560px at 85% -8%,var(--glow) 0%,transparent 62%),var(--bg);background-attachment:fixed}
-h1,h2,.big{font-family:'Fraunces',Georgia,serif;font-weight:300;letter-spacing:-.025em}.logo{font-family:'Fraunces',serif;font-weight:400;letter-spacing:.3em}
+body{font-family:var(--sf);background:var(--bg);-webkit-font-smoothing:antialiased}
+h1,h2,.big{font-family:var(--sf);font-weight:700;letter-spacing:-.022em}.logo{font-family:var(--sf);font-weight:600;letter-spacing:.16em}
 header{background:rgba(var(--bgc),.82);backdrop-filter:blur(14px)}nav a.on{color:var(--ac);background:rgba(var(--acc),.1)}
 .pan{background:linear-gradient(180deg,var(--s2),var(--s1));box-shadow:0 1px 0 rgba(var(--fgc),.05) inset,0 24px 48px -28px rgba(var(--shc),var(--sha));border-radius:14px}
 .btn.p{background:linear-gradient(180deg,var(--g-mid),var(--g-lo));color:var(--ink);border:0}.btn:hover{border-color:var(--ac)}
