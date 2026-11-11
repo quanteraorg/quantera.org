@@ -2687,4 +2687,16 @@ window.MCHSHARE=()=>{const r=MTD(),mo=new Date().toLocaleDateString('en-US',{mon
 const lb38=PAGES.leaderboard;PAGES.leaderboard=()=>{lb38();const g=document.querySelector('#m .meg');if(g)g.insertAdjacentHTML('beforebegin',MCH())};
 document.head.insertAdjacentHTML('beforeend','<style>.mch{display:flex;gap:24px;align-items:center;justify-content:space-between;margin-bottom:16px;border-color:rgba(var(--acc),.35)}.mchr{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto}.mchr b{font-size:34px;font-variant-numeric:tabular-nums;line-height:1}@media(max-width:700px){.mch{flex-direction:column;align-items:stretch}.mchr{align-items:flex-start}}</style>');
 
-if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML='<div class="mu" style="padding:60px 32px">Loading live markets…</div>';setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();
+/* ===== v42: polish from the big-site benchmark (Yahoo Finance, Bloomberg, TradingView, Robinhood) =====
+   1 "/" jumps to search and Escape leaves it (TradingView, GitHub, YouTube)
+   2 on phones the market cards sit two across instead of one per row
+   3 first visit shows a page skeleton instead of a bare "Loading" line while the server wakes up */
+document.head.insertAdjacentHTML('beforeend','<style>'+
+'@media(max-width:800px){.g.g4:has(>.card){grid-template-columns:1fr 1fr!important;gap:10px}.g4>.card{padding:12px}.g4>.card .big{font-size:22px}}'+
+'.skel{padding:28px 32px}.skel i{display:block;border-radius:10px;background:linear-gradient(90deg,var(--s1),var(--s2),var(--s1));background-size:200% 100%;animation:skl 1.3s ease-in-out infinite}.skel .sg{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:22px 0}.skel .sr{height:44px;margin-top:10px}'+
+'@keyframes skl{to{background-position:-200% 0}}@media(prefers-reduced-motion:reduce){.skel i{animation:none}}@media(max-width:800px){.skel{padding:20px 14px}.skel .sg{grid-template-columns:1fr 1fr;gap:10px}}'+
+'</style>');
+const SKEL=()=>`<div class="skel" role="status" aria-label="Loading live markets"><i style="width:120px;height:12px"></i><i style="width:min(420px,70%);height:34px;margin-top:12px"></i><div class="sg">${'<i style="height:150px"></i>'.repeat(8)}</div>${'<i class="sr"></i>'.repeat(5)}<span class="mu" style="display:block;margin-top:14px;font-size:12px">Connecting to live market data…</span></div>`;
+addEventListener('keydown',e=>{const a=document.activeElement,q=$('#q');if(!q)return;if(e.key=='/'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&!a.isContentEditable){e.preventDefault();q.focus();q.select()}else if(e.key=='Escape'&&a==q){q.blur();const r=$('#res');if(r)r.style.display='none'}});
+
+if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML=SKEL();setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();
