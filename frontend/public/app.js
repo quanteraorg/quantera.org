@@ -2938,4 +2938,21 @@ const hm46=PAGES.home;PAGES.home=()=>{hm46();
  if('IntersectionObserver' in window){const io=new IntersectionObserver(es=>{if(location.hash.replace(/^#\/?/,'')!=''){io.disconnect();return}es.forEach(e=>{if(e.isIntersecting){const m=e.target.dataset.bg;if(m&&m!=cur){cur=m;try{SETBG(m)}catch(x){}}}})},{rootMargin:'-45% 0px -45% 0px'});
   setTimeout(()=>scenes.forEach(([q,m])=>{const el=document.querySelector(q);const s=el&&(el.closest('section')||el);if(s){s.dataset.bg=m;io.observe(s)}}),50)}};
 
+/* ===== v48: phone pass: bigger tap targets, scrolling chip rows, and a shorter Academy ===== */
+document.head.insertAdjacentHTML('beforeend','<style id="v48">'+
+/* tap targets: Apple suggests about 44pt; 36px+ with spacing is the practical floor for dense toolbars */
+'html.is-phone #m .tvbtn{min-height:36px;min-width:40px;padding-left:10px;padding-right:10px}'+
+'html.is-phone #m .chip,html.is-phone #m .tabs button,html.is-phone .qtabs button{min-height:38px;padding:8px 14px}'+
+'html.is-phone #m .tvt{scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}html.is-phone #m .tvt::-webkit-scrollbar{display:none}'+
+/* chip rows that would wrap into walls scroll sideways instead */
+'html.is-phone #lc,html.is-phone .ntop,html.is-phone .qtabs,html.is-phone .cmpq{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}html.is-phone #lc::-webkit-scrollbar{display:none}html.is-phone #lc>*,html.is-phone .cmpq>*{flex:none}'+
+/* Academy on phones: 8 lessons, then "Show all", with smaller covers */
+'html.is-phone #lg:not(.qall)>.qover{display:none!important}html.is-phone #lg .cover{height:96px}.lgmore{display:block;width:100%;margin:14px 0 0!important;text-align:center}'+
+'</style>');
+const lr48=PAGES.learn;PAGES.learn=a=>{lr48(a);
+ const fix=()=>{const G=document.getElementById('lg');if(!G)return false;let btn=G.parentNode.querySelector('.lgmore');if(!btn){btn=document.createElement('button');btn.className='btn lgmore';btn.onclick=()=>{G.classList.toggle('qall');fix();if(!G.classList.contains('qall'))G.scrollIntoView({block:'start'});track('learn_all')};G.after(btn)}
+  const vis=[...G.children].filter(c=>c.style.display!='none'&&!c.hidden);vis.forEach((c,i)=>c.classList.toggle('qover',i>=8));
+  btn.style.display=window.PHONE&&PHONE()&&vis.length>8?'':'none';btn.textContent=G.classList.contains('qall')?'Show fewer lessons':`Show all ${vis.length} lessons`;return true};
+ QWAIT(()=>fix()?1:0,()=>{const G=document.getElementById('lg');if(!G)return;const mo=new MutationObserver(()=>{if(!document.body.contains(G)){mo.disconnect();return}mo.disconnect();fix();mo.observe(G,{childList:true,attributes:true,subtree:true,attributeFilter:['style']})});mo.observe(G,{childList:true,attributes:true,subtree:true,attributeFilter:['style']})})};
+
 if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML=SKEL();setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();
