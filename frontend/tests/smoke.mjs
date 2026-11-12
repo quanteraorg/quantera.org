@@ -78,6 +78,26 @@ try {
       await page.close();
     }
   }
+  // Big screens: the interface scales up to fill the display (public/fit.js), and pointer positions must still line up.
+  {
+    const page = await browser.newPage({ viewport: { width: 2560, height: 1440 } });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(BASE + '/#/markets'); await page.waitForTimeout(1500);
+    const z = await page.evaluate(() => window.__qzoom);
+    if (z !== 1.6) failures.push(`big screen: expected the interface to scale 1.6x on 2560x1440, got ${z}`);
+    for (const r of ['markets', 'asset/AAPL', 'news', 'report/AAPL']) {
+      await page.evaluate(h => { location.hash = '#/' + h; }, r); await page.waitForTimeout(1500);
+      const ov = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      if (ov > 1) failures.push(`big screen ${r}: page scrolls sideways by ${ov}px`);
+    }
+    // what the page thinks is under the pointer must be what is really under it
+    const rectOk = await page.evaluate(() => { const a = document.querySelector('#nav > a[data-r="news"]'), r = a.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('a') === a; });
+    if (!rectOk) failures.push('big screen: element positions and pointer positions disagree');
+    await navClickCheck(page, 'big screen');
+    for (const e of errors) failures.push(`big screen: page error: ${e}`);
+    await page.close();
+  }
 } finally {
   await browser.close();
 }
@@ -86,4 +106,4 @@ if (failures.length) {
   console.error(`${failures.length} problem(s):\n` + failures.map(f => '  - ' + f).join('\n'));
   process.exit(1);
 }
-console.log(`OK: ${ROUTES.length} routes x 2 themes x 2 sizes, no page errors, no overflow, no accessibility violations, navigation steady under the pointer.`);
+console.log(`OK: ${ROUTES.length} routes x 2 themes x 2 sizes, no page errors, no overflow, no accessibility violations, navigation steady under the pointer; big screens scale to fit.`);
