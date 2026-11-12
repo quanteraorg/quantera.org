@@ -125,5 +125,23 @@
   }
   function apply() { var n = W.__qfitOff ? 1 : want(); if (n !== z) { set(n); W.dispatchEvent(new Event('resize')); } }
   apply();
+
+  // One report per browser session from large or touch screens: screen measurements only (no personal data),
+  // so problems on devices we can't test here, like an iPad in Safari, can be seen and fixed.
+  setTimeout(function () {
+    try {
+      var big = get(nat.iw) >= 1500 || (navigator.maxTouchPoints || 0) > 1;
+      if (!big || sessionStorage.getItem('q_fitrep')) return;
+      sessionStorage.setItem('q_fitrep', '1');
+      var vv = W.visualViewport, info = {
+        nativeWidth: get(nat.iw), nativeHeight: get(nat.ih), dpr: get(nat.dpr), screen: screen.width + 'x' + screen.height,
+        zoom: z, boxUnits: rz, pointerUnits: ez, pointerChecked: W.__qfitCheck || 'none', off: W.__qfitOff || null,
+        layoutWidth: view ? view.offsetWidth : null, boxWidth: view ? Math.round(gbcr.call(view).width) : null,
+        visualScale: vv ? vv.scale : null, visualWidth: vv ? Math.round(vv.width) : null, touchPoints: navigator.maxTouchPoints || 0,
+        coarse: !!(W.matchMedia && W.matchMedia('(pointer: coarse)').matches), ua: navigator.userAgent
+      };
+      if (W.Sentry && Sentry.captureMessage) Sentry.captureMessage('fit-screen report', { level: 'info', tags: { fit: String(z), fitOff: String(!!W.__qfitOff) }, extra: info });
+    } catch (e) {}
+  }, 9000);
   var t = 0; W.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(apply, 150); });
 })();
