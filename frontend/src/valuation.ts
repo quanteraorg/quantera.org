@@ -90,11 +90,20 @@ function page(sym?: string): void {
     const cash = last(find(bal, 'cash')), sti = last(find(bal, 'shortTermInvestments')), debt = last(find(bal, 'longTermDebt'));
     const net = (cash?.[0] || 0) + (sti?.[0] || 0) - (debt?.[0] || 0);
     const fy = (i: number) => P[i]?.label || '', link = (i: number) => P[i]?.filing ? ` (<a href="${esc(P[i].filing!)}" target="_blank" rel="noopener noreferrer">${esc(P[i].form || 'filing')} ↗</a>)` : '';
-    const base: Inputs = { fcf: f[0] / 1e9, g: Math.round(g0 * 2) / 2, d: 9, t: 2.5, shares: sh[0] / 1e9, net: net / 1e9, price };
+    // one unusual year (a one-off payment, a big tax bill) can swing a DCF, so compare it with the 3-year average
+    const fl = find(cf, 'freeCashFlow')!.values, last3 = fl.slice(-3).filter((v): v is number => v != null);
+    const avg3 = last3.length === 3 ? last3.reduce((a, b) => a + b, 0) / 3 : null;
+    const differs = avg3 != null && avg3 > 0 && Math.abs(f[0] / avg3 - 1) > 0.25;
+    const useAvg = false; // the reported latest year is the standard start; growth companies sit well above their average for good reason
+    const start = useAvg ? avg3! : f[0];
+    const base: Inputs = { fcf: start / 1e9, g: Math.round(g0 * 2) / 2, d: 9, t: 2.5, shares: sh[0] / 1e9, net: net / 1e9, price };
     state = {
       sym, st, x: { ...base }, base,
       src: {
-        fcf: `${fy(f[1])} free cash flow: cash from operations minus capital spending${link(f[1])}.`,
+        fcf: (useAvg
+          ? `Average of the last 3 years (${fy(P.length - 3)}–${fy(P.length - 1)}): ${money(avg3!)}. The latest year alone, ${money(f[0])}${link(f[1])}, is ${f[0] > avg3! ? 'well above' : 'well below'} that average, so it may include one-off items. Type ${fmt(f[0] / 1e9, 1)} to use it instead.`
+          : `${fy(f[1])} free cash flow: cash from operations minus capital spending${link(f[1])}.${avg3 != null ? ` The 3-year average is ${money(avg3)}.` : ''}${differs ? ` The latest year is ${f[0] > avg3! ? 'well above' : 'well below'} the average: that can be growth${f[0] > avg3! ? '' : ' slowing'}, or one-off items such as a large payment. If it’s one-offs, the average is a steadier start.` : ''}`)
+          + (avg3 != null ? `<span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="chip" data-fcf="${f[0] / 1e9}">Latest year (${money(f[0])})</button><button class="chip" data-fcf="${avg3 / 1e9}">3-year average (${money(avg3)})</button></span>` : ''),
         g: cagr == null ? 'Revenue history wasn’t available, so this starts at 5%.' : `${esc(st.name || sym)}’s revenue grew ${pct(cagr)} a year over the last ${yrs} year${yrs > 1 ? 's' : ''}${cagr > 20 ? ', capped at 20% because very few companies keep that up for five years' : cagr < 0 ? ', floored at 0%' : ''}. Years 6–10 fade to the terminal rate.`,
         d: 'The return investors expect for the risk. 8–10% is typical for a large US company; riskier businesses use more.',
         t: 'Growth forever after year 10. Kept near long-run inflation and economic growth; it must be below the discount rate.',
@@ -104,7 +113,7 @@ function page(sym?: string): void {
       },
     };
     render(box);
-  }).catch(() => { if (box.isConnected) box.innerHTML = '<div class="pan qv-warn">The data couldn’t be loaded just now. Please try again.</div>'; });
+  }).catch(e => { console.error('valuation', e); if (box.isConnected) box.innerHTML = '<div class="pan qv-warn">The data couldn’t be loaded just now. Please try again.</div>'; });
 }
 
 const FIELDS: [keyof Inputs, string, number, number, number, string][] = [
@@ -127,6 +136,7 @@ function render(box: HTMLElement): void {
     const ev = i.type === 'range' ? 'oninput' : 'onchange';
     (i as any)[ev] = () => { const v = +i.value; if (!state || !isFinite(v)) return; const k = i.dataset.k as keyof Inputs; state.x[k] = v; sync(k, i); out(box); };
   });
+  box.querySelectorAll<HTMLButtonElement>('[data-fcf]').forEach(b => b.onclick = () => { if (!state) return; state.x.fcf = +b.dataset.fcf!; const i = box.querySelector<HTMLInputElement>('input[type=number][data-k=fcf]')!; sync('fcf', i); i.value = String(+state.x.fcf.toFixed(3)); out(box); track('valuation_fcf_basis'); });
   (box.querySelector('#qvreset') as HTMLButtonElement).onclick = () => { if (state) { state.x = { ...state.base }; render(box); } };
   out(box);
 }
