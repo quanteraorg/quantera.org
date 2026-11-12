@@ -93,7 +93,8 @@ public final class Main {
         }, 3600, 60));
         ROUTES.put("/api/calendar", new Route(r -> {
             String type = r.query().getOrDefault("type", "earnings");
-            if (!type.equals("earnings") && !type.equals("ipo")) throw new UpstreamException("type must be earnings or ipo", 400);
+            if (type.equals("economic")) return Json.obj("type", type, "items", Macro.releases());
+            if (!type.equals("earnings") && !type.equals("ipo")) throw new UpstreamException("type must be earnings, ipo or economic", 400);
             return Json.obj("type", type, "items", Providers.calendar(type));
         }, 3600, 60));
         ROUTES.put("/api/markets", new Route(r -> {

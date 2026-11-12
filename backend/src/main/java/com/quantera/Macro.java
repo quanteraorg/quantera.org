@@ -110,6 +110,55 @@ final class Macro {
     }
 
     /** The whole dashboard; series that fail are left out rather than failing the page. */
+    /** Major US releases tracked on the calendar: FRED release id, a keyword the official name must contain, and why markets care. */
+    record Rel(int id, String must, String what) {}
+    static final List<Rel> RELEASES = List.of(
+            new Rel(10, "Consumer Price", "Inflation: how fast prices rise. A hot reading can mean higher interest rates for longer."),
+            new Rel(50, "Employment", "Jobs report: hiring and unemployment. A key signal for the economy and the Fed."),
+            new Rel(53, "Gross Domestic Product", "GDP: the size and growth of the whole economy."),
+            new Rel(54, "Personal Income", "Consumer spending and the PCE price index, the Fed's preferred inflation measure."),
+            new Rel(46, "Producer Price", "Producer prices: what businesses pay, often an early sign of consumer inflation."),
+            new Rel(9, "Retail", "Retail sales: how much consumers are spending in shops and online."),
+            new Rel(13, "Industrial Production", "Factory, mining and utility output."));
+
+    /**
+     * Upcoming official release dates for the next 60 days from FRED's release calendar. The release name shown is FRED's
+     * own; the plain-English line is added only when that name matches what's expected for the release id, so a
+     * changed id can never mislabel a release.
+     */
+    static List<Object> releases() {
+        String key = cfg("FRED_API_KEY", null);
+        if (key == null) throw new UpstreamException("The economic calendar is being set up. Check back soon.", 503);
+        return CACHE.get("fredrel", 6 * 3600_000L, () -> {
+            LocalDate today = LocalDate.now(ZoneOffset.UTC), until = today.plusDays(60);
+            List<Object> out = new ArrayList<>();
+            try (ExecutorService ex = Executors.newVirtualThreadPerTaskExecutor()) {
+                List<Future<List<Object>>> fs = new ArrayList<>();
+                for (Rel rl : RELEASES) fs.add(ex.submit(() -> {
+                    HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(cfg("FRED_API_URL", "https://api.stlouisfed.org") + "/fred/release/dates?release_id=" + rl.id()
+                            + "&realtime_start=" + today + "&include_release_dates_with_no_data=true&sort_order=asc&limit=10&file_type=json&api_key=" + java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8)))
+                            .timeout(Duration.ofSeconds(10)).GET().build(), HttpResponse.BodyHandlers.ofString());
+                    List<Object> rows = new ArrayList<>();
+                    if (r.statusCode() != 200) return rows;
+                    for (Object o : list(map(Json.parse(r.body())).get("release_dates"))) {
+                        Map<String, Object> d = map(o);
+                        String date = str(d.get("date")), name = str(d.get("release_name"));
+                        if (date == null || name == null) continue;
+                        LocalDate ld = LocalDate.parse(date);
+                        if (ld.isBefore(today) || ld.isAfter(until)) continue;
+                        rows.add(Json.obj("date", date, "name", name, "what", name.toLowerCase().contains(rl.must().toLowerCase()) ? rl.what() : null,
+                                "link", "https://fred.stlouisfed.org/releases/calendar", "source", "FRED (Federal Reserve Bank of St. Louis) release calendar"));
+                    }
+                    return rows;
+                }));
+                for (Future<List<Object>> f : fs) try { out.addAll(f.get(15, TimeUnit.SECONDS)); } catch (Exception ignored) { /* that release is left out */ }
+            }
+            if (out.isEmpty()) throw new UpstreamException("Release dates are unavailable right now");
+            out.sort(Comparator.comparing(o -> String.valueOf(map(o).get("date"))));
+            return out;
+        });
+    }
+
     static Map<String, Object> dashboard() { return dashboard(30 * 60_000L); }
 
     static Map<String, Object> dashboard(long ttlMs) {

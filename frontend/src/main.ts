@@ -11,6 +11,7 @@ import { initValuation } from './valuation';
 import { initResearch } from './research';
 import { initConnect } from './connect';
 import { initAnalytics } from './analytics';
+import { initEcon } from './econ';
 
 initStates();
 initMotion();
@@ -23,3 +24,4 @@ initValuation();
 initResearch();
 initConnect();
 initAnalytics();
+initEcon();
