@@ -134,16 +134,24 @@ final class Macro {
             List<Object> out = new ArrayList<>();
             try (ExecutorService ex = Executors.newVirtualThreadPerTaskExecutor()) {
                 List<Future<List<Object>>> fs = new ArrayList<>();
+                String base = cfg("FRED_API_URL", "https://api.stlouisfed.org"), k = java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8);
                 for (Rel rl : RELEASES) fs.add(ex.submit(() -> {
-                    HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(cfg("FRED_API_URL", "https://api.stlouisfed.org") + "/fred/release/dates?release_id=" + rl.id()
-                            + "&realtime_start=" + today + "&realtime_end=9999-12-31&include_release_dates_with_no_data=true&sort_order=desc&limit=40&file_type=json&api_key=" + java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8)))
+                    // The date list carries only ids and dates, so the official name comes from fred/release.
+                    HttpResponse<String> nr = HTTP.send(HttpRequest.newBuilder(URI.create(base + "/fred/release?release_id=" + rl.id() + "&file_type=json&api_key=" + k))
+                            .timeout(Duration.ofSeconds(10)).GET().build(), HttpResponse.BodyHandlers.ofString());
+                    if (nr.statusCode() != 200) { System.err.println("fred release " + rl.id() + ": HTTP " + nr.statusCode()); return List.of(); }
+                    List<Object> rels = list(map(Json.parse(nr.body())).get("releases"));
+                    String name = rels.isEmpty() ? null : str(map(rels.get(0)).get("name"));
+                    if (name == null) return List.of();
+                    HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(base + "/fred/release/dates?release_id=" + rl.id()
+                            + "&realtime_start=" + today + "&realtime_end=9999-12-31&include_release_dates_with_no_data=true&sort_order=desc&limit=40&file_type=json&api_key=" + k))
                             .timeout(Duration.ofSeconds(10)).GET().build(), HttpResponse.BodyHandlers.ofString());
                     List<Object> rows = new ArrayList<>();
                     if (r.statusCode() != 200) { System.err.println("fred release dates " + rl.id() + ": HTTP " + r.statusCode()); return rows; }
                     for (Object o : list(map(Json.parse(r.body())).get("release_dates"))) {
                         Map<String, Object> d = map(o);
-                        String date = str(d.get("date")), name = str(d.get("release_name"));
-                        if (date == null || name == null) continue;
+                        String date = str(d.get("date"));
+                        if (date == null) continue;
                         LocalDate ld = LocalDate.parse(date);
                         if (ld.isBefore(today) || ld.isAfter(until)) continue;
                         rows.add(Json.obj("date", date, "name", name, "what", name.toLowerCase().contains(rl.must().toLowerCase()) ? rl.what() : null,
