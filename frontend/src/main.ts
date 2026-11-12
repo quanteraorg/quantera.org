@@ -8,6 +8,8 @@ import { initGlass } from './glass';
 import { initTrust } from './trust';
 import { initStatements } from './statements';
 import { initValuation } from './valuation';
+import { initResearch } from './research';
+import { initConnect } from './connect';
 
 initStates();
 initMotion();
@@ -17,3 +19,5 @@ initGlass();
 initTrust();
 initStatements();
 initValuation();
+initResearch();
+initConnect();

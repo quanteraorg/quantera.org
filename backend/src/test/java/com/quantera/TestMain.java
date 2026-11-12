@@ -77,6 +77,7 @@ public class TestMain {
             reply(ex, 200, "application/json", sy.equals("ZZZ") ? "{\"c\":0,\"d\":null,\"dp\":null,\"pc\":0,\"t\":0}" : "{\"c\":226.6,\"d\":0.56,\"dp\":" + (sy.equals("TSLA") ? "-3.1" : sy.equals("NVDA") ? "2.4" : "0.25") + ",\"h\":227,\"l\":224,\"o\":225,\"pc\":226.04,\"t\":1792800000}");
         });
         fake.createContext("/fh/stock/symbol", ex -> { String mic = ex.getRequestURI().getRawQuery().replaceAll(".*mic=([A-Z]+).*", "$1"); List<Object> rows = l(Json.parse("[{\"symbol\":\"AAPL\",\"description\":\"APPLE INC\",\"type\":\"Common Stock\",\"mic\":\"XNAS\"},{\"symbol\":\"SPY\",\"description\":\"SPDR S&P 500 ETF\",\"type\":\"ETP\",\"mic\":\"ARCX\"},{\"symbol\":\"ABCD\",\"description\":\"OTC CO\",\"type\":\"Common Stock\",\"mic\":\"OOTC\"},{\"symbol\":\"XYZW\",\"description\":\"WARRANT\",\"type\":\"Warrant\",\"mic\":\"XNAS\"}]")); rows.removeIf(o -> !mic.equals(m(o).get("mic"))); reply(ex, 200, "application/json", Json.write(rows)); });
+        fake.createContext("/fh/stock/peers", ex -> { String q = ex.getRequestURI().getRawQuery(); reply(ex, 200, "application/json", q.contains("symbol=FNDX") ? "[\"FNDX\",\"FNDY\",\"7203.T\",\"FNDY\"]" : "[]"); });
         fake.createContext("/fh/stock/profile2", ex -> reply(ex, 200, "application/json", "{\"name\":\"Apple Inc\",\"country\":\"US\",\"currency\":\"USD\",\"exchange\":\"NASDAQ\",\"finnhubIndustry\":\"Technology\",\"marketCapitalization\":3400000,\"logo\":\"https://x.test/l.png\",\"weburl\":\"https://apple.com\"}"));
         fake.createContext("/fh/stock/metric", ex -> reply(ex, 200, "application/json", "{\"metric\":{\"peTTM\":33.1,\"beta\":1.2,\"52WeekHigh\":350,\"52WeekLow\":200,\"dividendYieldIndicatedAnnual\":0.45,\"revenueGrowthTTMYoy\":6.1,\"netProfitMarginTTM\":24,\"roeTTM\":150}}"));
         fake.createContext("/fh/search", ex -> { upstreamCalls.add("finnhub search"); reply(ex, 200, "application/json", "{\"result\":[{\"description\":\"SHOPIFY INC\",\"symbol\":\"SHOP\",\"type\":\"Common Stock\"},{\"description\":\"SHOPIFY INC\",\"symbol\":\"SHOP.TO\",\"type\":\"Common Stock\"}]}"); });
@@ -464,6 +465,13 @@ public class TestMain {
         t("fundamentals: key stats, analysts, earnings and statements in the reporting currency, oldest first", r.code == 200 && d(fk.get("pe")) == 9.5 && d(fk.get("marketCap")) == 5e12 && d(fk.get("revenueGrowth")) == 0.1 && d(fa.get("target")) == 3600 && d(fa.get("buy")) == 10
             && fan.size() == 2 && d(m(fan.get(1)).get("revenue")) == 5e13 && d(m(fan.get(1)).get("netIncome")) == 3e12 && l(m(r.body).get("quarterly")).size() == 1 && "JPY".equals(m(r.body).get("financialCurrency")) && "2100-01-01".equals(m(r.body).get("nextEarnings")) && d(m(l(m(r.body).get("earnings")).get(0)).get("surprise")) == 0.428);
         t("fundamentals: a symbol with no data is a 404, not an error page", get(p, "/api/fundamentals?symbol=NOFUND").code == 404);
+        System.setProperty("FINNHUB_API_KEY", "fh-test");
+        r = get(p, "/api/peers?symbol=FNDX");
+        List<Object> prs = r.code == 200 ? l(m(r.body).get("peers")) : List.of();
+        t("peers: the company's own figures come first; a peer whose figures fail is left out, not filled in; non-US peers skipped; source stated",
+            r.code == 200 && prs.size() == 1 && "FNDX".equals(m(prs.get(0)).get("symbol")) && d(m(prs.get(0)).get("pe")) == 9.5 && String.valueOf(m(r.body).get("source")).contains("Yahoo Finance"));
+        t("peers: a company with no listed competitors -> 404", get(p, "/api/peers?symbol=AAPL").code == 404);
+        System.clearProperty("FINNHUB_API_KEY");
         String seoHtml = http(p, "/seo/stock/fndx");
         t("seo: stock page is real HTML with title, canonical, numbers and app link", seoHtml.contains("<title>Fund X (FNDX) Stock") && seoHtml.contains("rel=\"canonical\" href=\"https://quanteraorg.vercel.app/stock/FNDX\"") && seoHtml.contains("¥5.00T") && seoHtml.contains("/#/asset/FNDX") && seoHtml.contains("application/ld+json"));
         t("seo: headline numbers state their period", seoHtml.contains("Latest quarter, vs a year ago") && seoHtml.contains("Full-year figures"));

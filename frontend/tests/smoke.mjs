@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 const AXE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const BASE = process.env.BASE || 'http://localhost:8124';
 const ROUTES = ['', 'markets', 'world', 'news', 'stocks', 'screener', 'compare', 'ipos', 'asset/AAPL', 'trade', 'plan',
-  'portfolio', 'planner', 'learn', 'glossary', 'ai', 'macro', 'calendar', 'about', 'pricing', 'settings', 'options', 'valuation/AAPL'];
+  'portfolio', 'planner', 'learn', 'glossary', 'ai', 'macro', 'calendar', 'about', 'pricing', 'settings', 'options', 'valuation/AAPL', 'asset/AAPL/research', 'lesson/pe'];
 const SIZES = [[1440, 900, 'desktop'], [390, 844, 'phone']];
 const failures = [];
 
