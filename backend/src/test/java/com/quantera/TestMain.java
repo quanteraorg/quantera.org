@@ -511,6 +511,62 @@ public class TestMain {
         r = get(p, "/api/filings?symbol=AAPL");
         t("filings: earnings dates from 8-K item 2.02, flagged after the New York close", l(m(r.body).get("earnings")).size() == 1 && Boolean.TRUE.equals(m(l(m(r.body).get("earnings")).get(0)).get("afterClose")));
         t("filings: companies that don't file with the SEC -> 404", get(p, "/api/filings?symbol=7203.T").code == 404);
+        // ---- full financial statements
+        r = get(p, "/api/statements?symbol=AAPL");
+        Map<String, Object> sa = m(m(r.body).get("annual"));
+        List<Object> sper = l(sa.get("periods"));
+        Map<String, Object> srev = m(l(sa.get("income")).stream().filter(o -> "revenue".equals(m(o).get("key"))).findFirst().orElseThrow());
+        Map<String, Object> sfcf = m(l(sa.get("cashflow")).stream().filter(o -> "freeCashFlow".equals(m(o).get("key"))).findFirst().orElseThrow());
+        Map<String, Object> scap = m(l(sa.get("cashflow")).stream().filter(o -> "capex".equals(m(o).get("key"))).findFirst().orElseThrow());
+        t("statements: fiscal-year columns, revenue per year, capital spending shown as money out, free cash flow derived with a note",
+            r.code == 200 && sper.size() == 2 && "FY2024".equals(m(sper.get(1)).get("label")) && "2024-09-28".equals(m(sper.get(1)).get("end"))
+            && d(l(srev.get("values")).get(0)) == 383e9 && d(l(srev.get("values")).get(1)) == 391e9 && d(l(scap.get("values")).get(1)) == -9.4e9
+            && d(l(sfcf.get("values")).get(1)) == 118e9 - 9.4e9 && String.valueOf(sfcf.get("note")).contains("Cash from operations minus capital spending")
+            && Boolean.FALSE.equals(m(r.body).get("financial")) && "SEC EDGAR (XBRL company facts)".equals(m(r.body).get("source")));
+        t("statements: lines a company doesn't report are left out, not shown as zero", l(sa.get("income")).stream().noneMatch(o -> "rnd".equals(m(o).get("key"))));
+        t("statements: companies that don't file with the SEC -> 404", get(p, "/api/statements?symbol=7203.T").code == 404);
+        Map<String, Object> stg = m(Json.parse("{\"Revenues\":{\"units\":{\"USD\":["
+            + "{\"start\":\"2023-01-01\",\"end\":\"2023-12-31\",\"val\":100,\"frame\":\"CY2023\",\"form\":\"10-K\",\"filed\":\"2024-02-01\",\"accn\":\"0000000001-24-000001\"},"
+            + "{\"start\":\"2024-01-01\",\"end\":\"2024-12-31\",\"val\":120,\"frame\":\"CY2024\",\"form\":\"10-K\",\"filed\":\"2025-02-01\",\"accn\":\"0000000001-25-000001\"},"
+            + "{\"start\":\"2024-10-01\",\"end\":\"2025-09-30\",\"val\":130,\"frame\":\"CY2025\",\"form\":\"10-Q\",\"filed\":\"2025-10-30\"}]}},"
+            + "\"Liabilities\":{\"units\":{\"USD\":[{\"end\":\"2024-12-31\",\"val\":40,\"frame\":\"CY2024Q4I\",\"filed\":\"2025-02-01\"}]}},"
+            + "\"LiabilitiesAndStockholdersEquity\":{\"units\":{\"USD\":[{\"end\":\"2023-12-31\",\"val\":90,\"frame\":\"CY2023Q4I\",\"filed\":\"2024-02-01\"}]}},"
+            + "\"StockholdersEquity\":{\"units\":{\"USD\":[{\"end\":\"2023-12-31\",\"val\":60,\"frame\":\"CY2023Q4I\",\"filed\":\"2024-02-01\"},{\"end\":\"2024-12-30\",\"val\":70,\"frame\":\"CY2024Q4I\",\"filed\":\"2025-02-01\"}]}}}"));
+        Map<String, Object> sb = Statements.build(stg, 1, false, false);
+        Map<String, Object> sliab = m(l(sb.get("balance")).stream().filter(o -> "liabilities".equals(m(o).get("key"))).findFirst().orElseThrow());
+        t("statements: a 12-month figure found only in a 10-Q (a trailing year) is not shown as a fiscal year", l(sb.get("periods")).size() == 2);
+        t("statements: each column links to the filing it came from", "https://www.sec.gov/Archives/edgar/data/1/000000000125000001/0000000001-25-000001-index.htm".equals(m(l(sb.get("periods")).get(1)).get("filing")));
+        t("statements: balances match the period end (within days); missing total liabilities derived from liabilities+equity minus equity, with a note",
+            d(l(sliab.get("values")).get(0)) == 30 && d(l(sliab.get("values")).get(1)) == 40 && String.valueOf(sliab.get("note")).contains("minus equity"));
+        long d19 = java.time.LocalDate.parse("2019-03-01").toEpochDay(), d22 = java.time.LocalDate.parse("2022-02-02").toEpochDay(), d23 = java.time.LocalDate.parse("2023-02-01").toEpochDay();
+        List<double[]> splits = List.of(new double[]{20, java.time.LocalDate.parse("2022-02-01").toEpochDay(), java.time.LocalDate.parse("2022-07-15").toEpochDay()});
+        double[] seps = {43.70, 112.20, 4.56}, sni = {30.7e9, 76.0e9, 60.0e9};
+        Statements.splitAdjust(seps, null, sni, new long[]{d19, d22, d23}, splits);
+        t("statements: EPS last filed before a split is adjusted; one filed between announcement and effect is adjusted only if its share count jumps by the ratio; restated ones untouched",
+            seps[0] == 2.19 && seps[1] == 5.61 && seps[2] == 4.56);
+        double[] keep = {5.0, 5.2};
+        Statements.splitAdjust(keep, null, new double[]{5e9, 5.2e9}, new long[]{d22, d23}, splits);
+        t("statements: a filing inside the split window without a matching share jump is left alone", keep[0] == 5.0);
+        Map<String, Object> splitTags = m(Json.parse("{\"StockholdersEquityNoteStockSplitConversionRatio1\":{\"units\":{\"pure\":["
+            + "{\"end\":\"2019-09-30\",\"val\":5,\"filed\":\"2020-10-26\"},{\"end\":\"2020-08-10\",\"val\":5,\"filed\":\"2020-10-26\"},{\"end\":\"2020-08-31\",\"val\":5,\"filed\":\"2021-02-08\"},{\"end\":\"2022-08-24\",\"val\":3,\"filed\":\"2022-10-24\"}]}}}"));
+        List<double[]> ps = Statements.splits(splitTags);
+        t("statements: split ratios read from the company's own tags; old comparative dates ignored",
+            ps.size() == 2 && ps.get(0)[0] == 5 && ps.get(0)[1] == java.time.LocalDate.parse("2020-08-10").toEpochDay() && ps.get(1)[0] == 3);
+        Map<String, Object> qg = m(Json.parse("{\"Revenues\":{\"units\":{\"USD\":["
+            + "{\"start\":\"2024-01-01\",\"end\":\"2024-12-31\",\"val\":100,\"frame\":\"CY2024\",\"form\":\"10-K\",\"filed\":\"2025-02-01\"},"
+            + "{\"start\":\"2024-01-01\",\"end\":\"2024-03-31\",\"val\":20,\"frame\":\"CY2024Q1\",\"form\":\"10-Q\",\"filed\":\"2024-05-01\"},"
+            + "{\"start\":\"2024-04-01\",\"end\":\"2024-06-30\",\"val\":25,\"frame\":\"CY2024Q2\",\"form\":\"10-Q\",\"filed\":\"2024-08-01\"},"
+            + "{\"start\":\"2024-07-01\",\"end\":\"2024-09-30\",\"val\":24,\"frame\":\"CY2024Q3\",\"form\":\"10-Q\",\"filed\":\"2024-11-01\"}]}},"
+            + "\"EarningsPerShareDiluted\":{\"units\":{\"USD/shares\":[{\"start\":\"2024-01-01\",\"end\":\"2024-12-31\",\"val\":4,\"frame\":\"CY2024\",\"filed\":\"2025-02-01\"},"
+            + "{\"start\":\"2024-01-01\",\"end\":\"2024-03-31\",\"val\":1,\"frame\":\"CY2024Q1\",\"filed\":\"2024-05-01\"},{\"start\":\"2024-04-01\",\"end\":\"2024-06-30\",\"val\":1,\"frame\":\"CY2024Q2\",\"filed\":\"2024-08-01\"},{\"start\":\"2024-07-01\",\"end\":\"2024-09-30\",\"val\":1,\"frame\":\"CY2024Q3\",\"filed\":\"2024-11-01\"}]}}}"));
+        Map<String, Object> qb = Statements.build(qg, 1, true, false);
+        List<Object> qper = l(qb.get("periods"));
+        Map<String, Object> qrev = m(l(qb.get("income")).stream().filter(o -> "revenue".equals(m(o).get("key"))).findFirst().orElseThrow());
+        Map<String, Object> qeps = m(l(qb.get("income")).stream().filter(o -> "eps".equals(m(o).get("key"))).findFirst().orElseThrow());
+        t("statements: the fourth quarter (only in the annual report) is the year minus three quarters, marked as worked out; per-share figures left blank",
+            qper.size() == 4 && "Dec 2024".equals(m(qper.get(3)).get("label")) && m(qper.get(3)).get("derived") != null && m(qper.get(0)).get("derived") == null
+            && d(l(qrev.get("values")).get(3)) == 31 && l(qeps.get("values")).get(3) == null);
+        t("statements: SIC 6000-6799 (banks, insurers) flagged so misleading ratios are left out", Statements.financial(6021.0) && !Statements.financial(3571.0) && !Statements.financial(null));
         // ---- background price alerts (Web Push)
         java.security.KeyPairGenerator kg = java.security.KeyPairGenerator.getInstance("EC"); kg.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
         java.security.KeyPair vk = kg.generateKeyPair(), ua = kg.generateKeyPair();

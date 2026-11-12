@@ -6,6 +6,7 @@ import { initDaily } from './daily';
 import { initFolders } from './folders';
 import { initGlass } from './glass';
 import { initTrust } from './trust';
+import { initStatements } from './statements';
 
 initStates();
 initMotion();
@@ -13,3 +14,4 @@ initDaily();
 initFolders();
 initGlass();
 initTrust();
+initStatements();
