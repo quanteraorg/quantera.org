@@ -106,6 +106,8 @@ public final class Main {
         ROUTES.put("/api/filings", new Route(r -> Sec.filings(symbol(r)), 3600, 30));
         ROUTES.put("/api/financials", new Route(r -> Sec.financials(symbol(r)), 21600, 30));
         ROUTES.put("/api/statements", new Route(r -> Statements.of(symbol(r)), 21600, 30));
+        ROUTES.put("/api/technicals", new Route(r -> Research.technicals(symbol(r)), 3600, 30));
+        ROUTES.put("/api/research", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Research.report(r.body()); }, 0, 6));
         ROUTES.put("/api/peers", new Route(r -> Peers.of(symbol(r)), 21600, 20));
         ROUTES.put("/api/push/key", new Route(r -> Push.key(), 3600, 30));
         ROUTES.put("/api/push/alerts", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Push.add(r.body()); }, 0, 30));

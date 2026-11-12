@@ -18,7 +18,7 @@ final class Gemini {
         HttpResponse<String> r;
         try {
             r = Providers.HTTP.send(HttpRequest.newBuilder(URI.create(cfg("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com") + "/v1beta/models/" + model + ":generateContent"))
-                    .timeout(Duration.ofSeconds(45)).header("x-goog-api-key", cfg("GEMINI_API_KEY", "")).header("content-type", "application/json")
+                    .timeout(Duration.ofSeconds(120)).header("x-goog-api-key", cfg("GEMINI_API_KEY", "")).header("content-type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(Json.write(body))).build(), HttpResponse.BodyHandlers.ofString());
         } catch (Exception e) { throw new UpstreamException("AI provider error"); }
         if (r.statusCode() != 200) {

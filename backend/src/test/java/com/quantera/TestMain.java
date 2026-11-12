@@ -56,7 +56,9 @@ public class TestMain {
             if (avMode.equals("badkey")) { reply(ex, 200, J, "{\"Error Message\":\"the parameter apikey is invalid or missing. Please claim your free API key on (https://www.alphavantage.co/support/#api-key). It should take less than 20 seconds.\"}"); return; }
             switch (f) {
                 case "GLOBAL_QUOTE" -> reply(ex, 200, J, sym(ex).equals("ZZZ") ? "{\"Global Quote\":{}}" : "{\"Global Quote\":{\"05. price\":\"226.10\",\"09. change\":\"1.5\",\"10. change percent\":\"0.67%\",\"06. volume\":\"5000\",\"07. latest trading day\":\"2026-10-05\",\"08. previous close\":\"224.6\"}}");
-                case "TIME_SERIES_DAILY" -> reply(ex, 200, J, "{\"Time Series (Daily)\":{\"2026-10-02\":{\"1. open\":\"10\",\"2. high\":\"12\",\"3. low\":\"9\",\"4. close\":\"11\",\"5. volume\":\"100\"},\"2026-10-01\":{\"1. open\":\"9\",\"2. high\":\"10\",\"3. low\":\"8\",\"4. close\":\"10\",\"5. volume\":\"90\"}}}");
+                case "TIME_SERIES_DAILY" -> { if (sym(ex).equals("TECH")) { StringBuilder tb = new StringBuilder("{\"Time Series (Daily)\":{"); java.time.LocalDate d0 = java.time.LocalDate.of(2026, 11, 11);
+                    for (int i = 0; i < 300; i++) { double c = 400 - i + (i % 3) * 0.5; tb.append(i == 0 ? "" : ",").append("\"").append(d0.minusDays(i)).append("\":{\"1. open\":\"").append(c).append("\",\"2. high\":\"").append(c + 1).append("\",\"3. low\":\"").append(c - 1).append("\",\"4. close\":\"").append(c).append("\",\"5. volume\":\"100\"}"); }
+                    reply(ex, 200, J, tb.append("}}").toString()); } else reply(ex, 200, J, "{\"Time Series (Daily)\":{\"2026-10-02\":{\"1. open\":\"10\",\"2. high\":\"12\",\"3. low\":\"9\",\"4. close\":\"11\",\"5. volume\":\"100\"},\"2026-10-01\":{\"1. open\":\"9\",\"2. high\":\"10\",\"3. low\":\"8\",\"4. close\":\"10\",\"5. volume\":\"90\"}}}"); }
                 case "SYMBOL_SEARCH" -> reply(ex, 200, J, "{\"bestMatches\":[{\"1. symbol\":\"SHOP\",\"2. name\":\"Shopify\",\"3. type\":\"Equity\",\"4. region\":\"United States\",\"8. currency\":\"USD\"}]}");
                 case "OVERVIEW" -> reply(ex, 200, J, "{\"Symbol\":\"AAPL\",\"Name\":\"Apple\",\"AssetType\":\"Common Stock\",\"Sector\":\"TECHNOLOGY\",\"MarketCapitalization\":\"3400000000000\",\"PERatio\":\"33\",\"Beta\":\"1.1\",\"DividendYield\":\"None\"}");
                 case "TOP_GAINERS_LOSERS" -> reply(ex, 200, J, "{\"last_updated\":\"2026-10-05 16:00\",\"top_gainers\":[{\"ticker\":\"AAA\",\"price\":\"5\",\"change_amount\":\"1\",\"change_percentage\":\"25%\",\"volume\":\"900\"}],\"top_losers\":[{\"ticker\":\"BBB\",\"price\":\"2\",\"change_amount\":\"-1\",\"change_percentage\":\"-33.3%\",\"volume\":\"50\"}],\"most_actively_traded\":[{\"ticker\":\"CCC\",\"price\":\"9\",\"change_amount\":\"0.1\",\"change_percentage\":\"1.1%\",\"volume\":\"9000\"}]}");
@@ -83,12 +85,16 @@ public class TestMain {
         fake.createContext("/fh/search", ex -> { upstreamCalls.add("finnhub search"); reply(ex, 200, "application/json", "{\"result\":[{\"description\":\"SHOPIFY INC\",\"symbol\":\"SHOP\",\"type\":\"Common Stock\"},{\"description\":\"SHOPIFY INC\",\"symbol\":\"SHOP.TO\",\"type\":\"Common Stock\"}]}"); });
         fake.createContext("/fh/calendar/earnings", ex -> reply(ex, 200, "application/json", "{\"earningsCalendar\":[{\"date\":\"2026-10-30\",\"epsEstimate\":1.5,\"symbol\":\"AAPL\"},{\"date\":\"2026-10-28\",\"epsEstimate\":null,\"symbol\":\"MSFT\"},{\"date\":\"2026-10-29\",\"symbol\":\"RELI.NS\"}]}"));
         fake.createContext("/fh/calendar/ipo", ex -> reply(ex, 200, "application/json", "{\"ipoCalendar\":[{\"date\":\"2026-11-01\",\"exchange\":\"NASDAQ\",\"name\":\"NewCo\",\"price\":\"10.00-12.00\",\"symbol\":\"NEW\"}]}"));
-        fake.createContext("/td/time_series", ex -> { upstreamCalls.add("twelvedata " + ex.getRequestURI().getRawQuery()); reply(ex, 200, "application/json", ex.getRequestURI().getRawQuery().contains("symbol=ZZZ") ? "{\"code\":400,\"message\":\"symbol not found\",\"status\":\"error\"}" : "{\"values\":[{\"datetime\":\"2026-10-23\",\"open\":\"11\",\"high\":\"12\",\"low\":\"10\",\"close\":\"11.5\",\"volume\":\"100\"},{\"datetime\":\"2026-10-22\",\"open\":\"10\",\"high\":\"11\",\"low\":\"9\",\"close\":\"10.5\",\"volume\":\"90\"}],\"status\":\"ok\"}"); });
+        fake.createContext("/td/time_series", ex -> { upstreamCalls.add("twelvedata " + ex.getRequestURI().getRawQuery());
+            reply(ex, 200, "application/json", ex.getRequestURI().getRawQuery().contains("symbol=ZZZ") ? "{\"code\":400,\"message\":\"symbol not found\",\"status\":\"error\"}" : "{\"values\":[{\"datetime\":\"2026-10-23\",\"open\":\"11\",\"high\":\"12\",\"low\":\"10\",\"close\":\"11.5\",\"volume\":\"100\"},{\"datetime\":\"2026-10-22\",\"open\":\"10\",\"high\":\"11\",\"low\":\"9\",\"close\":\"10.5\",\"volume\":\"90\"}],\"status\":\"ok\"}"); });
         fake.createContext("/gm/v1beta/models/", ex -> {
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             upstreamCalls.add("gemini " + ex.getRequestURI().getPath() + " key=" + ex.getRequestHeaders().getFirst("x-goog-api-key") + (body.contains("\"OBJECT\"") ? " schema-ok" : ""));
             if (body.contains("DENIEDKEY")) { reply(ex, 403, "application/json", "{\"error\":{\"code\":403,\"message\":\"Permission denied on the service.\",\"status\":\"PERMISSION_DENIED\"}}"); return; }
             if (body.contains("BADKEY")) { reply(ex, 400, "application/json", "{\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\",\"status\":\"INVALID_ARGUMENT\"}}"); return; }
+            if (body.contains("DATA:")) { String rep = "Here you go: {\"headline\":\"Steady grower\",\"summary\":\"Apple earns a lot (SEC 10-K, FY2025).\",\"sections\":[{\"title\":\"Business\",\"points\":[\"Sells phones.\"]},{\"title\":\"Empty\",\"points\":[]}],\"bull\":[\"Brand\"],\"bear\":[\"Price\"],\"risks\":[\"Rules\"],\"catalysts\":[\"Earnings\"],\"verdict\":{\"rating\":\"Hold\",\"confidence\":\"Sure\",\"reasons\":[\"Fair price\"],\"changeMind\":\"A cheaper price\"}}";
+                upstreamCalls.add("gemini research " + (body.contains("financialStatements") || body.contains("quote") ? "with-data" : "no-data"));
+                reply(ex, 200, "application/json", "{\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":" + Json.write(rep) + "}]}}]}"); return; }
             String txt = body.contains("functionResponse") ? "**Data** Apple is $226 [[asset:AAPL]]" : body.contains("Task: ") ? "- **What**: chips rose" : null;
             reply(ex, 200, "application/json", txt != null ? "{\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"" + txt.replace("\"", "\\\"") + "\"}]}}]}"
                     : "{\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"functionCall\":{\"name\":\"get_quote\",\"args\":{\"symbol\":\"AAPL\"}}}]}}]}");
@@ -304,12 +310,31 @@ public class TestMain {
         t("AI invalid key -> clear 503 message", r.code == 503 && r.raw.contains("key is invalid"));
         r = call(p, "POST", "/api/explain", "{\"lens\":\"tldr\",\"title\":\"NOCREDIT\"}", ip());
         t("AI out of credits -> clear 503 message", r.code == 503 && r.raw.contains("out of credits"));
+        double[] sm = Research.sma(new double[]{1, 2, 3, 4, 5}, 2);
+        t("technicals: moving average and RSI maths", sm[4] == 4.5 && Double.isNaN(sm[0]) && Research.rsi(new double[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, 14) == 100
+                && Math.abs(Research.ema(new double[]{2, 4, 6}, 2)[2] - 5) < 1e-9);
+        r = get(p, "/api/technicals?symbol=TECH");
+        Map<String, Object> tc = m(r.body), cn = m(tc.get("counts"));
+        String rsiSig = l(tc.get("signals")).stream().map(x -> m(x)).filter(x -> "RSI (14 days)".equals(x.get("name"))).map(x -> String.valueOf(x.get("signal"))).findFirst().orElse("");
+        t("technicals: a steady uptrend rates Buy or Strong buy, shows overbought RSI, and lists every signal with its rule", r.code == 200
+                && List.of("Buy", "Strong buy").contains(tc.get("rating")) && "Uptrend".equals(tc.get("trend")) && "sell".equals(rsiSig)
+                && ((Number) cn.get("buy")).intValue() + ((Number) cn.get("neutral")).intValue() + ((Number) cn.get("sell")).intValue() == l(tc.get("signals")).size()
+                && l(tc.get("signals")).stream().allMatch(x -> m(x).get("rule") != null) && "2026-11-11".equals(tc.get("asOf")));
+        t("technicals: too little history is a clear 404", get(p, "/api/technicals?symbol=AAPL").code == 404);
+        boolean bad = false; try { Research.parse("{\"verdict\":{\"rating\":\"Moon\"}}"); } catch (RuntimeException e) { bad = true; }
+        t("research: a reply without a valid Buy/Hold/Sell rating is rejected, not shown", bad);
         System.setProperty("GEMINI_API_KEY", "gm-test");
         r = get(p, "/api/health");
         t("health: Gemini chosen when its key is set", "gemini".equals(m(r.body).get("aiProvider")));
         r = call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"user\",\"content\":\"Tell me about Apple\"}]}", ip());
         t("Gemini chat runs the quote tool and answers, key server-side", r.code == 200 && String.valueOf(m(r.body).get("text")).contains("Apple is $226") && l(m(r.body).get("used")).contains("Quote AAPL") && !r.raw.contains("gm-test")
                 && upstreamCalls.stream().anyMatch(u -> u.startsWith("gemini /gm/v1beta/models/gemini-flash-latest:generateContent key=gm-test schema-ok")));
+        r = call(p, "POST", "/api/research", "{\"symbol\":\"AAPL\"}", ip());
+        Map<String, Object> rv = m(m(m(r.body).get("report")).get("verdict"));
+        t("research: AI report parsed from the reply, verdict checked, unknown confidence falls back to Low, empty sections dropped, sources listed",
+                r.code == 200 && "Hold".equals(rv.get("rating")) && "Low".equals(rv.get("confidence")) && l(m(m(r.body).get("report")).get("sections")).size() == 1
+                && !l(m(r.body).get("sources")).isEmpty() && upstreamCalls.contains("gemini research with-data") && !r.raw.contains("gm-test"));
+        t("research: GET is refused", get(p, "/api/research?symbol=AAPL").code == 405);
         r = call(p, "POST", "/api/explain", "{\"lens\":\"eli5\",\"title\":\"Chips rally\",\"summary\":\"Shares rose.\",\"symbols\":[\"NVDA\"]}", ip());
         t("Gemini explains a story", r.code == 200 && String.valueOf(m(r.body).get("text")).contains("chips rose"));
         r = call(p, "POST", "/api/explain", "{\"lens\":\"eli5\",\"title\":\"BADKEY\"}", ip());

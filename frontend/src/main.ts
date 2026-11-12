@@ -12,6 +12,7 @@ import { initResearch } from './research';
 import { initConnect } from './connect';
 import { initAnalytics } from './analytics';
 import { initEcon } from './econ';
+import { initDeepResearch } from './deepresearch';
 
 initStates();
 initMotion();
@@ -25,3 +26,4 @@ initResearch();
 initConnect();
 initAnalytics();
 initEcon();
+initDeepResearch();
