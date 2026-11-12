@@ -30,6 +30,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Build TypeScript modules (type check + Vite)
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run build
       - name: Install test tools
         working-directory: frontend/tests
         run: npm install --no-audit --no-fund
