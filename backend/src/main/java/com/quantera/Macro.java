@@ -136,10 +136,10 @@ final class Macro {
                 List<Future<List<Object>>> fs = new ArrayList<>();
                 for (Rel rl : RELEASES) fs.add(ex.submit(() -> {
                     HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(cfg("FRED_API_URL", "https://api.stlouisfed.org") + "/fred/release/dates?release_id=" + rl.id()
-                            + "&realtime_start=" + today + "&include_release_dates_with_no_data=true&sort_order=asc&limit=10&file_type=json&api_key=" + java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8)))
+                            + "&realtime_start=" + today + "&realtime_end=9999-12-31&include_release_dates_with_no_data=true&sort_order=desc&limit=40&file_type=json&api_key=" + java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8)))
                             .timeout(Duration.ofSeconds(10)).GET().build(), HttpResponse.BodyHandlers.ofString());
                     List<Object> rows = new ArrayList<>();
-                    if (r.statusCode() != 200) return rows;
+                    if (r.statusCode() != 200) { System.err.println("fred release dates " + rl.id() + ": HTTP " + r.statusCode()); return rows; }
                     for (Object o : list(map(Json.parse(r.body())).get("release_dates"))) {
                         Map<String, Object> d = map(o);
                         String date = str(d.get("date")), name = str(d.get("release_name"));
@@ -151,7 +151,7 @@ final class Macro {
                     }
                     return rows;
                 }));
-                for (Future<List<Object>> f : fs) try { out.addAll(f.get(15, TimeUnit.SECONDS)); } catch (Exception ignored) { /* that release is left out */ }
+                for (Future<List<Object>> f : fs) try { out.addAll(f.get(15, TimeUnit.SECONDS)); } catch (Exception e) { System.err.println("fred release dates: " + e); /* that release is left out */ }
             }
             if (out.isEmpty()) throw new UpstreamException("Release dates are unavailable right now");
             out.sort(Comparator.comparing(o -> String.valueOf(map(o).get("date"))));
