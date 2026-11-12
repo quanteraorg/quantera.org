@@ -53,7 +53,7 @@ const CSS = `
  background:rgba(var(--bgc),.92);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border:1px solid rgba(var(--fgc),.12);box-shadow:0 18px 44px -14px rgba(var(--shc),.55);animation:qglass .32s cubic-bezier(.3,1.3,.5,1) both}
 .qmeth b{display:block;margin-bottom:4px}.qmeth small{display:block;color:var(--mu);margin-top:6px}.qmeth a{color:var(--ac);display:inline-block;margin-top:6px}
 @media(prefers-reduced-transparency:reduce){.qmeth{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgb(var(--bgc))}}
-.qsrc{display:flex;flex-wrap:wrap;gap:4px 14px;margin:10px 0 2px;font-size:12.5px;color:var(--mu);line-height:1.5}.qsrc b{color:var(--tx);font-weight:500}.qsrc span{white-space:nowrap}
+.qsrc{display:flex;flex-wrap:wrap;gap:4px 14px;margin:10px 0 2px;font-size:12.5px;color:var(--mu);line-height:1.5}.qsrc b{color:var(--tx);font-weight:500}.qsrc span{white-space:nowrap;max-width:100%}@media(max-width:600px){.qsrc span{white-space:normal}}
 #m.asp:not([data-tab=research]) #qres{display:none}
 #m.asp[data-tab=research] :is(.g[style*="2fr 1fr"],#sc,#fna,#fin,#fpic,#fany,#erx,#rnb,#secp,#qst),#m.asp[data-tab=research]>div>.g.g2{display:none!important}
 #qres{margin-top:16px}#qres .qr-jump{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
