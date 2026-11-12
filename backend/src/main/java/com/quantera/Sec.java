@@ -18,7 +18,7 @@ final class Sec {
     static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).followRedirects(HttpClient.Redirect.NORMAL).build();
     static final Cache CACHE = Providers.CACHE;
 
-    private static Object get(String url, int timeoutSec) {
+    static Object get(String url, int timeoutSec) {
         HttpResponse<String> r;
         try {
             r = HTTP.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(timeoutSec)).header("User-Agent", cfg("SEC_USER_AGENT", "Quantera Research research@quantera.org"))
