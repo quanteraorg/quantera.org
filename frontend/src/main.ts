@@ -5,9 +5,11 @@ import { initMotion } from './motion';
 import { initDaily } from './daily';
 import { initFolders } from './folders';
 import { initGlass } from './glass';
+import { initTrust } from './trust';
 
 initStates();
 initMotion();
 initDaily();
 initFolders();
 initGlass();
+initTrust();
