@@ -1,0 +1,14 @@
+{
+  "name": "quantera-frontend-tests",
+  "private": true,
+  "type": "module",
+  "description": "Browser smoke test for frontend/public (page errors, overflow, accessibility). Not part of the deployed site.",
+  "scripts": {
+    "smoke": "node smoke.mjs",
+    "syntax": "node -e \"new Function(require('fs').readFileSync('../public/app.js','utf8'))\""
+  },
+  "devDependencies": {
+    "axe-core": "4.10.2",
+    "playwright": "1.63.0"
+  }
+}
