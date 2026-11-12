@@ -112,6 +112,10 @@ public class TestMain {
             StringBuilder b = new StringBuilder("observation_date," + id + "\n"); java.time.LocalDate d0 = java.time.LocalDate.of(2020, 1, 1);
             for (int i = 0; i < 81; i++) b.append(d0.plusMonths(i)).append(',').append(i == 40 ? "." : String.valueOf(100 + i)).append('\n');
             reply(ex, 200, "text/csv", b.toString()); });
+        fake.createContext("/fredapi/fred/release/dates", ex -> { String q = ex.getRequestURI().getRawQuery(); java.time.LocalDate td = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
+            String body = q.contains("release_id=10&") ? "{\"release_dates\":[{\"release_id\":10,\"release_name\":\"Consumer Price Index\",\"date\":\"" + td.minusDays(3) + "\"},{\"release_id\":10,\"release_name\":\"Consumer Price Index\",\"date\":\"" + td.plusDays(9) + "\"}]}"
+                : q.contains("release_id=9&") ? "{\"release_dates\":[{\"release_id\":9,\"release_name\":\"Renamed Release\",\"date\":\"" + td.plusDays(2) + "\"}]}" : "{\"release_dates\":[]}";
+            reply(ex, 200, "application/json", body); });
         fake.createContext("/fredapi/fred/series/observations", ex -> { upstreamCalls.add("fredapi " + ex.getRequestURI().getRawQuery()); StringBuilder b = new StringBuilder("{\"observations\":["); java.time.LocalDate d0 = java.time.LocalDate.of(2020, 1, 1);
             for (int i = 0; i < 81; i++) b.append(i == 0 ? "" : ",").append("{\"date\":\"").append(d0.plusMonths(i)).append("\",\"value\":\"").append(i == 40 ? "." : String.valueOf(100 + i)).append("\"}");
             reply(ex, 200, "application/json", b.append("]}").toString()); });
@@ -502,6 +506,11 @@ public class TestMain {
         System.setProperty("FRED_API_KEY", "fred-test"); System.setProperty("FRED_API_URL", base + "/fredapi"); Providers.CACHE.clear();
         r = get(p, "/api/macro");
         t("macro: official FRED API used when a key is set (key sent server-side only)", r.code == 200 && l(m(r.body).get("items")).size() == 16 && !r.raw.contains("fred-test") && upstreamCalls.stream().anyMatch(u -> u.startsWith("fredapi") && u.contains("api_key=fred-test")));
+        r = get(p, "/api/calendar?type=economic");
+        List<Object> econ = r.code == 200 ? l(m(r.body).get("items")) : List.of();
+        t("economic calendar: upcoming official release dates from FRED, sorted; past dates dropped; a release whose name doesn't match gets no explanation rather than a wrong one",
+            econ.size() == 2 && "Renamed Release".equals(m(econ.get(0)).get("name")) && m(econ.get(0)).get("what") == null
+            && "Consumer Price Index".equals(m(econ.get(1)).get("name")) && String.valueOf(m(econ.get(1)).get("what")).startsWith("Inflation") && String.valueOf(m(econ.get(1)).get("source")).contains("FRED"));
         System.clearProperty("FRED_API_KEY");
         // ---- SEC filings and financial statements
         System.setProperty("SEC_BASE_URL", base + "/sec"); System.setProperty("SEC_DATA_URL", base + "/secdata"); System.setProperty("SEC_USER_AGENT", "Quantera Test test@example.com");
