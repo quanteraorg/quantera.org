@@ -18,3 +18,4 @@ declare const LES: [string, string, string, string, string, string, string, stri
 declare const BADGES: [string, string, string, string, (d: any) => boolean][];
 declare const DONE: Set<string>;
 declare const PAGES: Record<string, (arg?: string) => void>;
+declare const SUBT: Record<string, [string, string][]>;
