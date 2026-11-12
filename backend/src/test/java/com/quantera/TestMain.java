@@ -113,7 +113,9 @@ public class TestMain {
             for (int i = 0; i < 81; i++) b.append(d0.plusMonths(i)).append(',').append(i == 40 ? "." : String.valueOf(100 + i)).append('\n');
             reply(ex, 200, "text/csv", b.toString()); });
         fake.createContext("/fredapi/fred/release/dates", ex -> { String q = ex.getRequestURI().getRawQuery(); java.time.LocalDate td = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
-            String body = q.contains("release_id=10&") ? "{\"release_dates\":[{\"release_id\":10,\"release_name\":\"Consumer Price Index\",\"date\":\"" + td.minusDays(3) + "\"},{\"release_id\":10,\"release_name\":\"Consumer Price Index\",\"date\":\"" + td.plusDays(9) + "\"}]}"
+            // Like the real API, ascending order starts decades back, so only newest-first requests see upcoming dates.
+            String body = !q.contains("sort_order=desc") ? "{\"release_dates\":[{\"release_id\":10,\"release_name\":\"Consumer Price Index\",\"date\":\"1997-02-10\"}]}"
+                : q.contains("release_id=10&") ? "{\"release_dates\":[{\"release_id\":10,\"release_name\":\"Consumer Price Index\",\"date\":\"" + td.minusDays(3) + "\"},{\"release_id\":10,\"release_name\":\"Consumer Price Index\",\"date\":\"" + td.plusDays(9) + "\"}]}"
                 : q.contains("release_id=9&") ? "{\"release_dates\":[{\"release_id\":9,\"release_name\":\"Renamed Release\",\"date\":\"" + td.plusDays(2) + "\"}]}" : "{\"release_dates\":[]}";
             reply(ex, 200, "application/json", body); });
         fake.createContext("/fredapi/fred/series/observations", ex -> { upstreamCalls.add("fredapi " + ex.getRequestURI().getRawQuery()); StringBuilder b = new StringBuilder("{\"observations\":["); java.time.LocalDate d0 = java.time.LocalDate.of(2020, 1, 1);
