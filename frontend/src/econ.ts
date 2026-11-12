@@ -13,7 +13,7 @@ const CSS = `
 
 function render(host: HTMLElement): void {
   host.innerHTML = '<div class="pan"><h3>Economic releases</h3><p class="sub">Loading the official calendar…</p></div>';
-  jf('/api/calendar?type=economic').then(({ ok, b }) => {
+  jf('/api/calendar?type=economic').catch(() => ({ ok: false, b: {} } as any)).then(({ ok, b }) => {
     if (!host.isConnected) return;
     const items = ok ? (b.items || []) as { date: string; name: string; what?: string | null; link: string; source: string }[] : [];
     if (!items.length) { host.innerHTML = `<div class="pan"><h3>Economic releases</h3><p class="sub">${esc(b?.error || 'The release calendar is unavailable right now.')}</p></div>`; return; }
