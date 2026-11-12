@@ -32,6 +32,7 @@ final class Anthropic {
             tool("get_financial_statements", "Income statement, balance sheet and cash flow lines from a US company's SEC filings (10-K/10-Q), with the filing for each period. period: annual (last 5 years) or quarterly (last 4 quarters).",
                     Json.obj("symbol", Json.obj("type", "string"), "period", Json.obj("type", "string", "enum", List.of("annual", "quarterly"))), "symbol"),
             tool("get_competitors", "A company's competitors with valuation, growth and margin ratios side by side (peer list from Finnhub, figures from Yahoo Finance, last 12 months).", Json.obj("symbol", Json.obj("type", "string")), "symbol"),
+            tool("get_technicals", "Technical analysis from daily prices: moving averages, MACD, RSI, stochastic, momentum, support and resistance, 52-week range, volatility, each signal with its rule, and an overall technical rating.", Json.obj("symbol", Json.obj("type", "string")), "symbol"),
             tool("get_earnings", "Recent quarterly earnings per share: actual versus analysts' expectations, the next report date, and the analysts' average price target (a forecast).", Json.obj("symbol", Json.obj("type", "string")), "symbol"));
 
     /** Key lines from the SEC statements, trimmed for the model: each value labelled with its period and filing. */
@@ -89,6 +90,7 @@ final class Anthropic {
                     String s = sym(in.get("symbol")); boolean q = "quarterly".equals(in.get("period"));
                     used.add("SEC filings " + s + (q ? " (quarterly)" : " (annual)")); return statementsForAi(s, q);
                 }
+                case "get_technicals": { String s = sym(in.get("symbol")); used.add("Technicals " + s); return Research.technicals(s); }
                 case "get_competitors": { String s = sym(in.get("symbol")); used.add("Competitors of " + s); return Peers.of(s); }
                 case "get_earnings": {
                     String s = sym(in.get("symbol")); used.add("Earnings " + s);
@@ -163,11 +165,19 @@ final class Anthropic {
             }
             String prompt = "Headline: " + title + "\nSummary: " + (summary.isEmpty() ? "(none)" : summary) + "\nCompanies tagged: " + (syms.isEmpty() ? "none" : String.join(", ", syms))
                     + "\nToday's price moves: " + (moves.length() == 0 ? "not available" : moves) + "\n\nTask: " + LENSES.get(lens);
-            if (useGemini()) return Json.obj("lens", lens, "text", Gemini.complete(EXPLAIN_SYSTEM, prompt, 600));
-            String req = Json.write(Json.obj("model", cfg("ANTHROPIC_MODEL", "claude-sonnet-4-6"), "max_tokens", 450, "system", EXPLAIN_SYSTEM, "messages", List.of(Json.obj("role", "user", "content", prompt))));
+            return Json.obj("lens", lens, "text", useGemini() ? Gemini.complete(EXPLAIN_SYSTEM, prompt, 600) : complete(EXPLAIN_SYSTEM, prompt, 450));
+        });
+    }
+
+    /** One-shot completion with whichever AI provider is active. */
+    static String complete(String system, String prompt, int maxTokens) {
+        if (useGemini()) return Gemini.complete(system, prompt, maxTokens);
+        String key = cfg("ANTHROPIC_API_KEY", null);
+        if (key == null) throw new UpstreamException("The AI is not configured", 503);
+        String req = Json.write(Json.obj("model", cfg("ANTHROPIC_MODEL", "claude-sonnet-4-6"), "max_tokens", Math.min(maxTokens, 4000), "system", system, "messages", List.of(Json.obj("role", "user", "content", prompt))));
             HttpResponse<String> r;
             try {
-                r = Providers.HTTP.send(HttpRequest.newBuilder(URI.create(cfg("ANTHROPIC_BASE_URL", "https://api.anthropic.com") + "/v1/messages")).timeout(Duration.ofSeconds(40))
+                r = Providers.HTTP.send(HttpRequest.newBuilder(URI.create(cfg("ANTHROPIC_BASE_URL", "https://api.anthropic.com") + "/v1/messages")).timeout(Duration.ofSeconds(maxTokens > 1000 ? 120 : 40))
                         .header("x-api-key", key).header("anthropic-version", "2023-06-01").header("content-type", "application/json").POST(HttpRequest.BodyPublishers.ofString(req)).build(), HttpResponse.BodyHandlers.ofString());
             } catch (Exception e) { throw new UpstreamException("AI provider error"); }
 
@@ -176,8 +186,7 @@ final class Anthropic {
             try { for (Object o : list(map(Json.parse(r.body())).get("content"))) if ("text".equals(map(o).get("type"))) t.append(str(map(o).get("text"))); }
             catch (IllegalArgumentException e) { throw new UpstreamException("AI provider error"); }
             if (t.length() == 0) throw new UpstreamException("AI provider error");
-            return Json.obj("lens", lens, "text", t.toString());
-        });
+            return t.toString();
     }
 
     static Map<String, Object> chat(List<Map<String, Object>> input) {
