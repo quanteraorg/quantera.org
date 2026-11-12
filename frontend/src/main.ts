@@ -7,6 +7,7 @@ import { initFolders } from './folders';
 import { initGlass } from './glass';
 import { initTrust } from './trust';
 import { initStatements } from './statements';
+import { initValuation } from './valuation';
 
 initStates();
 initMotion();
@@ -15,3 +16,4 @@ initFolders();
 initGlass();
 initTrust();
 initStatements();
+initValuation();
