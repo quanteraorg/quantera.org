@@ -250,6 +250,8 @@ final class Statements {
             if (r.length > 5) {
                 List<Map<String, Fact>> src = ordered(g, r[2], instant, Arrays.copyOfRange(r, 5, r.length));
                 long[] fl = new long[keys.size()];
+                List<List<Span>> sp = null; // year-to-date figures, loaded only if a quarterly cash-flow value is missing
+                boolean ytd = false;
                 for (int i = 0; i < keys.size(); i++) {
                     Fact f = instant ? at(src, ends[i]) : flow(src, keys.get(i));
                     String[] d = instant ? null : derived.get(keys.get(i));
@@ -257,9 +259,18 @@ final class Statements {
                         Fact a = flow(src, d[0]), q1 = flow(src, d[1]), q2 = flow(src, d[2]), q3 = flow(src, d[3]);
                         if (a != null && q1 != null && q2 != null && q3 != null) f = new Fact(a.v() - q1.v() - q2.v() - q3.v(), a.end(), a.accn(), a.form(), a.filed());
                     }
+                    if (f == null && table == CASH && keys.get(i).contains("Q")) {
+                        if (sp == null) { sp = new ArrayList<>(); for (String t : Arrays.copyOfRange(r, 5, r.length)) sp.add(spans(g, t, r[2])); }
+                        f = fromYearToDate(sp, ends[i]);
+                        if (f != null) ytd = true;
+                    }
                     if (f != null) { v[i] = OUTFLOWS.contains(r[0]) ? -Math.abs(f.v()) : f.v(); fl[i] = f.filed(); }
                 }
                 filed.put(r[0], fl);
+                if (allNaN(v)) { out.add(null); continue; }
+                vals.put(r[0], v);
+                out.add(line(r, v, ytd ? "Some quarters worked out from the year-to-date totals in the filings (this year-to-date minus the previous one)" : null));
+                continue;
             }
             if (allNaN(v)) { out.add(null); continue; } // placeholder keeps positions for derived lines; removed at the end
             vals.put(r[0], v);
@@ -267,6 +278,51 @@ final class Statements {
         }
         out.removeIf(Objects::isNull);
         return out;
+    }
+
+    /** Every reported span of one concept (start, end, value, filed), keeping the latest filing for each span. */
+    record Span(long s, long e, double v, long filed) {}
+    static List<Span> spans(Map<String, Object> g, String tag, String unit) {
+        Map<String, Object[]> latest = new HashMap<>();
+        for (Object o : list(map(map(map(g.get(tag)).get("units"))).get(unit))) {
+            Map<String, Object> x = map(o);
+            Double v = num(x.get("val"));
+            String st = str(x.get("start")), en = str(x.get("end")), fd = Objects.toString(str(x.get("filed")), "");
+            if (v == null || st == null || en == null) continue;
+            Object[] cur = latest.get(st + "|" + en);
+            if (cur == null || fd.compareTo((String) cur[0]) > 0) latest.put(st + "|" + en, new Object[]{fd, v});
+        }
+        List<Span> out = new ArrayList<>();
+        for (Map.Entry<String, Object[]> e : latest.entrySet()) {
+            String[] k = e.getKey().split("\\|");
+            String fd = (String) e.getValue()[0];
+            out.add(new Span(LocalDate.parse(k[0]).toEpochDay(), LocalDate.parse(k[1]).toEpochDay(), (Double) e.getValue()[1], fd.isEmpty() ? Long.MAX_VALUE : LocalDate.parse(fd).toEpochDay()));
+        }
+        return out;
+    }
+
+    /**
+     * A quarter's cash flow when the filings give only year-to-date totals: the year-to-date figure ending at the quarter
+     * minus the one ending a quarter earlier from the same start (Q2 = first half minus Q1; Q4 = full year minus nine months).
+     * A three-month figure ending at the quarter is used directly. Null when the pieces aren't both filed.
+     */
+    static Fact fromYearToDate(List<List<Span>> src, long end) {
+        for (List<Span> sp : src) {
+            Span three = null, ytd = null;
+            for (Span x : sp) {
+                if (Math.abs(x.e() - end) > 4) continue;
+                long len = x.e() - x.s();
+                if (len >= 80 && len <= 100) three = x;
+                else if (len > 100 && len <= 380 && (ytd == null || len < ytd.e() - ytd.s())) ytd = x;
+            }
+            if (three != null) return new Fact(three.v(), end, null, null, three.filed());
+            if (ytd == null) continue;
+            Span prior = null;
+            for (Span x : sp)
+                if (Math.abs(x.s() - ytd.s()) <= 4 && end - x.e() >= 80 && end - x.e() <= 100 && (prior == null || x.e() > prior.e())) prior = x;
+            if (prior != null) return new Fact(ytd.v() - prior.v(), end, null, null, Math.max(ytd.filed(), prior.filed()));
+        }
+        return null;
     }
 
     static Map<String, Object> line(String[] r, double[] v, String note) {

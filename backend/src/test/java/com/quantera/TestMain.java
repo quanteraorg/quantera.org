@@ -579,6 +579,16 @@ public class TestMain {
         t("statements: the fourth quarter (only in the annual report) is the year minus three quarters, marked as worked out; per-share figures left blank",
             qper.size() == 4 && "Dec 2024".equals(m(qper.get(3)).get("label")) && m(qper.get(3)).get("derived") != null && m(qper.get(0)).get("derived") == null
             && d(l(qrev.get("values")).get(3)) == 31 && l(qeps.get("values")).get(3) == null);
+        Map<String, Object> yg = m(Json.parse("{\"Revenues\":{\"units\":{\"USD\":["
+            + "{\"start\":\"2024-01-01\",\"end\":\"2024-03-31\",\"val\":50,\"frame\":\"CY2024Q1\",\"form\":\"10-Q\",\"filed\":\"2024-05-01\"},"
+            + "{\"start\":\"2024-04-01\",\"end\":\"2024-06-30\",\"val\":55,\"frame\":\"CY2024Q2\",\"form\":\"10-Q\",\"filed\":\"2024-08-01\"}]}},"
+            + "\"NetCashProvidedByUsedInOperatingActivities\":{\"units\":{\"USD\":["
+            + "{\"start\":\"2024-01-01\",\"end\":\"2024-03-31\",\"val\":10,\"form\":\"10-Q\",\"filed\":\"2024-05-01\"},"
+            + "{\"start\":\"2024-01-01\",\"end\":\"2024-06-30\",\"val\":25,\"form\":\"10-Q\",\"filed\":\"2024-08-01\"}]}}}"));
+        Map<String, Object> yb = Statements.build(yg, 1, true, false);
+        Map<String, Object> yocf = m(l(yb.get("cashflow")).stream().filter(o -> "operatingCashFlow".equals(m(o).get("key"))).findFirst().orElseThrow());
+        t("statements: quarterly cash flow from year-to-date totals (Q2 = first half minus Q1), with a note saying so",
+            d(l(yocf.get("values")).get(0)) == 10 && d(l(yocf.get("values")).get(1)) == 15 && String.valueOf(yocf.get("note")).contains("year-to-date"));
         t("statements: SIC 6000-6799 (banks, insurers) flagged so misleading ratios are left out", Statements.financial(6021.0) && !Statements.financial(3571.0) && !Statements.financial(null));
         // ---- background price alerts (Web Push)
         java.security.KeyPairGenerator kg = java.security.KeyPairGenerator.getInstance("EC"); kg.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
