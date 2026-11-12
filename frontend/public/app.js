@@ -3082,37 +3082,5 @@ PAGES.stub=()=>{const r=decodeURIComponent((location.hash.split('/')[1]||'')).sl
  <p class="mu" style="margin:0 0 20px">It may have moved. Search for a stock or page with <b>${/Mac|iPhone|iPad/.test(navigator.platform||'')?'⌘':'Ctrl'} K</b>, or pick a section:</p>
  <div class="pre" style="justify-content:center"><a class="btn p" href="#/markets">Markets</a><a class="btn" href="#/stocks">Stocks</a><a class="btn" href="#/trade">Paper trade</a><a class="btn" href="#/learn">Academy</a></div></div>`;setTimeout(()=>{const h=document.querySelector("#m .phero");if(h)h.remove()},0)};
 
-/* ===== v51: number typography, loading skeletons, honest error and freshness states =====
-   Numbers: lining, equal-width digits everywhere they line up, and a true minus sign (−) for negative values.
-   Loading: every "Loading…" line gets a shimmering placeholder bar.
-   Errors: if live data stops responding, one calm notice says so; on the deployed site a banner says when sample data is showing.
-   Freshness: the price strip shows when prices were last updated and that some are delayed. */
-document.head.insertAdjacentHTML('beforeend','<style id="v51">'+
-'body,.big,.k,h1,h2,h3,td,th,.p,.sv,.pill,#tape,.hl,.hmv,.cmpt{font-variant-numeric:tabular-nums lining-nums}.hmk{font-variant-numeric:normal}'+
-'.qld{position:relative;color:transparent!important;min-width:160px}.qld::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);height:12px;width:min(260px,100%);border-radius:7px;background:linear-gradient(90deg,var(--s1),var(--s2),var(--s1));background-size:200% 100%;animation:skl 1.3s ease-in-out infinite}'+
-'.qld::after{content:attr(data-l);position:absolute;left:0;top:calc(50% + 12px);font-size:11.5px;color:var(--mu);white-space:nowrap}'+
-'@media(prefers-reduced-motion:reduce){.qld::before{animation:none}}'+
-'.qfresh{flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:11.5px;color:var(--mu);white-space:nowrap;border-left:1px solid var(--ln)}.qfresh i{width:6px;height:6px;border-radius:50%;background:var(--up);display:inline-block}.qfresh.stale i{background:#e8a07a}@media(max-width:800px){.qfresh{display:none}}'+
-'.qbanner{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px 16px;font-size:13.5px;background:rgba(232,160,122,.12);color:var(--tx);border-bottom:1px solid rgba(232,160,122,.35);text-align:center}.qbanner button{margin:0;padding:4px 12px;font-size:13px}'+
-'</style>');
-
-/* numbers: true minus sign for negative values in text (never inside inputs, code or editable text) */
-const QMINUS=root=>{if(!root)return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{const p=n.parentElement;if(!p||p.closest('input,textarea,select,script,style,code,pre,[contenteditable]'))return NodeFilter.FILTER_REJECT;return /(^|[\s(])-(?=\$?\d)/.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP}});const L=[];let n;while(n=w.nextNode())L.push(n);L.forEach(t=>{t.nodeValue=t.nodeValue.replace(/(^|[\s(])-(?=\$?\d)/g,'$1−')})};
-/* loading lines become skeletons; the words stay available to screen readers */
-const QLOAD=root=>{if(!root)return;root.querySelectorAll('div,span,p,td').forEach(e=>{if(e.children.length)return;const t=e.textContent.trim();if(/^Loading\b.{0,40}…$/.test(t)){if(!e.classList.contains('qld')){e.classList.add('qld');e.setAttribute('role','status');e.dataset.l=t}}else if(e.classList.contains('qld')){e.classList.remove('qld');e.removeAttribute('data-l')}})};
-(()=>{let t;const m=document.getElementById('m');if(!m)return;const run=()=>{QMINUS(m);QLOAD(m)};new MutationObserver(()=>{clearTimeout(t);t=setTimeout(run,60)}).observe(m,{childList:true,subtree:true,characterData:true});setTimeout(run,300)})();
-
-/* freshness and errors: watch real API responses */
-const QF={last:0,fails:0,noticeAt:0};
-(()=>{const f0=window.fetch.bind(window);window.fetch=async(u,o)=>{const s=typeof u=='string'?u:(u&&u.url)||'';const isData=/\/api\/(markets|snapshot|quotes?|history|intraday|world|popular|news|overview|fundamentals|screen|directory|macro|calendar)\b/.test(s);
- try{const r=await f0(u,o);if(isData){if(r.ok){QF.last=Date.now();QF.fails=0;QFDRAW()}else if(r.status>=500){QFAIL()}}return r}catch(e){if(isData)QFAIL();throw e}}})();
-const QFAIL=()=>{QF.fails++;QFDRAW();if(QF.fails>=3&&Date.now()-QF.noticeAt>5*60e3){QF.noticeAt=Date.now();try{qtoast('Live data isn’t responding right now. Numbers on screen may be out of date; we’ll keep trying.')}catch(e){}}};
-const QFDRAW=()=>{const t=document.getElementById('tape');if(!t)return;let e=t.querySelector('.qfresh');if(!e){e=document.createElement('span');e.className='qfresh';e.setAttribute('aria-live','polite');const b=t.querySelector('#tpb');b?t.insertBefore(e,b):t.appendChild(e)}
- if(!QF.last){e.style.display='none';return}e.style.display='';const stale=Date.now()-QF.last>10*60e3||QF.fails>=3;e.classList.toggle('stale',stale);
- e.innerHTML=`<i></i>${stale?'Prices may be out of date':'Prices as of '+new Date(QF.last).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})} · some delayed 15 min`};
-setInterval(QFDRAW,60e3);
-/* on the deployed site, say plainly when live data is off and sample prices are showing */
-setTimeout(()=>{if(!/^https?:/.test(location.protocol)||/^(localhost|127\.)/.test(location.hostname)||QLIVE.ok||document.querySelector('.qbanner'))return;
- document.querySelector('header').insertAdjacentHTML('afterend','<div class="qbanner" role="status"><span><b>Live data is unavailable right now.</b> Prices shown are sample data, not real quotes.</span><button class="btn" onclick="location.reload()">Try again</button></div>')},12000);
-
+/* ===== v51 moved to frontend/src/states.ts (TypeScript module, loaded as /assets/modules.js) ===== */
 if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML=SKEL();setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();

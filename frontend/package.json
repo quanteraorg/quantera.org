@@ -1,0 +1,14 @@
+{
+  "name": "quantera-frontend",
+  "private": true,
+  "type": "module",
+  "description": "Builds TypeScript modules from src/ into public/assets/modules.js. The rest of public/ is served as-is.",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "5.7.2",
+    "vite": "5.4.11"
+  }
+}
