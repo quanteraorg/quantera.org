@@ -2534,7 +2534,7 @@ addEventListener('hashchange',()=>setTimeout(TBAR,0));
 setTimeout(()=>{NAVDECO();TBAR();const n=document.getElementById('nav');if(n)new MutationObserver(()=>{if(n.querySelector('a[data-r]:not(:has(.ni))')||!n.querySelector('.nmore'))NAVDECO()}).observe(n,{childList:true})},0);
 /* ===== v36: first visit that leads with value, a 3D market city, first-steps checklist, and sign-up asked at the right moment ===== */
 document.head.insertAdjacentHTML('beforeend',`<style>
-.sc.hx .in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:28px;align-items:center;max-width:1240px}
+.sc.hx .in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:28px;align-items:center;max-width:1520px}
 .sc.hx h1.k{font-size:clamp(40px,5.4vw,78px)!important;line-height:1.02!important;letter-spacing:-.03em}
 .sc.hx .cth{font-family:Fraunces,Georgia,serif;font-weight:300;font-size:clamp(34px,4.6vw,64px);line-height:1.04;letter-spacing:-.025em;margin:0}.sc.hx .lead{font-size:clamp(16px,1.5vw,19px);line-height:1.6;color:var(--tx);opacity:.86;max-width:540px;margin:18px 0 22px}
 .sc.hx .cta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.sc.hx .cta .btn.p{font-size:16px;padding:14px 22px}.sc.hx .cta .tl{color:var(--mu);font-size:15px}.sc.hx .cta .tl:hover{color:var(--tx)}
@@ -2726,7 +2726,7 @@ Object.assign(TT,{about:['About','Who builds Quantera and why.'],ai:['Ask Quante
  screener:['Screener','Filter stocks by size, valuation, growth and dividends.'],settings:['Settings','Display, chart and account settings.'],social:['Follow Quantera','Where we post lessons and market explainers.'],
  terminal:['Terminal','A workspace with several charts side by side.'],valuation:['Valuation','Estimate what a company could be worth.']});
 document.head.insertAdjacentHTML('beforeend','<style>'+
-'.hm{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:110px 32px 40px}.hm section{margin:0 0 64px;width:100%;max-width:none}'+
+'.hm{position:relative;z-index:2;max-width:1520px;margin:0 auto;padding:110px 32px 40px}.hm section{margin:0 0 64px;width:100%;max-width:none}'+
 '.hm-hero{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;min-height:min(640px,calc(100vh - 150px))}'+
 '.hm h1{font-size:clamp(34px,4.6vw,58px);line-height:1.06;margin:0 0 18px;font-weight:400}.hm .lead{font-size:18px;line-height:1.6;color:var(--mu);margin:0 0 26px;max-width:560px}'+
 '.hm .cta{display:flex;gap:10px;flex-wrap:wrap}.hm .cta .btn{margin:0;padding:12px 20px;font-size:15px}.hm .fine{font-size:13px;color:var(--mu);margin-top:14px}'+
