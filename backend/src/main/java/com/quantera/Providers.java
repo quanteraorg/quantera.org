@@ -104,7 +104,8 @@ final class Providers {
         if (c == null || c == 0) throw new UpstreamException("Symbol not found", 404);
         Double t = num(j.get("t"));
         return Json.obj("symbol", s, "price", c, "change", num(j.get("d")), "changePct", num(j.get("dp")), "volume", null, "prevClose", num(j.get("pc")),
-                "asOf", t == null ? null : java.time.Instant.ofEpochSecond(t.longValue()).toString().substring(0, 10), "source", "Finnhub");
+                "asOf", t == null ? null : java.time.Instant.ofEpochSecond(t.longValue()).toString().substring(0, 10),
+                "time", t == null ? null : java.time.Instant.ofEpochSecond(t.longValue()).toString(), "source", "Finnhub");
     }
 
     static Map<String, Object> quote(String s, long ttlMs) {

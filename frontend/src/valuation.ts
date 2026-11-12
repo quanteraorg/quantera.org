@@ -8,8 +8,8 @@
 
 interface Line { key: string; values: (number | null)[] }
 interface Period { label: string; end: string; filing?: string; form?: string }
-interface St { symbol: string; name?: string; financial: boolean; annual: { periods: Period[]; income: Line[]; balance: Line[]; cashflow: Line[] } }
-interface Inputs { fcf: number; g: number; d: number; t: number; shares: number; net: number; price: number }
+export interface St { symbol: string; name?: string; financial: boolean; annual: { periods: Period[]; income: Line[]; balance: Line[]; cashflow: Line[] } }
+export interface Inputs { fcf: number; g: number; d: number; t: number; shares: number; net: number; price: number }
 
 const CSS = `
 .qv h1{font-size:34px;margin:0 0 6px}.qv .lead{color:var(--mu);max-width:760px;line-height:1.6;margin:0 0 18px}
@@ -50,6 +50,24 @@ export function dcf(x: Inputs, g = x.g, d = x.d) {
   const ev = pv + tvpv, eq = ev + x.net;
   return { rows, pv, tv, tvpv, ev, eq, ps: eq / x.shares };
 }
+/**
+ * The model's starting inputs from a company's filings and price, so every page that shows a DCF uses the same rules:
+ * latest reported free cash flow, revenue growth (compound, up to 5 years) kept between 0% and 20%, a 9% discount rate,
+ * 2.5% terminal growth, latest diluted shares, and cash plus short-term investments minus long-term debt.
+ * Returns null when a needed figure isn't filed (nothing is guessed) or the company is a bank or insurer.
+ */
+export function startingInputs(st: St, price: number): { x: Inputs; cagr: number | null; years: number } | null {
+  if (st.financial || !isFinite(price)) return null;
+  const A = st.annual, f = last(find(A.cashflow, 'freeCashFlow')), sh = last(find(A.income, 'shares')), rev = find(A.income, 'revenue');
+  if (!f || !sh) return null;
+  let cagr: number | null = null, years = 0;
+  if (rev) { const v = rev.values, iL = v.length - 1; for (let k = Math.min(5, iL); k >= 1; k--) { const a = v[iL], b = v[iL - k]; if (a != null && b != null && a > 0 && b > 0) { cagr = (Math.pow(a / b, 1 / k) - 1) * 100; years = k; break; } } }
+  const g0 = cagr == null ? 5 : Math.max(0, Math.min(20, cagr));
+  const cash = last(find(A.balance, 'cash')), sti = last(find(A.balance, 'shortTermInvestments')), debt = last(find(A.balance, 'longTermDebt'));
+  const net = (cash?.[0] || 0) + (sti?.[0] || 0) - (debt?.[0] || 0);
+  return { x: { fcf: f[0] / 1e9, g: Math.round(g0 * 2) / 2, d: 9, t: 2.5, shares: sh[0] / 1e9, net: net / 1e9, price }, cagr, years };
+}
+
 /** The year 1-5 growth rate at which the model's value equals today's price (bisection). */
 export function impliedGrowth(x: Inputs): number | null {
   const f = (g: number) => dcf(x, g).ps - x.price;
@@ -96,7 +114,7 @@ function page(sym?: string): void {
     const differs = avg3 != null && avg3 > 0 && Math.abs(f[0] / avg3 - 1) > 0.25;
     const useAvg = false; // the reported latest year is the standard start; growth companies sit well above their average for good reason
     const start = useAvg ? avg3! : f[0];
-    const base: Inputs = { fcf: start / 1e9, g: Math.round(g0 * 2) / 2, d: 9, t: 2.5, shares: sh[0] / 1e9, net: net / 1e9, price };
+    const base: Inputs = { ...startingInputs(st, price)!.x, fcf: start / 1e9 }; // same rules as every other DCF on the site
     state = {
       sym, st, x: { ...base }, base,
       src: {
