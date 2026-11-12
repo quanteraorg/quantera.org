@@ -10,7 +10,7 @@ const CSS = `
 .qpill.on{opacity:1}.qpill-host>a,.qpill-host>button{position:relative;z-index:1}
 .qpill-host.qpill-ready>a.on,.qpill-host.qpill-ready>button.on{background:transparent!important}
 #sub.qpill-host .qpill{border-radius:2px;height:2px!important;background:var(--ac);box-shadow:0 0 10px rgba(var(--acc),.6)}
-.qglint{position:relative}.qglint::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:2;opacity:0;transition:opacity .35s;
+.qglint::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:2;opacity:0;transition:opacity .35s;
  background:radial-gradient(180px circle at var(--gx,50%) var(--gy,0%),rgba(255,255,255,.10),transparent 65%)}
 .qglint:hover::before{opacity:1}
 .mm.on,.qf-pop{animation:qglass .42s cubic-bezier(.3,1.3,.5,1) both!important;transform-origin:top center}
@@ -29,7 +29,7 @@ function placePill(host: HTMLElement): void {
   let pill = pills.get(host);
   if (!pill || !pill.isConnected) {
     pill = document.createElement('span'); pill.className = 'qpill'; pill.setAttribute('aria-hidden', 'true');
-    host.classList.add('qpill-host'); if (getComputedStyle(host).position === 'static') host.style.position = 'relative'; host.prepend(pill); pills.set(host, pill);
+    host.classList.add('qpill-host'); host.prepend(pill); pills.set(host, pill);
   }
   const on = host.querySelector<HTMLElement>(':scope>a.on,:scope>button.on');
   if (!on || !on.offsetWidth) { pill.classList.remove('on'); host.classList.remove('qpill-ready'); return; }
@@ -64,7 +64,7 @@ function glint(): void {
   document.addEventListener('pointermove', e => {
     const el = (e.target as Element | null)?.closest?.(SEL) as HTMLElement | null;
     if (!el) return;
-    el.classList.add('qglint');
+    if (!el.classList.contains('qglint')) { if (getComputedStyle(el).position === 'static') return; el.classList.add('qglint'); }
     const r = el.getBoundingClientRect();
     el.style.setProperty('--gx', `${e.clientX - r.left}px`);
     el.style.setProperty('--gy', `${e.clientY - r.top}px`);
