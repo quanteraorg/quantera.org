@@ -13,6 +13,8 @@ final class Anthropic {
 
     static final String SYSTEM = "You are Quantera AI inside a finance education and research app. Explain in plain English for beginners. "
             + "Use the tools for every price, figure or headline and never invent data; if a tool fails or finds nothing, say so. Prices are end-of-day or delayed. "
+            + "After each figure, cite its source and date in brackets, for example (SEC 10-K, FY2026), (Yahoo Finance, last 12 months) or (Finnhub, Nov 11). "
+            + "Prefer get_financial_statements for revenue, profit, cash flow and balance-sheet figures: it comes straight from SEC filings. Say clearly when something is a forecast. "
             + "Keep answers under 180 words. When analysing, use three labelled parts: **Data** (what the tools returned), **Analysis** (what it shows), "
             + "**Interpretation** (what it might mean, noting this is not investment advice). End with helpful links using exactly these tokens: [[asset:SYMBOL]] or [[lesson:ID]] "
             + "with ids ratios, cashflow, peg, capm, rsi, options101, bs, sharpe, kelly, var, wacc, duration, compound, pe, fees, divers, bond, dcf.";
@@ -26,7 +28,29 @@ final class Anthropic {
             tool("get_price_stats", "Return, high, low and worst drop for a ticker over N trading days (max 1000).", Json.obj("symbol", Json.obj("type", "string"), "days", Json.obj("type", "number")), "symbol"),
             tool("get_company", "Company profile and key fundamentals for a ticker.", Json.obj("symbol", Json.obj("type", "string")), "symbol"),
             tool("search_symbols", "Find tickers by company name or keyword.", Json.obj("query", Json.obj("type", "string")), "query"),
-            tool("get_news", "Recent headlines, optionally for tickers (comma-separated).", Json.obj("symbols", Json.obj("type", "string"))));
+            tool("get_news", "Recent headlines, optionally for tickers (comma-separated).", Json.obj("symbols", Json.obj("type", "string"))),
+            tool("get_financial_statements", "Income statement, balance sheet and cash flow lines from a US company's SEC filings (10-K/10-Q), with the filing for each period. period: annual (last 5 years) or quarterly (last 4 quarters).",
+                    Json.obj("symbol", Json.obj("type", "string"), "period", Json.obj("type", "string", "enum", List.of("annual", "quarterly"))), "symbol"),
+            tool("get_competitors", "A company's competitors with valuation, growth and margin ratios side by side (peer list from Finnhub, figures from Yahoo Finance, last 12 months).", Json.obj("symbol", Json.obj("type", "string")), "symbol"),
+            tool("get_earnings", "Recent quarterly earnings per share: actual versus analysts' expectations, the next report date, and the analysts' average price target (a forecast).", Json.obj("symbol", Json.obj("type", "string")), "symbol"));
+
+    /** Key lines from the SEC statements, trimmed for the model: each value labelled with its period and filing. */
+    static Map<String, Object> statementsForAi(String s, boolean quarterly) {
+        Map<String, Object> st = Statements.of(s), b = map(st.get(quarterly ? "quarterly" : "annual"));
+        List<Object> per = list(b.get("periods"));
+        int from = Math.max(0, per.size() - (quarterly ? 4 : 5));
+        List<Object> periods = new ArrayList<>();
+        for (Object o : per.subList(from, per.size())) { Map<String, Object> p = map(o); periods.add(Json.obj("period", p.get("label"), "ends", p.get("end"), "filing", p.get("form"), "link", p.get("filing"))); }
+        Map<String, Object> lines = new LinkedHashMap<>();
+        for (String part : List.of("income", "balance", "cashflow", "ratios"))
+            for (Object o : list(b.get(part))) {
+                Map<String, Object> l = map(o);
+                List<Object> v = list(l.get("values"));
+                lines.put(String.valueOf(l.get("label")), v.subList(Math.min(from, v.size()), v.size()));
+            }
+        return Json.obj("company", st.get("name"), "source", "SEC EDGAR filings", "isBankOrInsurer", st.get("financial"), "periods", periods, "lines", lines,
+                "note", "Values are in US dollars (ratios as fractions); null means not reported.");
+    }
 
     private static String sym(Object x) {
         String s = String.valueOf(x == null ? "" : x).toUpperCase();
@@ -60,6 +84,17 @@ final class Anthropic {
                 case "get_news": {
                     String s = String.valueOf(in.getOrDefault("symbols", "")).toUpperCase().replaceAll("[^A-Z0-9.,\\-]", "");
                     used.add("News"); return Providers.news(s.length() > 80 ? s.substring(0, 80) : s, "", 5);
+                }
+                case "get_financial_statements": {
+                    String s = sym(in.get("symbol")); boolean q = "quarterly".equals(in.get("period"));
+                    used.add("SEC filings " + s + (q ? " (quarterly)" : " (annual)")); return statementsForAi(s, q);
+                }
+                case "get_competitors": { String s = sym(in.get("symbol")); used.add("Competitors of " + s); return Peers.of(s); }
+                case "get_earnings": {
+                    String s = sym(in.get("symbol")); used.add("Earnings " + s);
+                    Map<String, Object> f = Yahoo.fundamentals(s);
+                    return Json.obj("symbol", s, "source", "Yahoo Finance", "quarters", f.get("earnings"), "nextReport", f.get("nextEarnings"), "analysts", f.get("analysts"),
+                            "note", "Expected figures and price targets are analysts' forecasts, not results.");
                 }
                 default: return Json.obj("error", "Unknown tool");
             }

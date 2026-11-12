@@ -10,6 +10,7 @@ import { initStatements } from './statements';
 import { initValuation } from './valuation';
 import { initResearch } from './research';
 import { initConnect } from './connect';
+import { initAnalytics } from './analytics';
 
 initStates();
 initMotion();
@@ -21,3 +22,4 @@ initStatements();
 initValuation();
 initResearch();
 initConnect();
+initAnalytics();
