@@ -3069,4 +3069,17 @@ const A11Y=root=>{root=root||document;
 addEventListener('keydown',e=>{if((e.key=='Enter'||e.key==' ')&&e.target&&e.target.matches&&e.target.matches('[onclick][role=button],[onclick][role=link]')&&!/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){e.preventDefault();e.target.click()}});
 (()=>{let t;const mo=new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>A11Y(document.getElementById('m')),120)});const m=document.getElementById('m');if(m)mo.observe(m,{childList:true,subtree:true});setTimeout(()=>A11Y(document),800)})();
 
+/* ===== v50: retire sample-data pages; options builder joins the Academy; a real "page not found" =====
+   explorer and globe showed ~20 sample assets; the live 3D company map (home) and World markets replace them.
+   analyze, chartlab, brain, lab and risk were sample-data experiments with no links left. Old bookmarks land on the live page that replaced each one. */
+const RETIRED={explorer:'stocks',globe:'world',analyze:'screener',chartlab:'asset/SPY',brain:'learn',lab:'compare',risk:'portfolio'};
+Object.keys(RETIRED).forEach(k=>{PAGES[k]=()=>{location.replace('#/'+RETIRED[k])}});
+HUB.options='learn';SUBT.learn=[['Academy','learn'],['Chart Gym','practice'],['How to read a chart','chartschool'],['Options payoff','options'],['Glossary','glossary']];
+TT.options=['Options payoff','See how an options trade pays off at different prices. A teaching model, not live prices.'];
+try{QCP_PAGES.splice(QCP_PAGES.findIndex(p=>p[0]=='glossary'),0,['options','Options payoff','Build an options position and see the payoff','⌁'])}catch(e){}
+PAGES.stub=()=>{const r=decodeURIComponent((location.hash.split('/')[1]||'')).slice(0,40);$('#m').innerHTML=`<div class="pan" style="text-align:center;padding:48px 20px;max-width:620px;margin:20px auto">
+ <div class="tg" style="margin-bottom:10px">Page not found</div><h2 style="margin:0 0 10px;font-size:28px">There’s no page called “${esc(r)}”.</h2>
+ <p class="mu" style="margin:0 0 20px">It may have moved. Search for a stock or page with <b>${/Mac|iPhone|iPad/.test(navigator.platform||'')?'⌘':'Ctrl'} K</b>, or pick a section:</p>
+ <div class="pre" style="justify-content:center"><a class="btn p" href="#/markets">Markets</a><a class="btn" href="#/stocks">Stocks</a><a class="btn" href="#/trade">Paper trade</a><a class="btn" href="#/learn">Academy</a></div></div>`;setTimeout(()=>{const h=document.querySelector("#m .phero");if(h)h.remove()},0)};
+
 if(/^https?:/.test(location.protocol)&&!QLIVE.ok){$('#m').innerHTML=SKEL();setTimeout(()=>{if(!QLIVE.ok)route()},5000)}else route();
