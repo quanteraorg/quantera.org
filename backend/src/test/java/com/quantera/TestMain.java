@@ -531,6 +531,11 @@ public class TestMain {
             && d(l(srev.get("values")).get(0)) == 383e9 && d(l(srev.get("values")).get(1)) == 391e9 && d(l(scap.get("values")).get(1)) == -9.4e9
             && d(l(sfcf.get("values")).get(1)) == 118e9 - 9.4e9 && String.valueOf(sfcf.get("note")).contains("Cash from operations minus capital spending")
             && Boolean.FALSE.equals(m(r.body).get("financial")) && "SEC EDGAR (XBRL company facts)".equals(m(r.body).get("source")));
+        Set<String> aiUsed = new LinkedHashSet<>();
+        Map<String, Object> aiSt = m(Anthropic.runTool("get_financial_statements", Json.obj("symbol", "AAPL"), aiUsed));
+        t("ai: the statements tool gives SEC figures labelled with their period and filing, and records the source for the answer",
+            "SEC EDGAR filings".equals(aiSt.get("source")) && l(aiSt.get("periods")).size() == 2 && "FY2024".equals(m(l(aiSt.get("periods")).get(1)).get("period"))
+            && d(l(m(aiSt.get("lines")).get("Revenue")).get(1)) == 391e9 && aiUsed.contains("SEC filings AAPL (annual)"));
         t("statements: lines a company doesn't report are left out, not shown as zero", l(sa.get("income")).stream().noneMatch(o -> "rnd".equals(m(o).get("key"))));
         t("statements: companies that don't file with the SEC -> 404", get(p, "/api/statements?symbol=7203.T").code == 404);
         Map<String, Object> stg = m(Json.parse("{\"Revenues\":{\"units\":{\"USD\":["
