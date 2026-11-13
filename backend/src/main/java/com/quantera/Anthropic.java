@@ -14,6 +14,7 @@ final class Anthropic {
     static final String SYSTEM = "You are Quantera AI inside a finance education and research app. Explain in plain English for beginners. "
             + "Use the tools for every price, figure or headline and never invent data; if a tool fails or finds nothing, say so. Prices are end-of-day or delayed. "
             + "After each figure, cite its source and date in brackets, for example (SEC 10-K, FY2026), (Yahoo Finance, last 12 months) or (Finnhub, Nov 11). "
+            + "Copy figures exactly as the tools give them (rounding is fine) rather than working out new ones; if you calculate something, say so and show the inputs. "
             + "Prefer get_financial_statements for revenue, profit, cash flow and balance-sheet figures: it comes straight from SEC filings. Say clearly when something is a forecast. "
             + "Keep answers under 180 words. When analysing, use three labelled parts: **Data** (what the tools returned), **Analysis** (what it shows), "
             + "**Interpretation** (what it might mean, noting this is not investment advice). End with helpful links using exactly these tokens: [[asset:SYMBOL]] or [[lesson:ID]] "
@@ -204,6 +205,7 @@ final class Anthropic {
         if (key == null) throw new UpstreamException("The AI is not configured", 503);
         List<Object> msgs = new ArrayList<>(input);
         Set<String> used = new LinkedHashSet<>();
+        List<Object> data = new ArrayList<>(), sources = new ArrayList<>();
         String text = "";
         for (int turn = 0; turn < 5; turn++) {
             String body = Json.write(Json.obj("model", cfg("ANTHROPIC_MODEL", "claude-sonnet-4-6"), "max_tokens", 900, "system", SYSTEM, "tools", TOOLS, "messages", msgs));
@@ -226,11 +228,19 @@ final class Anthropic {
             for (Object b : content) {
                 Map<String, Object> blk = map(b);
                 if (!"tool_use".equals(blk.get("type"))) continue;
-                String out = Json.write(runTool(str(blk.get("name")), map(blk.get("input")), used));
+                Object res = runTool(str(blk.get("name")), map(blk.get("input")), used);
+                data.add(res); Grounding.addLinks(sources, Grounding.links(str(blk.get("name")), map(blk.get("input")), res));
+                String out = Json.write(res);
                 results.add(Json.obj("type", "tool_result", "tool_use_id", str(blk.get("id")), "content", out.length() > 6000 ? out.substring(0, 6000) : out));
             }
             msgs.add(Json.obj("role", "user", "content", results));
         }
-        return Json.obj("text", text.isEmpty() ? "Sorry, I could not produce an answer. Please try again." : text, "used", new ArrayList<>(used));
+        return answer(text, used, data, sources);
+    }
+
+    /** The chat reply: the answer, the tools used, clickable sources, and how many of its figures match the data. */
+    static Map<String, Object> answer(String text, Set<String> used, List<Object> data, List<Object> sources) {
+        if (text.isEmpty()) return Json.obj("text", "Sorry, I could not produce an answer. Please try again.", "used", new ArrayList<>(used), "sources", List.of());
+        return Json.obj("text", text, "used", new ArrayList<>(used), "sources", sources, "check", data.isEmpty() ? null : Grounding.check(text, data));
     }
 }

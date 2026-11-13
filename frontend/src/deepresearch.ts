@@ -2,6 +2,7 @@
 // and a technical rating), a full technical-analysis table, and a written report built only from figures Quantera holds.
 // Replaces the story-explainer lenses on news stories, sits on every stock's Research tab, and has its own page at
 // #/report/SYM. The technicals and analyst figures load without the AI, so the panel stays useful when the AI is offline.
+import { checkLine, type Check } from './grounding';
 
 interface Sig { name: string; value: number | null; signal: 'buy' | 'sell' | 'neutral'; rule: string }
 interface Tech {
@@ -13,7 +14,7 @@ interface Tech {
 interface Analysts { target?: number; low?: number; high?: number; count?: number; rating?: string; strongBuy?: number; buy?: number; hold?: number; sell?: number; strongSell?: number }
 interface Fund { name?: string; price?: number; analysts?: Analysts | null; nextEarnings?: string | null }
 interface Report {
-  symbol: string; name: string; generatedAt: string; provider: string; sources: { what: string; from: string; asOf: string }[]; notAvailable: string[];
+  symbol: string; name: string; generatedAt: string; provider: string; sources: { what: string; from: string; asOf: string }[]; notAvailable: string[]; check?: Check;
   report: { headline: string; summary: string; sections: { title: string; points: string[] }[]; bull: string[]; bear: string[]; risks: string[]; catalysts: string[];
     verdict: { rating: 'Positive' | 'Neutral' | 'Negative'; confidence: string; horizon: string; reasons: string[]; changeMind: string } };
 }
@@ -113,7 +114,7 @@ function reportBody(r: Report): string {
     <div class="qdr-2" style="margin-top:12px"><div><h4 style="margin-top:0">Key risks</h4>${li(p.risks)}</div><div><h4 style="margin-top:0">What to watch</h4>${li(p.catalysts)}</div></div>
     <h4>Outlook: ${esc(p.verdict.rating)} (${esc(p.verdict.confidence.toLowerCase())} confidence)</h4>${li(p.verdict.reasons)}
     ${p.verdict.changeMind ? `<p><b>What would change this view:</b> ${esc(p.verdict.changeMind)}</p>` : ''}
-    <h4>Sources</h4><ul>${r.sources.map(s => `<li>${esc(s.what)}: ${esc(s.from)} · ${esc(day(s.asOf))}</li>`).join('')}</ul>
+    <h4>Sources</h4>${r.check?.figures ? `<div class="qgr" style="margin-bottom:8px">${checkLine(r.check)}</div>` : ''}<ul>${r.sources.map(s => `<li>${esc(s.what)}: ${esc(s.from)} · ${esc(day(s.asOf))}</li>`).join('')}</ul>
     ${r.notAvailable.length ? `<p class="qdr-note">Not available for this report: ${esc(r.notAvailable.join(', '))}.</p>` : ''}
     <p class="qdr-note">Written by AI on ${esc(new Date(r.generatedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }))} from the data listed above, and refreshed at most every 12 hours. AI can misread figures; check the sources before relying on anything. This is general information for learning, not a personal recommendation to buy, sell or hold any security. Quantera is not a registered investment adviser, broker or research analyst. Do your own research and consider speaking to a licensed professional.</p></div>`;
 }

@@ -178,6 +178,15 @@ final class Research {
     }
 
     /** Parse and check the model's JSON; anything malformed is an error rather than a half-shown report. */
+    /** All the report's written text, for checking its figures. */
+    static String prose(Object o) {
+        StringBuilder b = new StringBuilder();
+        if (o instanceof String t) b.append(t).append('\n');
+        else if (o instanceof Map<?, ?> m) { for (Object v : m.values()) b.append(prose(v)); }
+        else if (o instanceof List<?> l) { for (Object v : l) b.append(prose(v)); }
+        return b.toString();
+    }
+
     static Map<String, Object> parse(String text) {
         int a = text.indexOf('{'), b = text.lastIndexOf('}');
         if (a < 0 || b <= a) throw new UpstreamException("The AI returned an unreadable report. Please try again.");
@@ -205,8 +214,9 @@ final class Research {
             String prompt = "Company ticker: " + s + "\nToday's date: " + java.time.LocalDate.now(java.time.ZoneOffset.UTC) + "\n\nDATA:\n" + Json.write(d) + "\n\nWrite the report now as the JSON object described.";
             String text = Anthropic.complete(SYSTEM, prompt, 8000);
             Map<String, Object> co = map(d.get("company"));
+            Map<String, Object> rep = parse(text);
             return Json.obj("symbol", s, "name", co.getOrDefault("name", s), "generatedAt", Instant.now().toString(), "provider", Anthropic.provider(),
-                    "report", parse(text), "sources", sources, "notAvailable", d.getOrDefault("notAvailable", List.of()));
+                    "report", rep, "sources", sources, "check", Grounding.check(prose(rep), d), "notAvailable", d.getOrDefault("notAvailable", List.of()));
         });
     }
 }
