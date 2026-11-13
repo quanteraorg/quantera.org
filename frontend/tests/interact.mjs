@@ -180,6 +180,30 @@ async function flows(browser, size) {
       }
     }
   });
+  // chart extras: indicator search, ADX, Fibonacci extension, named templates
+  if (size === 'desktop') await step('chart extras', async () => {
+    await go(page, 'trade/AAPL'); await page.waitForTimeout(1500);
+    await page.locator('#m .tvbtn', { hasText: 'Indicators' }).first().click(); await page.waitForTimeout(300);
+    await page.fill('.qcs', 'volatility'); await page.waitForTimeout(150);
+    const shown = await page.evaluate(() => [...document.querySelectorAll('#m .tvp button[data-g="in"]')].filter(b => b.style.display !== 'none').map(b => b.dataset.v).sort().join(','));
+    if (shown !== 'atr,bb,kc') fail(W('indicator search'), `"volatility" showed ${shown || 'nothing'}`);
+    await page.fill('.qcs', 'adx'); await page.locator('#m .tvp button[data-v="adx"]').click(); await page.waitForTimeout(300);
+    if (!(await page.evaluate(() => document.querySelector('#m .tvp button[data-v="adx"]')?.classList.contains('on')))) fail(W('ADX'), 'clicking ADX after searching did not switch it on');
+    await page.fill('.qcs', ''); await page.keyboard.press('Escape');
+    const fe = page.locator('#m .tvtool[title^="Fibonacci extension"]').first();
+    if (!(await fe.count())) fail(W('Fibonacci extension'), 'tool missing');
+    else {
+      await fe.scrollIntoViewIfNeeded(); await fe.click(); const cv = page.locator('#m canvas').first(); await cv.scrollIntoViewIfNeeded(); const bb = await cv.boundingBox();
+      for (const [fx, fy] of [[0.3, 0.5], [0.5, 0.25], [0.62, 0.4]]) { await page.mouse.click(bb.x + bb.width * fx, bb.y + Math.min(bb.height, 600) * fy); await page.waitForTimeout(200); }
+      await page.waitForTimeout(900);
+      if (!(await page.evaluate(() => (JSON.parse(localStorage.getItem('q_dr') || '{}').AAPL || []).some(d => d.t === 'fe' && d.a && d.b && d.c)))) fail(W('Fibonacci extension'), 'three clicks did not save an extension');
+    }
+    await page.locator('#m .tvbtn[title="Chart settings"]').first().click(); await page.waitForTimeout(300);
+    await page.fill('.qtpn', 'Test set-up'); await page.click('.qtps'); await page.waitForTimeout(300);
+    const names = await page.evaluate(() => JSON.parse(localStorage.getItem('q_tpls') || '[]').map(t => t.name));
+    if (!names.includes('Test set-up')) fail(W('templates'), `saving a template did not store it (${names.join(', ')})`);
+    await checks(page, errors, W('chart extras'));
+  });
   // paper trade
   await step('paper trade', async () => {
     await go(page, 'trade/AAPL'); await page.waitForTimeout(1500);
@@ -271,6 +295,23 @@ async function phoneTaps(browser) {
   await page.evaluate(() => { location.hash = '#/asset/AAPL'; }); await page.waitForTimeout(2000);
   for (const t of ['Financials', 'Research', 'Overview']) { const b = page.locator('#m button', { hasText: t }).first(); if (await b.count()) { await b.tap().catch(() => {}); await page.waitForTimeout(500); await checks(page, errors, `phone tap tab ${t}`); } }
   const r1 = page.locator('#m .tvbtn', { hasText: /^1Y$/ }).first(); if (await r1.count()) { await r1.tap(); await page.waitForTimeout(300); await checks(page, errors, 'phone tap chart range'); }
+  // touch gestures on the chart: one finger sideways pans it, a vertical swipe still scrolls the page
+  await page.evaluate(() => { location.hash = '#/trade/AAPL'; }); await page.waitForTimeout(2500);
+  const cv = page.locator('#m canvas').first();
+  if (await cv.count()) {
+    await cv.scrollIntoViewIfNeeded(); await page.waitForTimeout(200);
+    const bb = await cv.boundingBox(), cdp = await ctx.newCDPSession(page);
+    const T = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y], id) => ({ x, y, id })) });
+    const cx = bb.x + bb.width / 2, cy = bb.y + Math.min(bb.height, 500) * 0.4;
+    const img0 = (await cv.screenshot()).toString('base64'), y0 = await page.evaluate(() => scrollY);
+    await T('touchStart', [[cx, cy]]); for (let i = 1; i <= 8; i++) await T('touchMove', [[cx + i * 15, cy + i]]); await T('touchEnd', []); await page.waitForTimeout(300);
+    if ((await cv.screenshot()).toString('base64') === img0) fail('phone chart', 'a sideways swipe did not pan the chart');
+    if ((await page.evaluate(() => scrollY)) !== y0) fail('phone chart', 'a sideways swipe on the chart scrolled the page');
+    const y1 = await page.evaluate(() => scrollY);
+    await T('touchStart', [[cx, cy]]); for (let i = 1; i <= 8; i++) await T('touchMove', [[cx, cy - i * 25]]); await T('touchEnd', []); await page.waitForTimeout(500);
+    if ((await page.evaluate(() => scrollY)) === y1) fail('phone chart', 'a vertical swipe on the chart no longer scrolls the page');
+    await checks(page, errors, 'phone chart gestures');
+  }
   await ctx.close();
 }
 

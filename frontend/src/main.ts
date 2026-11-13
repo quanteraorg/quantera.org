@@ -17,6 +17,7 @@ import { initLegal } from './legal';
 import { initStory } from './story';
 import { initUx } from './ux';
 import { initDepth } from './depth';
+import { initCharts } from './charts';
 
 initStates();
 initMotion();
@@ -35,3 +36,4 @@ initLegal();
 initStory();
 initUx();
 initDepth();
+initCharts();
