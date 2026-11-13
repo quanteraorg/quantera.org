@@ -14,6 +14,7 @@ import { initAnalytics } from './analytics';
 import { initEcon } from './econ';
 import { initDeepResearch } from './deepresearch';
 import { initLegal } from './legal';
+import { initStory } from './story';
 
 initStates();
 initMotion();
@@ -29,3 +30,4 @@ initAnalytics();
 initEcon();
 initDeepResearch();
 initLegal();
+initStory();

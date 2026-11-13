@@ -7,8 +7,8 @@
 declare global { interface Window { QPRIV?: () => 'all' | 'essential'; QSTATS?: () => boolean; Sentry?: any; va?: any } }
 
 const CSS = `
-.qskip{position:fixed;left:12px;top:-60px;z-index:200;padding:10px 14px;border-radius:10px;background:var(--ac);color:#111;font-weight:600;text-decoration:none}
-.qskip:focus{top:12px}
+.qskip{position:fixed;left:-9999px;top:12px;z-index:200;padding:10px 14px;border-radius:10px;background:var(--ac);color:#111;font-weight:600;text-decoration:none}
+.qskip:focus{left:12px}
 .qlink{background:none;border:0;padding:0;font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .qagree{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.45;margin:12px 0 0;color:var(--tx)}
 .qagree input{margin:2px 0 0;width:16px;height:16px;flex:none;accent-color:var(--ac)}

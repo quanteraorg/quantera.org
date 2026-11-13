@@ -337,6 +337,10 @@ public class TestMain {
         t("research: GET is refused", get(p, "/api/research?symbol=AAPL").code == 405);
         r = call(p, "POST", "/api/explain", "{\"lens\":\"eli5\",\"title\":\"Chips rally\",\"summary\":\"Shares rose.\",\"symbols\":[\"NVDA\"]}", ip());
         t("Gemini explains a story", r.code == 200 && String.valueOf(m(r.body).get("text")).contains("chips rose"));
+        r = call(p, "POST", "/api/explain", "{\"lens\":\"portfolio\",\"title\":\"Chips rally\",\"summary\":\"Shares rose.\",\"symbols\":[\"NVDA\"],\"holdings\":[\"NVDA 40%\",\"KO 10.5%\",\"<script> 5%\",\"jane@x.com 50%\"]}", ip());
+        t("portfolio lens: explains with holdings; only ticker-and-weight entries are sent", r.code == 200 && String.valueOf(m(r.body).get("text")).contains("chips rose"));
+        r = call(p, "POST", "/api/explain", "{\"lens\":\"portfolio\",\"title\":\"Chips rally\",\"summary\":\"Shares rose.\",\"holdings\":[\"bad\"]}", ip());
+        t("portfolio lens: no valid holdings is a 400", r.code == 400);
         r = call(p, "POST", "/api/explain", "{\"lens\":\"eli5\",\"title\":\"BADKEY\"}", ip());
         t("Gemini invalid key -> clear 503 message", r.code == 503 && r.raw.contains("GEMINI_API_KEY"));
         Anthropic.AI_PROBLEM = null;
