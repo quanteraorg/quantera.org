@@ -1,4 +1,4 @@
-// AI deep research: one panel per company with three verdicts side by side (an AI analyst view, Wall Street's consensus
+// AI deep research: one panel per company with three ratings side by side (an AI outlook, Wall Street's consensus
 // and a technical rating), a full technical-analysis table, and a written report built only from figures Quantera holds.
 // Replaces the story-explainer lenses on news stories, sits on every stock's Research tab, and has its own page at
 // #/report/SYM. The technicals and analyst figures load without the AI, so the panel stays useful when the AI is offline.
@@ -15,7 +15,7 @@ interface Fund { name?: string; price?: number; analysts?: Analysts | null; next
 interface Report {
   symbol: string; name: string; generatedAt: string; provider: string; sources: { what: string; from: string; asOf: string }[]; notAvailable: string[];
   report: { headline: string; summary: string; sections: { title: string; points: string[] }[]; bull: string[]; bear: string[]; risks: string[]; catalysts: string[];
-    verdict: { rating: 'Buy' | 'Hold' | 'Sell'; confidence: string; horizon: string; reasons: string[]; changeMind: string } };
+    verdict: { rating: 'Positive' | 'Neutral' | 'Negative'; confidence: string; horizon: string; reasons: string[]; changeMind: string } };
 }
 
 const CSS = `
@@ -56,7 +56,7 @@ const report = (s: string) => once(rcache, s, async () => {
 
 const num = (v: number | null | undefined, dp = 2) => v == null || !isFinite(v) ? '—' : fmt(v, dp);
 const pc = (v: number | null | undefined) => v == null || !isFinite(v) ? '—' : `${v >= 0 ? '+' : '−'}${fmt(Math.abs(v), 1)}%`;
-const cls = (r: string) => /buy/i.test(r) ? 'buy' : /sell|under/i.test(r) ? 'sell' : 'hold';
+const cls = (r: string) => /buy|positive/i.test(r) ? 'buy' : /sell|under|negative/i.test(r) ? 'sell' : 'hold';
 const arrow = (r: string) => cls(r) === 'buy' ? '▲ ' : cls(r) === 'sell' ? '▼ ' : '● ';
 const day = (iso: string) => { const d = new Date(iso.length === 10 ? iso + 'T00:00:00Z' : iso); return isNaN(+d) ? iso : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); };
 const li = (xs: string[]) => xs.length ? `<ul>${xs.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="mu">Not available.</p>';
@@ -86,11 +86,11 @@ function techCard(t: Tech | null, err?: string): string {
 function aiCard(r: Report | null, state: 'loading' | 'off' | 'error' | 'ok', msg = ''): string {
   if (state === 'ok' && r) {
     const v = r.report.verdict;
-    return `<div class="qdr-card"><span class="qdr-k">AI analyst view · ${esc(v.horizon)}</span><div class="qdr-v ${cls(v.rating)}">${arrow(v.rating)}${esc(v.rating)}</div>
+    return `<div class="qdr-card"><span class="qdr-k">AI outlook · ${esc(v.horizon)}</span><div class="qdr-v ${cls(v.rating)}">${arrow(v.rating)}${esc(v.rating)}</div>
       <div class="qdr-s">Confidence: <b>${esc(v.confidence)}</b>. ${esc(v.reasons[0] || '')}</div><div class="qdr-s">An AI opinion from the figures below, for learning. Not a recommendation to buy or sell; Quantera is not a registered investment adviser or research analyst.</div></div>`;
   }
   const body = state === 'loading' ? 'Reading the filings, ratios, competitors, technicals and news…' : esc(msg);
-  return `<div class="qdr-card"><span class="qdr-k">AI analyst view</span><div class="qdr-v">${state === 'loading' ? '…' : '—'}</div><div class="qdr-s">${body}</div></div>`;
+  return `<div class="qdr-card"><span class="qdr-k">AI outlook</span><div class="qdr-v">${state === 'loading' ? '…' : '—'}</div><div class="qdr-s">${body}</div></div>`;
 }
 
 function techTable(t: Tech): string {
@@ -111,7 +111,7 @@ function reportBody(r: Report): string {
     ${p.sections.map(s => `<h4>${esc(s.title)}</h4>${li(s.points)}`).join('')}
     <div class="qdr-2" style="margin-top:14px"><div><h4 style="margin-top:0">▲ Bull case</h4>${li(p.bull)}</div><div><h4 style="margin-top:0">▼ Bear case</h4>${li(p.bear)}</div></div>
     <div class="qdr-2" style="margin-top:12px"><div><h4 style="margin-top:0">Key risks</h4>${li(p.risks)}</div><div><h4 style="margin-top:0">What to watch</h4>${li(p.catalysts)}</div></div>
-    <h4>Verdict: ${esc(p.verdict.rating)} (${esc(p.verdict.confidence.toLowerCase())} confidence)</h4>${li(p.verdict.reasons)}
+    <h4>Outlook: ${esc(p.verdict.rating)} (${esc(p.verdict.confidence.toLowerCase())} confidence)</h4>${li(p.verdict.reasons)}
     ${p.verdict.changeMind ? `<p><b>What would change this view:</b> ${esc(p.verdict.changeMind)}</p>` : ''}
     <h4>Sources</h4><ul>${r.sources.map(s => `<li>${esc(s.what)}: ${esc(s.from)} · ${esc(day(s.asOf))}</li>`).join('')}</ul>
     ${r.notAvailable.length ? `<p class="qdr-note">Not available for this report: ${esc(r.notAvailable.join(', '))}.</p>` : ''}
@@ -147,7 +147,7 @@ function panel(host: HTMLElement, syms: string[], opts: { title?: string; full?:
   if (host.dataset.qdr === key && host.querySelector('.qdr')) return; // already showing these companies
   host.dataset.qdr = key;
   host.innerHTML = `<div class="qdr"><div class="qdr-h"><h3>${esc(opts.title || 'AI deep research')}</h3><span class="tag">AI</span>${syms.length && !opts.full ? `<a href="#/report/${enc(syms[0])}" id="qdrfull">Full report →</a>` : ''}</div>
-    <p class="qdr-sub">An AI analyst’s Buy / Hold / Sell view, Wall Street’s consensus and the technical picture side by side, then a full report built from SEC filings, ratios, competitors, prices and news. Every input is listed with its source.</p>
+    <p class="qdr-sub">An AI outlook (positive, neutral or negative), Wall Street’s consensus and the technical picture side by side, then a full report built from SEC filings, ratios, competitors, prices and news. Every input is listed with its source.</p>
     ${syms.length > 1 ? `<div class="qdr-tabs" role="tablist">${syms.map((s, i) => `<button role="tab" aria-selected="${i === 0}" class="${i === 0 ? 'on' : ''}" data-s="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}</div>`;
   const q = host.querySelector('.qdr') as HTMLElement;
   if (!syms.length) {
@@ -183,7 +183,7 @@ export function initDeepResearch(): void {
     if (!syms.length) {
       if (host.dataset.qdr === '') return;
       host.dataset.qdr = '';
-      host.innerHTML = `<div class="qdr"><div class="qdr-h"><h3>AI deep research</h3><span class="tag">AI</span></div><p class="qdr-sub">This story doesn’t name a listed company. Research any company: an AI analyst view, Wall Street’s consensus, technicals and a full sourced report.</p>
+      host.innerHTML = `<div class="qdr"><div class="qdr-h"><h3>AI deep research</h3><span class="tag">AI</span></div><p class="qdr-sub">This story doesn’t name a listed company. Research any company: an AI outlook, Wall Street’s consensus, technicals and a full sourced report.</p>
         <div class="qdr-find"><input id="qdrq2" placeholder="Ticker, e.g. AAPL" aria-label="Ticker" maxlength="12"><button class="btn p" id="qdrgo2">Research it</button></div></div>`;
       const go = () => { const s = (host.querySelector('#qdrq2') as HTMLInputElement).value.trim().toUpperCase(); if (/^[A-Z][A-Z0-9.\-^=]{0,11}$/.test(s)) location.hash = '#/report/' + enc(s); };
       (host.querySelector('#qdrgo2') as HTMLButtonElement).onclick = go;
@@ -194,7 +194,7 @@ export function initDeepResearch(): void {
   };
   PAGES.report = (a?: string) => { track('view_report'); reportPage(a && a !== 'report' ? decodeURIComponent(a).toUpperCase().slice(0, 12) : undefined); };
   HUB.report = 'research';
-  TT.report = ['Deep research', 'AI reports with a Buy / Hold / Sell view, analyst consensus and technicals.'];
+  TT.report = ['Deep research', 'AI reports with a positive, neutral or negative outlook, analyst consensus and technicals.'];
   if (!SUBT.research?.some(x => x[1] === 'report')) SUBT.research?.unshift(['Deep research', 'report']);
   // Each stock's Research tab gets the same panel.
   const main = document.getElementById('m');

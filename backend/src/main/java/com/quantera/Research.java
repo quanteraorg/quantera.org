@@ -8,7 +8,7 @@ import static com.quantera.Support.*;
 /**
  * Deep research on one company: a technical picture computed from real daily prices (no AI needed), and an AI-written
  * report built only from the figures Quantera already has (SEC filings, quote, fundamentals, analysts, peers, technicals,
- * headlines). The report ends with a Buy / Hold / Sell view, its confidence and what would change it. Every input is
+ * headlines). The report ends with a 12-month outlook (Positive, Neutral or Negative), its confidence and what would change it. Every input is
  * listed with its source so the reader can check it.
  */
 final class Research {
@@ -111,20 +111,22 @@ final class Research {
 
     // ---------- AI report ----------
 
-    static final Set<String> RATINGS = Set.of("Buy", "Hold", "Sell"), CONF = Set.of("Low", "Medium", "High");
+    /** Older wording a model might still use, mapped to the outlook scale. */
+    static final Map<String, String> OLD = Map.of("Buy", "Positive", "Hold", "Neutral", "Sell", "Negative");
+    static final Set<String> RATINGS = Set.of("Positive", "Neutral", "Negative"), CONF = Set.of("Low", "Medium", "High");
 
     static final String SYSTEM = "You are a careful equity research analyst writing for Quantera, a finance research and education app. "
             + "Use ONLY the figures and facts in the DATA block. Never invent numbers, events, quotes, products or dates; if something is missing, say it is not available. "
             + "After each figure, put its source and date in brackets, e.g. (SEC 10-K, FY2025), (Yahoo Finance, last 12 months), (technicals, daily closes to 2026-11-11). "
             + "Plain English that a beginner can follow, but analytical: compare against competitors and history, explain why each point matters. "
-            + "Give a 12-month view of Buy, Hold or Sell, weighing valuation against peers and history, growth, profitability, financial health, analyst consensus, the technical trend and the risks. "
-            + "Choose Hold when the evidence is mixed or the data is thin, and set confidence to match. Do not predict a specific price. "
+            + "Give a 12-month outlook of Positive, Neutral or Negative (an outlook for the business and shares, not an instruction to buy or sell), weighing valuation against peers and history, growth, profitability, financial health, analyst consensus, the technical trend and the risks. "
+            + "Choose Neutral when the evidence is mixed or the data is thin, and set confidence to match. Do not predict a specific price. "
             + "Reply with ONE JSON object and nothing else, exactly this shape: "
             + "{\"headline\":\"one sentence, at most 20 words\",\"summary\":\"3 to 4 sentences\","
             + "\"sections\":[{\"title\":\"Business\",\"points\":[\"...\"]},{\"title\":\"Growth and profitability\",\"points\":[]},{\"title\":\"Financial health\",\"points\":[]},"
             + "{\"title\":\"Valuation\",\"points\":[]},{\"title\":\"Competition\",\"points\":[]},{\"title\":\"Technical picture\",\"points\":[]},{\"title\":\"Recent news\",\"points\":[]}],"
             + "\"bull\":[\"3 points\"],\"bear\":[\"3 points\"],\"risks\":[\"3 points\"],\"catalysts\":[\"2 to 3 upcoming events or things to watch\"],"
-            + "\"verdict\":{\"rating\":\"Buy|Hold|Sell\",\"confidence\":\"Low|Medium|High\",\"reasons\":[\"3 short reasons\"],\"changeMind\":\"one sentence: what would change this view\"}}. "
+            + "\"verdict\":{\"rating\":\"Positive|Neutral|Negative\",\"confidence\":\"Low|Medium|High\",\"reasons\":[\"3 short reasons\"],\"changeMind\":\"one sentence: what would change this view\"}}. "
             + "Each section has 2 to 4 points of one or two sentences. If a section has no data, give one point saying so.";
 
     private static Object trim(Object o) {
@@ -182,7 +184,7 @@ final class Research {
         Map<String, Object> j;
         try { j = map(Json.parse(text.substring(a, b + 1))); } catch (RuntimeException e) { throw new UpstreamException("The AI returned an unreadable report. Please try again."); }
         Map<String, Object> v = map(j.get("verdict"));
-        String rating = String.valueOf(v.get("rating")).trim(), conf = String.valueOf(v.get("confidence")).trim();
+        String rating = OLD.getOrDefault(String.valueOf(v.get("rating")).trim(), String.valueOf(v.get("rating")).trim()), conf = String.valueOf(v.get("confidence")).trim();
         if (!RATINGS.contains(rating)) throw new UpstreamException("The AI returned an unreadable report. Please try again.");
         List<Object> secs = new ArrayList<>();
         for (Object o : list(j.get("sections"))) { Map<String, Object> x = map(o); String t = str(x.get("title")); List<String> p = strings(x.get("points"), 5); if (t != null && !p.isEmpty()) secs.add(Json.obj("title", t, "points", p)); }

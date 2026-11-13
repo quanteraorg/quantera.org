@@ -322,7 +322,7 @@ public class TestMain {
                 && l(tc.get("signals")).stream().allMatch(x -> m(x).get("rule") != null) && "2026-11-11".equals(tc.get("asOf")));
         t("technicals: too little history is a clear 404", get(p, "/api/technicals?symbol=AAPL").code == 404);
         boolean bad = false; try { Research.parse("{\"verdict\":{\"rating\":\"Moon\"}}"); } catch (RuntimeException e) { bad = true; }
-        t("research: a reply without a valid Buy/Hold/Sell rating is rejected, not shown", bad);
+        t("research: a reply without a valid Positive/Neutral/Negative outlook is rejected, not shown", bad);
         System.setProperty("GEMINI_API_KEY", "gm-test");
         r = get(p, "/api/health");
         t("health: Gemini chosen when its key is set", "gemini".equals(m(r.body).get("aiProvider")));
@@ -331,8 +331,8 @@ public class TestMain {
                 && upstreamCalls.stream().anyMatch(u -> u.startsWith("gemini /gm/v1beta/models/gemini-flash-latest:generateContent key=gm-test schema-ok")));
         r = call(p, "POST", "/api/research", "{\"symbol\":\"AAPL\"}", ip());
         Map<String, Object> rv = m(m(m(r.body).get("report")).get("verdict"));
-        t("research: AI report parsed from the reply, verdict checked, unknown confidence falls back to Low, empty sections dropped, sources listed",
-                r.code == 200 && "Hold".equals(rv.get("rating")) && "Low".equals(rv.get("confidence")) && l(m(m(r.body).get("report")).get("sections")).size() == 1
+        t("research: AI report parsed from the reply, outlook checked (old \"Hold\" wording maps to Neutral), unknown confidence falls back to Low, empty sections dropped, sources listed",
+                r.code == 200 && "Neutral".equals(rv.get("rating")) && "Low".equals(rv.get("confidence")) && l(m(m(r.body).get("report")).get("sections")).size() == 1
                 && !l(m(r.body).get("sources")).isEmpty() && upstreamCalls.contains("gemini research with-data") && !r.raw.contains("gm-test"));
         t("research: GET is refused", get(p, "/api/research?symbol=AAPL").code == 405);
         r = call(p, "POST", "/api/explain", "{\"lens\":\"eli5\",\"title\":\"Chips rally\",\"summary\":\"Shares rose.\",\"symbols\":[\"NVDA\"]}", ip());

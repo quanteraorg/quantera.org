@@ -106,7 +106,7 @@ TERMS = f"""
 <p>Quantera is a free financial research and learning website built and run independently by its founders. Contact us at {CONTACT}.</p>
 <h2 id="advice">Education, not investment advice</h2>
 <p>Quantera is for learning and research. Nothing on it is investment, financial, tax or legal advice, and nothing is a personal recommendation to buy, sell or hold any security. Quantera is not a registered investment adviser, broker-dealer or research analyst, and it does not know your circumstances, goals or risk tolerance.</p>
-<p>Ratings such as an AI analyst view (Buy, Hold or Sell), a technical rating or Wall Street analysts’ consensus are general information produced by formulas, by other people or by AI from public data. They can be wrong and they are not tailored to you. Past performance does not predict future results. Make your own decisions and speak to a licensed professional before investing real money.</p>
+<p>Ratings such as an AI outlook (positive, neutral or negative), a technical rating or Wall Street analysts’ consensus are general information produced by formulas, by other people or by AI from public data. They can be wrong and they are not tailored to you. Past performance does not predict future results. Make your own decisions and speak to a licensed professional before investing real money.</p>
 <h2>Paper money only</h2>
 <p>Trading on Quantera uses virtual money. No real money, securities or crypto change hands, and paper results don’t predict real results.</p>
 <h2 id="ai">AI-generated content</h2>
