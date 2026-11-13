@@ -427,6 +427,18 @@ public class TestMain {
         aiStep.set(0);
         r = call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"user\",\"content\":\"Tell me about Apple\"}]}", ip());
         t("AI runs tool loop and returns text + tools used", r.code == 200 && String.valueOf(m(r.body).get("text")).contains("Apple") && l(m(r.body).get("used")).contains("Quote AAPL"));
+        t("AI reply has clickable sources and a figure check", l(m(r.body).get("sources")).toString().contains("https://finance.yahoo.com/quote/AAPL") && m(r.body).get("check") instanceof Map);
+        {
+            Map<String, Object> data = Json.obj("price", 226.31, "revenue", 394_328_000_000L, "grossMargin", 0.4621, "head", "Shares rose 3.2% on Tuesday");
+            Map<String, Object> ck = Grounding.check("Apple trades at $226.31 (Yahoo Finance). Revenue was $394.3 billion in 2025, gross margin 46.2%, up 3.2% Nov 11. "
+                    + "It has 3 product lines and a 10-K filing; the 52-week range is wide. Profit was $512 billion. [[asset:AAPL]] 14-day RSI.", data);
+            t("grounding: matches rounded price, billions, fractions as % and numbers inside text", d(ck.get("matched")) == 4);
+            t("grounding: flags a figure not in the data, skips years, counts, dates, form names and parameters", d(ck.get("figures")) == 5 && l(ck.get("unmatched")).equals(List.of("$512 billion")));
+            t("grounding: no figures -> nothing to check", d(Grounding.check("Apple makes phones.", data).get("figures")) == 0);
+            t("grounding: SEC filing links come from the statements' periods", Grounding.links("get_financial_statements", Json.obj("symbol", "AAPL"),
+                    Json.obj("periods", List.of(Json.obj("period", "FY2025", "filing", "10-K", "link", "https://www.sec.gov/Archives/x.htm")))).toString().contains("https://www.sec.gov/Archives/x.htm"));
+            t("grounding: news links skip items without a web address", Grounding.links("get_news", Json.obj(), List.of(Json.obj("title", "A", "url", "https://n.test/1"), Json.obj("title", "B"))).size() == 1);
+        }
         t("AI key sent to Anthropic only, with tools", upstreamCalls.stream().anyMatch(u -> u.contains("anthropic key=an-test hasTools=true")) && !r.raw.contains("an-test"));
         t("AI rejects empty messages", call(p, "POST", "/api/ai", "{\"messages\":[]}", ip()).code == 400);
         t("AI rejects oversize message", call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"user\",\"content\":\"" + "x".repeat(3000) + "\"}]}", ip()).code == 400);
