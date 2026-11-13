@@ -116,6 +116,18 @@ async function flows(browser, size) {
       await t.click(); await page.waitForTimeout(700);
       await ok(page.evaluate(() => (document.getElementById('m').innerText || '').length > 200), W(`stock tab ${tab}`), 'tab content is empty');
     }
+    // research depth: earnings, valuation in context and timeline on the Research tab
+    await step('research depth', async () => {
+      await page.locator('#m button', { hasText: /^Research$/ }).first().click(); await page.waitForTimeout(3500);
+      const d = await page.evaluate(() => ({ e: document.querySelectorAll('#qdpe tr').length - 1, v: document.querySelectorAll('#qdpv .vrow').length, t: document.querySelectorAll('#qdpt .ev').length, f: document.querySelectorAll('#qdpt [data-f]').length }));
+      if (d.e < 4) fail(W('research depth'), `the earnings table has ${d.e} rows`);
+      if (d.v < 1) fail(W('research depth'), 'valuation in context shows no multiples');
+      if (d.t < 3) fail(W('research depth'), `the timeline has ${d.t} events`);
+      const f = page.locator('#qdpt [data-f="earn"]').first();
+      if (await f.count()) { await f.click(); await page.waitForTimeout(200); const hidden = await page.evaluate(() => [...document.querySelectorAll('#qdpt .ev')].filter(e => e.style.display !== 'none').every(e => e.dataset.ty === 'earn')); if (!hidden) fail(W('research depth'), 'the Earnings filter on the timeline shows other events too'); }
+      await checks(page, errors, W('research depth'));
+      await page.locator('#m button', { hasText: /^Overview$/ }).first().click(); await page.waitForTimeout(500);
+    });
     const star = page.locator('#m button', { hasText: /Watch/ }).first();
     if (await star.count()) await step('watchlist', async () => {
       const t0 = (await star.textContent()).trim();
