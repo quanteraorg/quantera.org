@@ -87,7 +87,7 @@ function aiCard(r: Report | null, state: 'loading' | 'off' | 'error' | 'ok', msg
   if (state === 'ok' && r) {
     const v = r.report.verdict;
     return `<div class="qdr-card"><span class="qdr-k">AI analyst view · ${esc(v.horizon)}</span><div class="qdr-v ${cls(v.rating)}">${arrow(v.rating)}${esc(v.rating)}</div>
-      <div class="qdr-s">Confidence: <b>${esc(v.confidence)}</b>. ${esc(v.reasons[0] || '')}</div><div class="qdr-s">An AI opinion from the figures below, for learning. Not advice.</div></div>`;
+      <div class="qdr-s">Confidence: <b>${esc(v.confidence)}</b>. ${esc(v.reasons[0] || '')}</div><div class="qdr-s">An AI opinion from the figures below, for learning. Not a recommendation to buy or sell; Quantera is not a registered investment adviser or research analyst.</div></div>`;
   }
   const body = state === 'loading' ? 'Reading the filings, ratios, competitors, technicals and news…' : esc(msg);
   return `<div class="qdr-card"><span class="qdr-k">AI analyst view</span><div class="qdr-v">${state === 'loading' ? '…' : '—'}</div><div class="qdr-s">${body}</div></div>`;
@@ -115,7 +115,7 @@ function reportBody(r: Report): string {
     ${p.verdict.changeMind ? `<p><b>What would change this view:</b> ${esc(p.verdict.changeMind)}</p>` : ''}
     <h4>Sources</h4><ul>${r.sources.map(s => `<li>${esc(s.what)}: ${esc(s.from)} · ${esc(day(s.asOf))}</li>`).join('')}</ul>
     ${r.notAvailable.length ? `<p class="qdr-note">Not available for this report: ${esc(r.notAvailable.join(', '))}.</p>` : ''}
-    <p class="qdr-note">Written by AI on ${esc(new Date(r.generatedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }))} from the data listed above, and refreshed at most every 12 hours. AI can misread figures; check the sources before relying on anything. Education, not investment advice.</p></div>`;
+    <p class="qdr-note">Written by AI on ${esc(new Date(r.generatedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }))} from the data listed above, and refreshed at most every 12 hours. AI can misread figures; check the sources before relying on anything. This is general information for learning, not a personal recommendation to buy, sell or hold any security. Quantera is not a registered investment adviser, broker or research analyst. Do your own research and consider speaking to a licensed professional.</p></div>`;
 }
 
 /** Fill `host` with the deep research panel for one company. */
@@ -147,7 +147,7 @@ function panel(host: HTMLElement, syms: string[], opts: { title?: string; full?:
   if (host.dataset.qdr === key && host.querySelector('.qdr')) return; // already showing these companies
   host.dataset.qdr = key;
   host.innerHTML = `<div class="qdr"><div class="qdr-h"><h3>${esc(opts.title || 'AI deep research')}</h3><span class="tag">AI</span>${syms.length && !opts.full ? `<a href="#/report/${enc(syms[0])}" id="qdrfull">Full report →</a>` : ''}</div>
-    <p class="qdr-sub">An AI analyst’s Buy / Hold / Sell view, Wall Street’s consensus and the technical picture side by side, then a full report built from SEC filings, ratios, competitors, prices and news. Every figure is sourced.</p>
+    <p class="qdr-sub">An AI analyst’s Buy / Hold / Sell view, Wall Street’s consensus and the technical picture side by side, then a full report built from SEC filings, ratios, competitors, prices and news. Every input is listed with its source.</p>
     ${syms.length > 1 ? `<div class="qdr-tabs" role="tablist">${syms.map((s, i) => `<button role="tab" aria-selected="${i === 0}" class="${i === 0 ? 'on' : ''}" data-s="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}</div>`;
   const q = host.querySelector('.qdr') as HTMLElement;
   if (!syms.length) {
