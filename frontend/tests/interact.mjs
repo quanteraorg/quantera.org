@@ -157,8 +157,10 @@ async function flows(browser, size) {
         await tl.scrollIntoViewIfNeeded(); await tl.click(); await cv.scrollIntoViewIfNeeded(); const bb = await cv.boundingBox();
         if (bb) {
           const before = await page.evaluate(() => localStorage.getItem('q_dr') || '');
-          await page.mouse.move(bb.x + bb.width * 0.3, bb.y + bb.height * 0.3); await page.mouse.down();
-          await page.mouse.move(bb.x + bb.width * 0.6, bb.y + bb.height * 0.6, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(400);
+          // draw inside the part of the chart that is on screen (with many indicators the chart is taller than the window)
+          const vh = await page.evaluate(() => innerHeight), top = Math.max(bb.y, 0), bot = Math.min(bb.y + bb.height, vh) - 20;
+          await page.mouse.move(bb.x + bb.width * 0.3, top + (bot - top) * 0.3); await page.mouse.down();
+          await page.mouse.move(bb.x + bb.width * 0.6, top + (bot - top) * 0.6, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(1000); // drawings save 0.5s after the last change
           const after = await page.evaluate(() => localStorage.getItem('q_dr') || '');
           if (after === before) fail(W('drawing'), 'drawing a trend line on the chart did not save a drawing');
           await checks(page, errors, W('drawing'));
