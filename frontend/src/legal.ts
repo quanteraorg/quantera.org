@@ -1,6 +1,5 @@
 // Privacy choices and accessibility basics:
-// - a one-time, non-blocking privacy notice (no cookies, no ads; anonymous statistics and error reports can be turned off)
-// - the same choice in Settings, with links to every policy
+// - a privacy choice in Settings (no cookies, no ads; anonymous statistics and error reports can be turned off), with links to every policy
 // - a "Skip to content" link, keyboard access for click-only links, and text labels for charts drawn on <canvas>
 // The choice itself is read in index.html (window.QPRIV / QSTATS) before analytics or error reporting load.
 
@@ -12,9 +11,6 @@ const CSS = `
 .qlink{background:none;border:0;padding:0;font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .qagree{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.45;margin:12px 0 0;color:var(--tx)}
 .qagree input{margin:2px 0 0;width:16px;height:16px;flex:none;accent-color:var(--ac)}
-.qpn{position:fixed;right:16px;bottom:16px;z-index:60;max-width:380px;padding:14px 16px;border-radius:14px;border:1px solid var(--ln);background:var(--s1);box-shadow:0 12px 40px rgba(0,0,0,.35);font-size:13.5px;line-height:1.5;color:var(--tx)}
-.qpn p{margin:0 0 10px}.qpn .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.qpn .btn{margin:0}
-@media(max-width:800px),(pointer:coarse) and (max-height:500px){.qpn{left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:none}}
 .qpv .opt{display:flex;gap:10px;align-items:flex-start;margin:10px 0;line-height:1.5}.qpv .opt input{margin-top:4px;accent-color:var(--ac)}
 .qpv .links{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13.5px}`;
 
@@ -27,18 +23,6 @@ function choose(v: 'all' | 'essential'): void {
     try { window.Sentry?.close?.(); } catch { /* not loaded */ }
     window.va = () => {}; // Vercel Web Analytics: drop anything queued from now on
   }
-}
-
-function notice(): void {
-  let saved: unknown = null;
-  try { saved = JSON.parse(localStorage.getItem('q_priv') || 'null'); } catch { /* storage blocked */ }
-  if (saved || gpc() || document.getElementById('qpn')) return;
-  const n = document.createElement('div');
-  n.id = 'qpn'; n.className = 'qpn'; n.setAttribute('role', 'region'); n.setAttribute('aria-label', 'Privacy notice');
-  n.innerHTML = `<p><b>No cookies, no ads.</b> Quantera counts anonymous page views and receives error reports so we can improve the site. You can turn these off at any time in Settings.</p>
-    <div class="row"><button class="btn p" data-v="all">OK</button><button class="btn" data-v="essential">Turn off</button><a href="/privacy" style="margin-left:auto">Privacy policy</a></div>`;
-  n.querySelectorAll<HTMLButtonElement>('[data-v]').forEach(b => b.onclick = () => { choose(b.dataset.v as 'all' | 'essential'); n.remove(); });
-  document.body.appendChild(n);
 }
 
 function settingsPanel(): void {
@@ -81,5 +65,6 @@ export function initLegal(): void {
   const run = () => { clearTimeout(t); t = window.setTimeout(() => { settingsPanel(); a11y(document); }, 120); };
   new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
   run();
-  setTimeout(notice, 1500);
+  // No pop-up notice: the site sets no cookies, so it opens straight into the page. The choice lives in Settings
+  // (linked as "Privacy choices" in the footer), and browser privacy signals switch statistics off automatically.
 }

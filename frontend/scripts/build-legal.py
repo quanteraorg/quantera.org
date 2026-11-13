@@ -144,7 +144,7 @@ COOKIES = f"""
 <tr><td>Short-lived page memory (session storage)</td><td>Scroll positions and one-time notices during a visit; cleared when you close the tab</td><td>Yes</td></tr></table>
 <p>None of this is used for advertising or to track you across other websites.</p>
 <h2>Statistics and error reports</h2>
-<p>Vercel Web Analytics counts page views without cookies or storage on your device. Sentry error reports don’t use cookies. Both are optional: turn them off in <a href="/#/settings">Settings</a> or the privacy notice, and they stay off if your browser sends Global Privacy Control or Do Not Track.</p>
+<p>Vercel Web Analytics counts page views without cookies or storage on your device. Sentry error reports don’t use cookies. Both are optional: turn them off in <a href="/#/settings">Settings</a> (or “Privacy choices” at the bottom of any page), and they stay off if your browser sends Global Privacy Control or Do Not Track.</p>
 <h2>Other websites</h2>
 <p>If you choose “Continue with Google”, you go to Google’s own sign-in page, where Google’s cookie policy applies. Links to news publishers and other sites take you to their websites, which have their own policies. Quantera doesn’t embed third-party ads, social media widgets or tracking pixels.</p>
 <h2>How to clear it</h2>
