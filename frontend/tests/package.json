@@ -2,9 +2,11 @@
   "name": "quantera-frontend-tests",
   "private": true,
   "type": "module",
-  "description": "Browser smoke test for frontend/public (page errors, overflow, accessibility). Not part of the deployed site.",
+  "description": "Browser tests for frontend/public: smoke (errors, overflow, accessibility), interact (every button, flows, loading and error states on recorded data) and live (real API check). Not part of the deployed site.",
   "scripts": {
     "smoke": "node smoke.mjs",
+    "interact": "node interact.mjs",
+    "live": "node live-api.mjs",
     "syntax": "node -e \"new Function(require('fs').readFileSync('../public/app.js','utf8'))\""
   },
   "devDependencies": {
