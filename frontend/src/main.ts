@@ -18,6 +18,7 @@ import { initStory } from './story';
 import { initUx } from './ux';
 import { initDepth } from './depth';
 import { initCharts } from './charts';
+import { initGrounding } from './grounding';
 
 initStates();
 initMotion();
@@ -37,3 +38,4 @@ initStory();
 initUx();
 initDepth();
 initCharts();
+initGrounding();

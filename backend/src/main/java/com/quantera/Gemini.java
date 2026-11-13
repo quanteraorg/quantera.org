@@ -73,6 +73,7 @@ final class Gemini {
         List<Object> contents = new ArrayList<>();
         for (Map<String, Object> m : input) contents.add(Json.obj("role", "assistant".equals(m.get("role")) ? "model" : "user", "parts", List.of(Json.obj("text", m.get("content")))));
         Set<String> used = new LinkedHashSet<>();
+        List<Object> data = new ArrayList<>(), sources = new ArrayList<>();
         String text = "";
         for (int turn = 0; turn < 5; turn++) {
             List<Object> ps = parts(call(Json.obj("systemInstruction", Json.obj("parts", List.of(Json.obj("text", Anthropic.SYSTEM))), "contents", contents,
@@ -86,11 +87,12 @@ final class Gemini {
             for (Object c : calls) {
                 Map<String, Object> fc = map(c);
                 Object out = Anthropic.runTool(str(fc.get("name")), map(fc.get("args")), used);
+                data.add(out); Grounding.addLinks(sources, Grounding.links(str(fc.get("name")), map(fc.get("args")), out));
                 String js = Json.write(out);
                 results.add(Json.obj("functionResponse", Json.obj("name", fc.get("name"), "response", Json.obj("result", js.length() > 6000 ? js.substring(0, 6000) : js))));
             }
             contents.add(Json.obj("role", "user", "parts", results));
         }
-        return Json.obj("text", text.isEmpty() ? "Sorry, I could not produce an answer. Please try again." : text, "used", new ArrayList<>(used));
+        return Anthropic.answer(text, used, data, sources);
     }
 }
