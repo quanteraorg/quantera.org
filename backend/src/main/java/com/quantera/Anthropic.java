@@ -136,7 +136,12 @@ final class Anthropic {
             "sides", "Give two sides: **Bull case** (2 to 3 bullets) and **Bear case** (2 to 3 bullets), then one line on what would settle the debate.",
             "five_w", "Answer the 5 W's, one line each: **Who**, **What**, **When**, **Where**, **Why**. Add **How** only if the story says.",
             "numbers", "List the key numbers in the story and what each one means for a beginner. If the story has no numbers, say so in one line.",
-            "questions", "Give 3 questions a smart investor would ask next, each with a one-line hint about where to find the answer.");
+            "questions", "Give 3 questions a smart investor would ask next, each with a one-line hint about where to find the answer.",
+            "portfolio", "The reader wants to know how this story could affect their practice portfolio, listed under \"Reader's practice portfolio\". "
+                    + "Write four short sections with these bold headings. **Directly affected**: holdings named in the story, what the news means for each and its share of the portfolio. "
+                    + "**Indirectly affected**: holdings that are competitors, in the same industry, or in sectors this kind of news usually moves; explain each link in one line and say plainly that it is a typical pattern, not a certainty. "
+                    + "**Probably not affected**: one line. **What to watch**: 2 bullets. Never predict prices or tell the reader to buy or sell. At most 220 words.");
+    static final java.util.regex.Pattern HOLDING = java.util.regex.Pattern.compile("^[A-Z0-9][A-Z0-9.\\-^=]{0,11} \\d{1,3}(\\.\\d)?%$");
     static final String EXPLAIN_SYSTEM = "You explain financial news for Quantera, an education app for beginner investors. Use only the headline, summary, companies and price moves you are given: "
             + "never invent facts, figures, quotes or events, and if the story does not say something, say it is not in the story. Plain English, short sentences. "
             + "Format with '- ' bullets and **bold** labels only. Keep it under 170 words. This is education, not investment advice.";
@@ -157,14 +162,19 @@ final class Anthropic {
         if (!LENSES.containsKey(lens) || title.isEmpty() || title.length() > 300 || summary.length() > 2000) throw new UpstreamException("Invalid request", 400);
         List<String> syms = new ArrayList<>();
         for (Object o : list(b.get("symbols"))) { String s = String.valueOf(o).toUpperCase(); if (SYM.matcher(s).matches() && syms.size() < 8) syms.add(s); }
-        return Providers.CACHE.get("x" + provider() + lens + "|" + title.hashCode() + "|" + summary.hashCode() + "|" + syms, 6 * 3600_000L, () -> {
+        List<String> holdings = new ArrayList<>(); // "TICKER 12.5%" only: tickers and weights, nothing about the person
+        for (Object o : list(b.get("holdings"))) { String h = String.valueOf(o).trim().toUpperCase(); if (HOLDING.matcher(h).matches() && holdings.size() < 15) holdings.add(h); }
+        if (lens.equals("portfolio") && holdings.isEmpty()) throw new UpstreamException("Add holdings to explain portfolio impact", 400);
+        return Providers.CACHE.get("x" + provider() + lens + "|" + title.hashCode() + "|" + summary.hashCode() + "|" + syms + "|" + holdings, 6 * 3600_000L, () -> {
             StringBuilder moves = new StringBuilder();
             for (String s : syms) {
                 try { Map<String, Object> q = Providers.quote(s, 5 * 60_000L); Double c = num(q.get("changePct")); if (c != null) moves.append(s).append(' ').append(c >= 0 ? "+" : "").append(String.format("%.2f", c)).append("% today; "); }
                 catch (RuntimeException e) { moves.append(s).append("; "); }
             }
             String prompt = "Headline: " + title + "\nSummary: " + (summary.isEmpty() ? "(none)" : summary) + "\nCompanies tagged: " + (syms.isEmpty() ? "none" : String.join(", ", syms))
-                    + "\nToday's price moves: " + (moves.length() == 0 ? "not available" : moves) + "\n\nTask: " + LENSES.get(lens);
+                    + "\nToday's price moves: " + (moves.length() == 0 ? "not available" : moves)
+                    + (holdings.isEmpty() ? "" : "\nReader's practice portfolio (ticker and share of the portfolio): " + String.join(", ", holdings))
+                    + "\n\nTask: " + LENSES.get(lens);
             return Json.obj("lens", lens, "text", useGemini() ? Gemini.complete(EXPLAIN_SYSTEM, prompt, 600) : complete(EXPLAIN_SYSTEM, prompt, 450));
         });
     }
