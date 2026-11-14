@@ -19,6 +19,7 @@ import { initUx } from './ux';
 import { initDepth } from './depth';
 import { initCharts } from './charts';
 import { initGrounding } from './grounding';
+import { initUi } from './ui';
 
 initStates();
 initMotion();
@@ -39,3 +40,4 @@ initUx();
 initDepth();
 initCharts();
 initGrounding();
+initUi();
