@@ -53,6 +53,20 @@ async function clickEverything(browser, size) {
     await go(page, route);
     const where = `${size} #/${route}`;
     await checks(page, errors, where);
+    // one design system: page title at the shared size, buttons and chips on one line at the shared heights
+    const ds = await page.evaluate(() => {
+      const m = document.getElementById('m'), out = [];
+      const t = m.querySelector('h1') || m.querySelector('h2.qpt');
+      if (t && !m.querySelector('.hm') && Math.abs(parseFloat(getComputedStyle(t).fontSize) - parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--q-title') || '0')) > 0.5 && window.__qTitle && Math.abs(parseFloat(getComputedStyle(t).fontSize) - window.__qTitle) > 0.5) out.push(`title is ${getComputedStyle(t).fontSize}`);
+      window.__qTitle ||= t && !m.querySelector('.hm') ? parseFloat(getComputedStyle(t).fontSize) : 0;
+      for (const b of m.querySelectorAll('.btn, .chip')) {
+        if (!b.offsetParent || b.closest('.addrow, .tvp, .tvbar')) continue;
+        const h = b.getBoundingClientRect().height, max = b.classList.contains('chip') ? 40 : 50;
+        if (h > max) { out.push(`"${b.textContent.trim().slice(0, 24)}" is ${Math.round(h)}px tall (wrapped or stretched)`); if (out.length > 3) break; }
+      }
+      return out;
+    });
+    for (const d of ds) fail(where, d);
     const n = await page.evaluate(sel => {
       const els = [...document.querySelectorAll('#m button, #m [role=tab], #sub a')].filter(e => e.offsetParent && !e.disabled);
       els.forEach((e, i) => e.setAttribute('data-qt', String(i)));
