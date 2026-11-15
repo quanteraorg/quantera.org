@@ -167,6 +167,7 @@ final class Anthropic {
         for (Object o : list(b.get("holdings"))) { String h = String.valueOf(o).trim().toUpperCase(); if (HOLDING.matcher(h).matches() && holdings.size() < 15) holdings.add(h); }
         if (lens.equals("portfolio") && holdings.isEmpty()) throw new UpstreamException("Add holdings to explain portfolio impact", 400);
         return Providers.CACHE.get("x" + provider() + lens + "|" + title.hashCode() + "|" + summary.hashCode() + "|" + syms + "|" + holdings, 6 * 3600_000L, () -> {
+            AiBudget.take();
             StringBuilder moves = new StringBuilder();
             for (String s : syms) {
                 try { Map<String, Object> q = Providers.quote(s, 5 * 60_000L); Double c = num(q.get("changePct")); if (c != null) moves.append(s).append(' ').append(c >= 0 ? "+" : "").append(String.format("%.2f", c)).append("% today; "); }
@@ -203,6 +204,7 @@ final class Anthropic {
     static Map<String, Object> chat(List<Map<String, Object>> input) {
         String key = cfg("ANTHROPIC_API_KEY", null);
         if (key == null) throw new UpstreamException("The AI is not configured", 503);
+        AiBudget.take();
         List<Object> msgs = new ArrayList<>(input);
         Set<String> used = new LinkedHashSet<>();
         List<Object> data = new ArrayList<>(), sources = new ArrayList<>();

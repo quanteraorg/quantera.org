@@ -208,6 +208,7 @@ final class Research {
         if (!SYM.matcher(s).matches()) throw new UpstreamException("Bad symbol", 400);
         if (!Anthropic.useGemini() && cfg("ANTHROPIC_API_KEY", null) == null) throw new UpstreamException("The AI is not configured", 503);
         return Providers.CACHE.get("rep" + Anthropic.provider() + s, 12 * 3600_000L, () -> {
+            AiBudget.take();
             List<Object> sources = new ArrayList<>();
             Map<String, Object> d = pack(s, sources);
             if (!d.containsKey("quote") && !d.containsKey("keyRatios") && !d.containsKey("financialStatements")) throw new UpstreamException("There isn't enough data on " + s + " for a report", 404);

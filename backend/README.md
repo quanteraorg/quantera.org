@@ -40,6 +40,10 @@ Alpha Vantage: Finnhub serves quotes, movers, company profiles, search, calendar
 ## AI provider (Gemini free tier now, Claude later)
 Set GEMINI_API_KEY (free from aistudio.google.com) to run the AI chat and story explanations on Gemini. To move to Claude,
 set a working ANTHROPIC_API_KEY and AI_PROVIDER=anthropic (or remove GEMINI_API_KEY). /api/health reports "aiProvider".
+AI_DAILY_LIMIT caps AI requests across the whole server per UTC day (default 400; 0 turns AI off), so traffic or abuse
+can never run up an unbounded bill. Also set a budget alert for the key in Google Cloud.
+Rate limits apply per visitor (first X-Forwarded-For entry, set by Vercel) and, with a ceiling ten times higher, per
+connecting address (CF-Connecting-IP), which a client calling the API server directly cannot fake.
 
 ## Global markets (Yahoo Finance, no key)
 Index levels (S&P 500, FTSE 100, Nikkei 225…), every country's stocks and ETFs (by sector, paged), non-US quotes, charts, intraday bars,
