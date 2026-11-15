@@ -230,6 +230,7 @@ function render(host: HTMLElement, a: Story, ents: Ent[]): void {
     <h4 style="margin-top:22px"><span class="n" style="background:rgba(var(--acc),.14)">→</span>Go deeper</h4>
     <div class="qnx-opts">
       <div class="qnx-opt" data-o="dr"><b>🔍 AI deep research</b><p>${syms.length ? `On ${syms.map(esc).join(', ')}: an AI outlook (positive, neutral or negative), Wall Street’s consensus, the technical picture and a full sourced report.` : 'Pick any company for an AI outlook, Wall Street’s consensus, technicals and a full sourced report.'}</p><button class="btn p" data-o="dr">Run deep research</button></div>
+      ${syms.length >= 2 && a.publishedAt ? `<div class="qnx-opt" data-o="rx"><b>⚖️ Why did these stocks move differently?</b><p>Same news, different reactions: how much of each move was the whole market, how unusual it was for each stock, and what usually explains the gap (size, volatility, who the news names).</p><button class="btn p" data-o="rx">Compare the reactions</button></div>` : ''}
       <div class="qnx-opt" data-o="pf"><b>💼 How does this affect my portfolio?</b><p>Checks your practice portfolio and watchlist against this story: what’s directly or indirectly exposed, your share at stake and today’s change.</p><button class="btn p" data-o="pf">Analyse my portfolio</button></div>
     </div><div id="qnxrun" style="margin-top:14px"></div></div>`;
   breakdown(host.querySelector('#qnxx') as HTMLElement, a, ents);
@@ -240,6 +241,7 @@ function render(host: HTMLElement, a: Story, ents: Ent[]): void {
     run.innerHTML = '<div id="qnxinner"></div>';
     const inner = run.querySelector('#qnxinner') as HTMLElement;
     if (b.dataset.o === 'dr') { track('story_deep_research'); (window as any).qDeep?.(inner, ents); }
+    else if (b.dataset.o === 'rx') { track('story_reaction'); (window as any).qReaction?.(inner, { symbols: syms, at: a.publishedAt, headline: a.title }); }
     else portfolio(inner, a, ents);
     run.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   });
