@@ -26,7 +26,7 @@ import { initHome } from './home';
 import { initChallenge } from './challenge';
 import { initWatchlists } from './watchlists';
 import { initStatex } from './statex';
-import { initKes } from './mascot';
+import { initKes } from './feedback';
 
 initStates();
 initMotion();
