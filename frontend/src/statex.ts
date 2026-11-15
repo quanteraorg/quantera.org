@@ -58,6 +58,8 @@ async function page(sym?: string): Promise<void> {
   let st: St;
   try { const { ok, b } = await jf(`/api/statements?symbol=${s}`); if (!ok || !b?.annual || b.financial) throw new Error(b?.error || 'no statements'); st = b; }
   catch (e) { box.innerHTML = `<p class="mu">${esc(s)}’s statements can’t be loaded right now (${esc((e as Error).message)}). Pick another company above.</p>`; return; }
+  // SEC lists names in capitals ("MICROSOFT CORP"); show them the way people write them
+  if (st.name && st.name === st.name.toUpperCase()) st.name = st.name.toLowerCase().replace(/\b([a-z])/g, c => c.toUpperCase()).replace(/\b(Inc|Corp|Co|Ltd)\b\.?/g, '$1.').replace(/\.\./g, '.');
   const q = questions(st);
   if (!q) { box.innerHTML = `<p class="mu">${esc(st.name)}’s filings don’t have five complete years of these figures. Pick another company above.</p>`; return; }
   box.innerHTML = `<div class="ev"><small>The company</small><b>${esc(st.name)} (${esc(st.symbol)})</b><p>Annual figures, ${esc(q.yrs[0])} to ${esc(q.yrs[q.yrs.length - 1])}, from its 10-K filings with the SEC.</p></div>`
