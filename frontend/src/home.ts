@@ -7,8 +7,8 @@
 import { library } from './library';
 
 const CSS = `
-.qh-eye{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 16px;margin:0 0 22px;text-transform:uppercase}.qh-eye .wm{font:300 clamp(34px,4.6vw,64px)/1 Fraunces,Georgia,serif;letter-spacing:.16em;color:var(--tx)}.qh-eye .rs{font-size:clamp(12.5px,1.15vw,16px);letter-spacing:.42em;font-weight:600;color:var(--ac,#c8a96a)}
-.hm .qh-h1{font:300 clamp(46px,8.2vw,112px)/.98 Fraunces,Georgia,serif!important;letter-spacing:-.03em!important;margin:0 0 24px!important;color:var(--tx)}
+.qh-brand{display:flex;align-items:center;gap:clamp(14px,1.6vw,22px);margin:0 0 clamp(26px,3vw,40px)}.qh-brand .mk{width:clamp(46px,4.4vw,64px);height:auto;flex:none;opacity:.95}.qh-brand .lk{display:inline-flex;flex-direction:column;gap:clamp(7px,.7vw,10px)}.qh-brand .wm{font:300 clamp(38px,5.2vw,74px)/.9 Fraunces,Georgia,serif;letter-spacing:.14em;margin-right:-.14em;text-transform:uppercase;color:var(--tx)}.qh-brand .rs{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:clamp(10.5px,.95vw,13.5px);font-weight:600;color:var(--ac,#c8a96a);text-transform:uppercase}.qh-brand .rs::before,.qh-brand .rs::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(200,169,106,.6))}.qh-brand .rs::after{background:linear-gradient(90deg,rgba(200,169,106,.6),transparent)}.qh-brand .rs span{letter-spacing:.5em;margin-right:-.5em}
+.hm .qh-h1{font:300 clamp(42px,7vw,96px)/1 Fraunces,Georgia,serif!important;letter-spacing:-.03em!important;margin:0 0 24px!important;color:var(--tx)}
 .hm .qh-h1 em{font-style:italic;color:var(--ac,#c8a96a)}
 .qh-alt{display:inline-block;margin-top:14px;font-size:14px;color:var(--mu)}.qh-alt:hover{color:var(--tx)}
 .qh-desk{margin:8px 0 8px}.qh-desk>h2{margin:0}.qh-desk>.sub{margin:4px 0 16px}
@@ -37,7 +37,7 @@ function hero(open: HTMLElement): void {
   const inner = open.querySelector(':scope > div'); if (!inner || inner.hasAttribute('data-qh')) return;
   inner.setAttribute('data-qh', '1');
   const facts = inner.querySelector('.hm-facts')?.outerHTML || '';
-  inner.innerHTML = `<p class="qh-eye" aria-label="Quantera Research"><span class="wm">Quantera</span><span class="rs">Research</span></p>
+  inner.innerHTML = `<div class="qh-brand" role="img" aria-label="Quantera Research"><img class="mk" src="/logo-mark.png" alt="" width="64" height="64"><span class="lk"><span class="wm">Quantera</span><span class="rs"><span>Research</span></span></span></div>
     <h1 class="qh-h1">Same news.<br><em>Different world.</em></h1>
     <p class="lead">Student-led, independent research into how companies and markets react to the news, and free tools to check it yourself. Every figure is sourced and every method is shown.</p>
     <div class="cta"><a class="btn p" href="#/research">Read the research</a><a class="btn" href="#/insights">Compare reactions to the news</a></div>
