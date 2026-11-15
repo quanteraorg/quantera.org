@@ -24,6 +24,7 @@ import { initReaction } from './reaction';
 import { initLibrary } from './library';
 import { initHome } from './home';
 import { initChallenge } from './challenge';
+import { initWatchlists } from './watchlists';
 
 initStates();
 initMotion();
@@ -48,4 +49,5 @@ initReaction();
 initLibrary();
 initHome();
 initChallenge();
+initWatchlists();
 initUi();
