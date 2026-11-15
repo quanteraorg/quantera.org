@@ -11,6 +11,7 @@ const CSS = `
 #m h3:not(.hm-mv):not([class*="tv"]){font-size:var(--q-fs-h3);font-weight:600;line-height:1.3;letter-spacing:0}
 #m .body h3,#m .lesson h3{font-size:19px}
 #m .hm-mv h3{font-size:12.5px}
+#m h1.k[data-sp] span{margin-right:0}
 /* buttons: one height per size, never wrapping onto two lines */
 #m .btn{min-height:var(--q-ctl);padding:0 15px;font-size:var(--q-fs-ctl);line-height:1.2;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;vertical-align:middle;box-sizing:border-box}
 #m .sc.hx .cta .btn,#m .hm .cta .btn,#m .btn.lg{min-height:var(--q-ctl-lg);padding:0 22px;font-size:15px}
@@ -27,6 +28,14 @@ const CSS = `
 export function initUi(): void {
   const put = () => { document.getElementById('qui-css')?.remove(); document.head.insertAdjacentHTML('beforeend', `<style id="qui-css">${CSS}</style>`); };
   put();
+  // page headers are drawn one word per span for an entrance animation, with no spaces between them, so screen
+  // readers and copy-paste got "WhobuildsQuanteraandwhy.". Put real spaces back (the CSS gap is removed to match).
+  const space = () => document.querySelectorAll<HTMLElement>('#m h1.k:not([data-sp])').forEach(h => {
+    h.setAttribute('data-sp', '1');
+    [...h.children].slice(0, -1).forEach(sp => sp.after(document.createTextNode(' ')));
+  });
+  const mm = document.getElementById('m');
+  if (mm) new MutationObserver(space).observe(mm, { childList: true, subtree: true });
   // pages without an h1 (stock, lesson) use their first h2 as the title: give it the shared title style
   const main = document.getElementById('m');
   const title = () => { if (!main || main.querySelector('h1')) return; const h = main.querySelector('h2'); if (h && !h.classList.contains('qpt') && h.getBoundingClientRect().top - main.getBoundingClientRect().top < 320) h.classList.add('qpt'); };

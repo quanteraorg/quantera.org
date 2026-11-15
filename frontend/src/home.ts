@@ -90,9 +90,11 @@ function home(): void {
 }
 
 // ---------- About ----------
+// The router replaces each page's first h2 (and the paragraph after it) with its own page header; the empty h2
+// first takes that place so the article's own headings stay.
 function about(): void {
   const m = document.getElementById('m'); if (!m) return;
-  m.innerHTML = `<article class="qab"><h1 class="qpt">About Quantera Research</h1>
+  m.innerHTML = `<h2 hidden aria-hidden="true"></h2><article class="qab">
     <p class="lede">Quantera Research is a student-led financial research, education and technology initiative. We study how companies and markets react to the news, publish what we find with every source shown, and build free tools so anyone can check the work.</p>
     <h2>Why we started</h2>
     <p>Financial news tells you what happened. It rarely explains why the same story moves one company 5% and another 25%, how unusual a move really was, or what the numbers in a company’s filings actually say. The tools that join all of this up are built for professionals and cost thousands a year, and much of what is free is scattered, full of jargon or unsourced.</p>
@@ -163,6 +165,7 @@ function setMeta(): void {
 
 export function initHome(): void {
   document.head.insertAdjacentHTML('beforeend', `<style id="qh-css">${CSS}</style>`);
+  (TT as Record<string, [string, string]>).about = ['About', 'Quantera Research: who we are and how we work.']; // the router draws this as the page header
   PAGES.about = () => { track('view_about'); about(); };
   const main = document.getElementById('m');
   if (main) { let t = 0; new MutationObserver(() => { clearTimeout(t); t = window.setTimeout(home, 20); }).observe(main, { childList: true }); }
