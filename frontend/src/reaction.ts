@@ -133,6 +133,32 @@ function scatter(): string {
     <p class="qrx-note">Each dot is one company in one of your comparisons (green: reacted up, red: down). Saved on this device only. <button class="btn" id="qinclr" style="margin-left:6px">Clear</button></p>${corr}`;
 }
 
+// ---------- Quantera's own dataset, collected by the server (backend Tracker.java) ----------
+interface Bucket { name: string; range: string; n: number; medianSigmas: number | null; medianAbnormal: number | null; shareOver2: number | null }
+interface Trk { rows: number; measured: number; events: number; from?: string; to?: string; buckets: Bucket[]; rankCorrelation: number | null; method: string; caveat: string }
+async function tracker(box: HTMLElement): Promise<void> {
+  const head = '<h3 style="margin-top:0">Reaction tracker: do smaller companies react more?</h3>';
+  let t: Trk;
+  try { const r = await fetch('/api/reaction/tracker'); if (!r.ok) throw new Error(); t = await r.json(); }
+  catch { box.innerHTML = head + '<p class="mu" style="margin:0">The tracker’s data isn’t available right now. Please check back later.</p>'; return; }
+  const day = (d?: string) => d ? new Date(d + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  if (t.measured < 10) {
+    box.innerHTML = head + `<p style="margin:0 0 8px">Quantera now measures, automatically, how every company reacts to news stories that name two or more of them, and stores the results as its own research dataset. ${t.measured ? `So far: <b>${t.measured} companies across ${t.events} stories</b>.` : 'The first stories are being measured now.'} Results by company size appear here once there are at least 10 measurements.</p><p class="qrx-note">${esc(t.method)}</p>`;
+    return;
+  }
+  const max = Math.max(1, ...t.buckets.map(b => b.medianSigmas || 0));
+  const bars = t.buckets.map(b => `<div class="qrx-b"><div class="nm"><b>${esc(b.name)}</b><small>${esc(b.range)} · ${b.n} measured</small></div>
+    <div class="qrx-trk" role="img" aria-label="${esc(b.name)} companies: median reaction ${b.medianSigmas ?? '—'} times their normal day"><div class="qrx-seg up" style="left:0;width:${b.medianSigmas ? (b.medianSigmas / max) * 100 : 0}%;top:7px"></div></div>
+    <div class="val">${b.medianSigmas != null ? fmt(b.medianSigmas, 1) + '×' : '—'}<small>median vs normal day</small></div></div>`).join('');
+  const rho = t.rankCorrelation;
+  const read = rho == null ? '' : `<p style="margin:12px 0 0">Across ${t.measured} measurements, the rank correlation between company size and reaction strength is <b>${fmt(rho, 2)}</b> ${rho <= -0.2 ? '(smaller companies have tended to react more)' : rho >= 0.2 ? '(larger companies have tended to react more)' : '(no clear relationship so far)'}.</p>`;
+  box.innerHTML = head + `<p class="mu" style="margin:0 0 12px">Quantera’s own dataset: <b>${t.measured} companies across ${t.events} news stories</b>, ${esc(day(t.from))} to ${esc(day(t.to))}, measured automatically. Bars show how big the company-specific reaction was compared with each company’s normal day.</p>
+    <div class="qrx-bars" style="margin-bottom:6px">${bars}</div>
+    <div class="ov"><table><tr><th>Size</th><th class="r">Companies</th><th class="r">Median reaction (× normal day)</th><th class="r">Median company-specific move</th><th class="r">Reactions over 2× normal</th></tr>
+    ${t.buckets.map(b => `<tr><td><b>${esc(b.name)}</b> <small class="mu">${esc(b.range)}</small></td><td class="r">${b.n}</td><td class="r">${b.medianSigmas != null ? fmt(b.medianSigmas, 2) + '×' : '—'}</td><td class="r">${b.medianAbnormal != null ? fmt(b.medianAbnormal, 2) + '%' : '—'}</td><td class="r">${b.shareOver2 != null ? fmt(b.shareOver2, 0) + '%' : '—'}</td></tr>`).join('')}</table></div>
+    ${read}<p class="qrx-note"><b>How it’s collected.</b> ${esc(t.method)}</p><p class="qrx-note"><b>What it can’t tell you.</b> ${esc(t.caveat)}</p>`;
+}
+
 // a real, documented event to start from: Nvidia's Q2 FY2027 results, released after the close on 26 Aug 2026
 const PRESETS: { label: string; ask: Ask }[] = [
   { label: 'Nvidia results, 26 Aug 2026: NVDA vs AMD, SMCI, AVGO', ask: { symbols: ['NVDA', 'AMD', 'SMCI', 'AVGO'], at: '2026-08-26T21:00:00Z', headline: 'Nvidia reports Q2 FY2027 results' } },
@@ -150,7 +176,8 @@ async function insights(): Promise<void> {
       <div class="qin-pre">${PRESETS.map((p, i) => `<button class="chip" data-p="${i}">${esc(p.label)}</button>`).join('')}</div>
       <div id="qinout" style="margin-top:18px"></div></div>
     <div class="pan"><h3 style="margin-top:0">Today’s stories that moved more than one company</h3><p class="mu" style="margin:0">Pick one to compare how each company reacted.</p><div class="qin-ev" id="qinev"><div class="qrx-sk" style="height:70px"></div></div></div>
-    <div class="pan"><h3 style="margin-top:0">Size and reaction</h3><p class="mu" style="margin:0 0 10px">Do smaller companies react more to the same news? Every comparison you run adds to this picture.</p><div id="qinsc">${scatter()}</div></div>
+    <div class="pan" id="qtrk"><h3 style="margin-top:0">Reaction tracker: do smaller companies react more?</h3><div class="qrx-sk" style="height:120px"></div></div>
+    <div class="pan"><h3 style="margin-top:0">Your comparisons</h3><p class="mu" style="margin:0 0 10px">Every comparison you run adds a dot here (saved on this device only).</p><div id="qinsc">${scatter()}</div></div>
     <div class="pan"><h3 style="margin-top:0">Method and limits</h3><p class="qrx-note" style="margin-top:0">Daily closing prices only, so news during the trading day is measured over the whole day. The market part uses each stock’s beta against the S&P 500 from the 120 trading days before the news. “Normal day” is the usual size of the stock’s company-specific moves over the same period. Reasons marked <b>Measured</b> are calculations; reasons marked <b>Typical pattern</b> are well-documented tendencies that may not apply to a particular event. Other news on the same day can move a stock, so none of this proves cause. Education, not investment advice. <a href="#/lesson/capm">Lesson: beta and the market</a></p></div>`;
   const out = m.querySelector('#qinout') as HTMLElement, S = m.querySelector('#qins') as HTMLInputElement, D = m.querySelector('#qind') as HTMLInputElement, Hd = m.querySelector('#qinh') as HTMLInputElement;
   D.max = new Date().toISOString().slice(0, 10);
@@ -171,6 +198,7 @@ async function insights(): Promise<void> {
   m.querySelectorAll<HTMLButtonElement>('[data-p]').forEach(b => b.onclick = () => go(PRESETS[+b.dataset.p!].ask));
   const pre = /^#\/insights\/(.+)$/.exec(location.hash);
   if (pre) { const [s, at] = decodeURIComponent(pre[1]).split('@'); if (s && at) { const syms = s.split(','), p = PRESETS.find(x => x.ask.at === at && x.ask.symbols.join(',') === syms.join(',')); go(p ? p.ask : { symbols: syms, at }); } }
+  tracker(m.querySelector('#qtrk') as HTMLElement);
   // real stories from the news feed that tag two or more companies
   const ev = m.querySelector('#qinev') as HTMLElement;
   try {

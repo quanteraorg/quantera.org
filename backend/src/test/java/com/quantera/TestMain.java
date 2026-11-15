@@ -487,6 +487,19 @@ public class TestMain {
                     .header("CF-Connecting-IP", "203.0.113.8").header("content-type", "application/json").POST(HttpRequest.BodyPublishers.ofString("{}")).build(), HttpResponse.BodyHandlers.ofString());
             t("rate limit: other connections are unaffected", other.statusCode() != 429);
         }
+        {
+            List<Object> rows = new ArrayList<>();
+            double[][] d = {{3e12, 1.2}, {5e11, 1.5}, {9e10, 2.1}, {4e10, 2.4}, {8e9, 2.9}, {5e9, 3.1}, {3e9, 2.6}, {1.5e9, 4.2}, {9e8, 3.8}, {6e8, 5.0}};
+            for (int i = 0; i < d.length; i++) rows.add(Json.obj("event_key", "e" + (i % 3), "day0", "2026-11-0" + (1 + i % 3), "symbol", "S" + i, "market_cap", d[i][0], "sigmas", (i % 2 == 0 ? 1 : -1) * d[i][1], "abnormal_pct", d[i][1] * 1.5));
+            rows.add(Json.obj("event_key", "e9", "day0", "2026-11-05", "symbol", "X", "market_cap", null, "sigmas", 1.0, "abnormal_pct", 1.0));
+            Map<String, Object> s = Tracker.summarise(rows);
+            List<Object> b = l(s.get("buckets"));
+            t("tracker: rows grouped by size (mega, large, mid, small), unknown size left out of the groups", d(m(b.get(0)).get("n")) == 2 && d(m(b.get(1)).get("n")) == 2 && d(m(b.get(2)).get("n")) == 3 && d(m(b.get(3)).get("n")) == 3 && d(s.get("measured")) == 10 && d(s.get("rows")) == 11);
+            t("tracker: medians use the size of the reaction, up or down", d(m(b.get(0)).get("medianSigmas")) == 1.35 && d(m(b.get(3)).get("medianSigmas")) == 4.2);
+            t("tracker: smaller companies reacting more shows as a negative rank correlation; events and dates counted", d(s.get("rankCorrelation")) < -0.8 && d(s.get("events")) == 4 && "2026-11-01".equals(s.get("from")) && "2026-11-05".equals(s.get("to")));
+            t("tracker: correlation only from 10 measurements", Tracker.summarise(rows.subList(0, 5)).get("rankCorrelation") == null);
+            t("tracker: only plain US tickers, at most six", Tracker.tickers(Json.obj("symbols", List.of(Json.obj("symbol", "NVDA"), Json.obj("symbol", "7203.T"), Json.obj("symbol", "OPAI.PVT"), "amd"))).equals(List.of("NVDA", "AMD")));
+        }
         t("reaction API: needs two companies and a real date", call(p, "GET", "/api/reaction?symbols=AAPL&at=2026-10-22", null, ip()).code == 400 && call(p, "GET", "/api/reaction?symbols=AAPL,MSFT&at=yesterday", null, ip()).code == 400);
         t("AI key sent to Anthropic only, with tools", upstreamCalls.stream().anyMatch(u -> u.contains("anthropic key=an-test hasTools=true")) && !r.raw.contains("an-test"));
         t("AI rejects empty messages", call(p, "POST", "/api/ai", "{\"messages\":[]}", ip()).code == 400);
