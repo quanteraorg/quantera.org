@@ -15,7 +15,7 @@ const BASE = process.env.BASE || 'http://localhost:8124';
 const ONLY = process.env.ONLY || ''; // e.g. ONLY=flows to run one part while debugging
 const ROUTES = ['', 'markets', 'world', 'news', 'stocks', 'screener', 'compare', 'ipos', 'asset/AAPL', 'trade/AAPL', 'plan',
   'portfolio', 'planner', 'learn', 'glossary', 'ai', 'macro', 'calendar', 'about', 'pricing', 'settings', 'options', 'valuation/AAPL',
-  'asset/AAPL/research', 'lesson/pe', 'report', 'report/AAPL', 'private', 'leaderboard', 'insights'];
+  'asset/AAPL/research', 'lesson/pe', 'report', 'report/AAPL', 'private', 'leaderboard', 'insights', 'research', 'research/nvidia-q2-fy2027-earnings-reaction', 'challenge'];
 // Buttons that leave the page, ask the browser for something, download, or delete data are not clicked blindly.
 const SKIP = /delete|log ?out|sign ?out|reset|clear all|remove all|leave the leaderboard|full ?screen|save chart image|share|notify me|download|export|print|install|continue with google|enable alerts|turn on alerts/i;
 const BROKEN = /\b(undefined|NaN)\b|\[object Object\]/;

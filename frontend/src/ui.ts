@@ -5,8 +5,8 @@
 const CSS = `
 :root{--q-ctl:36px;--q-ctl-sm:32px;--q-ctl-lg:46px;--q-r-pill:999px;--q-r-card:16px;--q-fs-ctl:13.5px;--q-fs-h3:16.5px;--q-fs-th:12px;--q-fs-td:14px}
 /* page titles: the stock and lesson pages used their own sizes */
-#m>h1:first-child,#m h2.qpt{font-family:Fraunces,Georgia,serif;font-weight:300;font-size:clamp(26px,2.8vw,36px);line-height:1.12;letter-spacing:-.01em}
-#m h2.qpt{font-size:clamp(26px,2.8vw,36px)!important}
+#m>h1,#m h1.qpt,#m h2.qpt{font-family:Fraunces,Georgia,serif;font-weight:300;font-size:clamp(26px,2.8vw,36px);line-height:1.12;letter-spacing:-.01em}
+#m h2.qpt,#m h1.qpt{font-size:clamp(26px,2.8vw,36px)!important}
 /* section headings inside pages and cards */
 #m h3:not(.hm-mv):not([class*="tv"]){font-size:var(--q-fs-h3);font-weight:600;line-height:1.3;letter-spacing:0}
 #m .body h3,#m .lesson h3{font-size:19px}
