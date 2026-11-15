@@ -118,6 +118,7 @@ export function renderDaily(host: HTMLElement): void {
           <div class="qd-next"><button class="btn p">Next question →</button></div></div>`);
         (body().querySelector('.qd-next .btn') as HTMLButtonElement).onclick = next;
         track('daily_news_' + (matchedToday ? 'match' : 'differ'));
+        (window as any).qKes?.(matchedToday ? 'correct' : 'tip', matchedToday ? 'Your read matched the market today!' : 'The market moved differently today. Headlines are only part of the story.');
       });
     };
     const showQuiz = (qi: number) => {
@@ -128,6 +129,7 @@ export function renderDaily(host: HTMLElement): void {
         const i = Number(b.dataset.i), right = i === ans; if (right) xp += 10;
         body().querySelectorAll<HTMLButtonElement>('.qd-o').forEach(x => { x.disabled = true; const k = Number(x.dataset.i); if (k === ans) x.classList.add('good'); else if (x === b) x.classList.add('bad'); });
         if (right) burst(b);
+        (window as any).qKes?.(right ? 'correct' : 'wrong');
         body().insertAdjacentHTML('beforeend', `<div class="qd-fb">${right ? '✅ Correct! +10 XP' : `Not quite: the answer is <b>${esc(opts[ans])}</b>.`}<br><span class="mu">${esc(l[9])}</span>
           <div class="qd-next"><button class="btn p">${qi + 1 < quiz.length ? 'Next question →' : 'Finish'}</button> <a class="btn" href="#/lesson/${esc(l[0])}">Open the lesson</a></div></div>`);
         (body().querySelector('.qd-next .btn') as HTMLButtonElement).onclick = next;
@@ -138,6 +140,7 @@ export function renderDaily(host: HTMLElement): void {
       s.day = today(); s.done = true; s.xp = xp; s.total += xp; s.days += firstToday ? 1 : 0; s.matched += matchedToday ? 1 : 0; s.hist = [...s.hist, today()].slice(-60);
       SS(KEY, s);
       try { ACT_('daily'); } catch { /* streak is optional */ }
+      (window as any).qKes?.('done', `Today’s challenge done: <b>+${xp} XP</b>. See you tomorrow!`);
       track('daily_done');
       box.innerHTML = header(s) + `<div class="qd-done"><div class="mu">Challenge complete</div><div class="big">+${xp} XP</div><div class="mu">🔥 ${streak()}-day streak. See you tomorrow!</div></div>`;
       burst(box.querySelector('.big') as Element);
