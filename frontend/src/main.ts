@@ -21,6 +21,8 @@ import { initCharts } from './charts';
 import { initGrounding } from './grounding';
 import { initUi } from './ui';
 import { initReaction } from './reaction';
+import { initLibrary } from './library';
+import { initHome } from './home';
 
 initStates();
 initMotion();
@@ -42,4 +44,6 @@ initDepth();
 initCharts();
 initGrounding();
 initReaction();
+initLibrary();
+initHome();
 initUi();
