@@ -34,7 +34,7 @@ def page(slug, title, desc, body):
             '<style>main table{border-collapse:collapse;width:100%;font-size:14.5px;margin:10px 0 18px}main th,main td{border-bottom:1px solid rgba(127,127,127,.25);padding:8px 10px;text-align:left;vertical-align:top}'
             'main th{font-weight:600}main th,main td{white-space:normal;overflow-wrap:anywhere}@media(max-width:640px){main table,main tbody,main tr,main td,main th{display:block;width:auto}main tr:first-child{display:none}main tr{padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25)}main td{border:0;padding:2px 0}main td:first-child{font-weight:600}}.toc{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;margin:6px 0 18px}.note{padding:12px 14px;border-radius:12px;border:1px solid rgba(127,127,127,.3);margin:12px 0}</style>'
             '</head><body><a href="#main" style="position:absolute;left:-999px" onfocus="this.style.left=\'12px\'" onblur="this.style.left=\'-999px\'">Skip to content</a>'
-            '<header><a class="logo" href="/"><img src="/logo-mark.png" alt="" width="26" height="26">QUANTERA</a><nav><a href="/stocks">Stocks</a>'
+            '<header><a class="logo" href="/"><img src="/logo-mark.png" alt="" width="26" height="26">QUANTERA</a><nav><a href="/research">Research</a><a href="/stocks">Stocks</a>'
             '<a href="/private-companies">Private companies</a><a href="/learn">Learn</a><a class="cta" href="/#/markets">Open the app</a></nav></header>'
             f'<main id="main"><h1>{t}</h1><p>Last updated {UPDATED}.</p>\n{body}\n</main>{FOOT}</body></html>\n')
 
