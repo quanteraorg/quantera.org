@@ -46,16 +46,15 @@ final class Tracker {
 
     static void run() {
         if (!Store.on()) return;
-        long cutoff = System.currentTimeMillis() - 30 * 3600_000L; // the first session after the story must have closed
-        int done = 0;
+        int done = 0, seen = 0;
         for (Object o : Providers.news("", "", 60)) {
             if (done >= PER_RUN) break;
             Map<String, Object> a = map(o);
             List<String> syms = tickers(a);
             String at = str(a.get("publishedAt")), title = str(a.get("title"));
             if (syms.size() < 2 || at == null || title == null) continue;
-            long t; try { t = Instant.parse(at).toEpochMilli(); } catch (RuntimeException e) { continue; }
-            if (t > cutoff) continue;
+            if (!sessionClosed(at, java.time.ZonedDateTime.now(Reaction.NY))) continue;
+            seen++;
             String k = key(a);
             try { if (!list(Store.rest("GET", "reaction_events?select=id&limit=1&event_key=eq." + java.net.URLEncoder.encode(k, java.nio.charset.StandardCharsets.UTF_8), null)).isEmpty()) continue; }
             catch (UpstreamException e) { lastError = "storage: " + e.getMessage(); return; }
@@ -67,7 +66,18 @@ final class Tracker {
             try { Store.insertIgnore("reaction_events", rows, "event_key,symbol"); done++; }
             catch (UpstreamException e) { lastError = "storage: " + e.getMessage(); return; }
         }
-        lastRun = Instant.now().toString(); if (done > 0) lastError = null;
+        lastRun = Instant.now().toString(); lastCandidates = seen; lastAdded = done; if (done > 0) lastError = null;
+    }
+
+    static volatile int lastCandidates = 0, lastAdded = 0;
+
+    /** Whether the first trading session that could react to news published at `at` has finished (16:30 New York, allowing for late prints). */
+    static boolean sessionClosed(String at, java.time.ZonedDateTime nowNy) {
+        java.time.LocalDate d;
+        try { d = Reaction.sessionFor(at); } catch (RuntimeException e) { return false; }
+        while (d.getDayOfWeek().getValue() > 5) d = d.plusDays(1); // a weekend story is first traded on Monday
+        java.time.LocalDate today = nowNy.toLocalDate();
+        return d.isBefore(today) || (d.equals(today) && nowNy.toLocalTime().isAfter(java.time.LocalTime.of(16, 30)));
     }
 
     static Map<String, Object> row(String key, String title, String at, Map<String, Object> c) {
@@ -124,6 +134,7 @@ final class Tracker {
         List<Object> rows = list(Store.rest("GET", "reaction_events?select=event_key,headline,day0,symbol,market_cap,move_pct,abnormal_pct,typical_day,sigmas,named&order=day0.desc&limit=2000", null));
         Map<String, Object> s = summarise(rows);
         s.put("recent", rows.subList(0, Math.min(rows.size(), 400)));
+        s.put("lastRun", lastRun); s.put("lastCandidates", lastCandidates); s.put("lastAdded", lastAdded);
         s.put("method", "Every few hours Quantera takes news stories that tag two or more US-listed companies, waits until the first trading session after the story has closed, and measures each company's reaction: the part the whole market explains (beta × the S&P 500's move) and the company-specific part, measured against the company's own normal day. Size is the company's market value when measured.");
         s.put("caveat", "These are observations of what happened after news, not proof that the news caused the move: other news, earnings or market events the same day can also move a stock. The stories come from Quantera's news providers, so the sample reflects what they cover. Education, not investment advice.");
         return s;
