@@ -113,8 +113,10 @@ export function initChallenge(): void {
   const main = document.getElementById('m');
   const card = () => {
     if (!/^#\/learn\/?$/.test(location.hash) || !main || main.querySelector('.qch-card')) return;
-    const h = main.querySelector('h1'); if (!h) return;
-    h.insertAdjacentHTML('afterend', `<div class="qch-card"><span style="font-size:26px" aria-hidden="true">⚖️</span><div><b>Market reaction challenge</b><p>A real news event: predict which companies reacted most and why, then see what was measured.</p></div><a class="btn p" href="#/challenge">Start</a></div>`);
+    // at the top of the page body, below the router's header band (or after the title on pages without one)
+    const body = main.querySelector<HTMLElement>(':scope > .body'), h = main.querySelector('h1'); if (!body && !h) return;
+    const html = `<div class="qch-card"><span style="font-size:26px" aria-hidden="true">⚖️</span><div><b>Market reaction challenge</b><p>A real news event: predict which companies reacted most and why, then see what was measured.</p></div><a class="btn p" href="#/challenge">Start</a></div>`;
+    if (body) body.insertAdjacentHTML('afterbegin', html); else h!.insertAdjacentHTML('afterend', html);
   };
   if (main) { let t = 0; new MutationObserver(() => { clearTimeout(t); t = window.setTimeout(card, 30); }).observe(main, { childList: true }); }
 }
