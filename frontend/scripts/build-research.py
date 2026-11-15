@@ -4,6 +4,7 @@
 Writes, in frontend/public:
   research/index.html          the library page (static, indexable)
   research/<slug>.html         one article page each, with Article structured data
+  insights.html                how the reaction analysis works (static, indexable)
   research/index.json          the list the app's library page (#/research) reads
   research/<slug>.json         each article for the app's reader (#/research/<slug>)
   sitemap-research.xml         and adds it to sitemap.xml
@@ -135,6 +136,33 @@ def index_html(data):
     return head('research', 'Research library', 'Original, sourced research from Quantera: company investigations, earnings analysis and how markets react to the news.', 'website', ld) + body + FOOT + '</body></html>\n'
 
 
+def insights_html():
+    ld = {"@context": "https://schema.org", "@type": "WebPage", "name": "Insights: why the same news moves stocks differently", "url": SITE + "/insights",
+          "publisher": {"@type": "Organization", "name": "Quantera Research"}}
+    body = ('<main id="main"><p class="crumb"><a href="/research">Research</a> › Insights</p><h1>Same news. Different world.</h1>'
+            '<p class="dek">When a story breaks, one company moves 5% and another 25%. Quantera\'s Insights tool measures how much of each move was the whole market, '
+            'how unusual it was for that particular stock, and which differences between the companies usually explain the gap.</p>'
+            '<p><a class="cta" href="/#/insights">Open Insights and compare any companies →</a></p>'
+            '<h2>How a reaction is measured</h2><ol>'
+            '<li><b>Day 0</b> is the first trading session that could react to the news. News published after the 4 p.m. New York close counts from the next session.</li>'
+            '<li><b>The market part</b> is the share of the move the whole market explains: the company\'s beta (its usual sensitivity to the S&amp;P 500, estimated from up to 120 trading days before the news) times the S&amp;P 500\'s move that day.</li>'
+            '<li><b>The company-specific part</b> (the abnormal return) is the actual move minus the market part.</li>'
+            '<li><b>A normal day</b> is the usual size of the company\'s company-specific moves over the same period. Dividing by it shows how unusual the reaction was for that stock: a 25% move by a stock that often moves 8% a day can be less unusual than a 5% move by one that rarely moves 1%.</li></ol>'
+            '<h2>What usually explains the gap</h2><div class="box"><ul>'
+            '<li><b>The whole market</b> (measured): how much each stock tracks the S&amp;P 500.</li>'
+            '<li><b>Normal volatility</b> (measured): some stocks always move more.</li>'
+            '<li><b>Company size</b> (typical pattern): smaller companies usually react more, because one event can be a larger share of their business, fewer analysts follow them and their shares trade less.</li>'
+            '<li><b>Who the news is about</b> (typical pattern): the company named in the story usually moves more than competitors or suppliers.</li>'
+            '<li><b>Trading activity</b> (measured): volume compared with the stock\'s average.</li>'
+            '<li><b>Valuation and the run-up before the news</b> (typical patterns): expensive or recently strong stocks can react more to news that changes expectations.</li></ul></div>'
+            '<h2>Limits</h2><ul><li>Daily closing prices only, so news during the trading day is measured over the whole day.</li>'
+            '<li>Other news, earnings or market events on the same day can also move a stock, so these measurements never prove why a price moved.</li>'
+            '<li>Size and valuation are today\'s figures, not the figures on the day of the news.</li><li>Education, not investment advice.</li></ul>'
+            '<h2>Read a full study</h2><p>See the method applied in <a href="/research/nvidia-q2-fy2027-earnings-reaction">Nvidia\'s Q2 FY2027 results: an 8.7% jump, then half of it given back</a>, '
+            'or try the <a href="/#/challenge">market reaction challenge</a> in the Academy.</p></main>')
+    return head('insights', 'Insights: why the same news moves stocks differently', 'How Quantera measures why the same news moves one company 5% and another 25%: market part, company-specific part, each stock\'s normal day, and what usually explains the gap.', 'website', ld) + body + FOOT + '</body></html>\n'
+
+
 def main():
     data = json.load(open(os.path.join(HERE, 'research.json'), encoding='utf-8'))
     arts = sorted(data['articles'], key=lambda a: a['date'], reverse=True)
@@ -148,7 +176,8 @@ def main():
     open(os.path.join(d, 'index.html'), 'w', encoding='utf-8').write(index_html({**data, 'articles': arts}))
     json.dump({'categories': data['categories'], 'articles': [{k: a[k] for k in ('slug', 'title', 'dek', 'date', 'category', 'tickers', 'readMinutes', 'findings') if k in a} for a in arts]},
               open(os.path.join(d, 'index.json'), 'w', encoding='utf-8'), ensure_ascii=False)
-    urls = [f'{SITE}/research'] + [f'{SITE}/research/{a["slug"]}' for a in arts]
+    open(os.path.join(OUT, 'insights.html'), 'w', encoding='utf-8').write(insights_html())
+    urls = [f'{SITE}/research', f'{SITE}/insights'] + [f'{SITE}/research/{a["slug"]}' for a in arts]
     open(os.path.join(OUT, 'sitemap-research.xml'), 'w').write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + ''.join(f'<url><loc>{u}</loc>' + (f'<lastmod>{a["date"]}</lastmod>' if (a := next((x for x in arts if u.endswith(x["slug"])), None)) else '') + '</url>\n' for u in urls) + '</urlset>\n')
     sm = os.path.join(OUT, 'sitemap.xml'); s = open(sm).read()
