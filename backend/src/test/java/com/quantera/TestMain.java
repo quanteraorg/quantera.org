@@ -465,6 +465,28 @@ public class TestMain {
             boolean tooEarly; try { Reaction.measure("BIG", Bs, java.time.LocalDate.parse(days.get(10)), M, "", Map.of()); tooEarly = false; } catch (Support.UpstreamException e) { tooEarly = e.code == 404; }
             t("reaction: refuses when there isn't enough history before the news", tooEarly);
         }
+        {
+            System.setProperty("AI_DAILY_LIMIT", "2"); AiBudget.reset();
+            AiBudget.take(); AiBudget.take();
+            int code = 0; try { AiBudget.take(); } catch (Support.UpstreamException e) { code = e.code; }
+            t("AI daily cap: refuses with 429 once the day's allowance is used", code == 429 && AiBudget.usedToday() == 2);
+            System.setProperty("AI_DAILY_LIMIT", "0"); AiBudget.reset(); code = 0; try { AiBudget.take(); } catch (Support.UpstreamException e) { code = e.code; }
+            t("AI daily cap: 0 turns AI off", code == 429);
+            System.clearProperty("AI_DAILY_LIMIT"); AiBudget.reset();
+        }
+        {
+            // a client calling the API directly can fake X-Forwarded-For, but not the connecting address Render's edge reports
+            int last = 0;
+            for (int i = 0; i < 302; i++) {
+                HttpResponse<String> rr = C.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + p + "/api/waitlist")).header("X-Forwarded-For", "10.9." + (i / 250) + "." + (i % 250))
+                        .header("CF-Connecting-IP", "203.0.113.7").header("content-type", "application/json").POST(HttpRequest.BodyPublishers.ofString("{}")).build(), HttpResponse.BodyHandlers.ofString());
+                last = rr.statusCode();
+            }
+            t("rate limit: faking a new X-Forwarded-For per request doesn't escape the per-connection backstop", last == 429);
+            HttpResponse<String> other = C.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + p + "/api/waitlist")).header("X-Forwarded-For", "10.9.9.9")
+                    .header("CF-Connecting-IP", "203.0.113.8").header("content-type", "application/json").POST(HttpRequest.BodyPublishers.ofString("{}")).build(), HttpResponse.BodyHandlers.ofString());
+            t("rate limit: other connections are unaffected", other.statusCode() != 429);
+        }
         t("reaction API: needs two companies and a real date", call(p, "GET", "/api/reaction?symbols=AAPL&at=2026-10-22", null, ip()).code == 400 && call(p, "GET", "/api/reaction?symbols=AAPL,MSFT&at=yesterday", null, ip()).code == 400);
         t("AI key sent to Anthropic only, with tools", upstreamCalls.stream().anyMatch(u -> u.contains("anthropic key=an-test hasTools=true")) && !r.raw.contains("an-test"));
         t("AI rejects empty messages", call(p, "POST", "/api/ai", "{\"messages\":[]}", ip()).code == 400);

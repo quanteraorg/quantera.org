@@ -68,6 +68,7 @@ final class Gemini {
 
     /** The AI chat with the same server-side tools (quotes, price stats, company, search, news) as the Anthropic version. */
     static Map<String, Object> chat(List<Map<String, Object>> input) {
+        AiBudget.take();
         List<Object> decls = new ArrayList<>();
         for (Object t : Anthropic.TOOLS) { Map<String, Object> m = map(t); decls.add(Json.obj("name", m.get("name"), "description", m.get("description"), "parameters", schema(m.get("input_schema")))); }
         List<Object> contents = new ArrayList<>();

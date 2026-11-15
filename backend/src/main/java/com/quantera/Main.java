@@ -293,6 +293,30 @@ public final class Main {
         try (OutputStream o = ex.getResponseBody()) { o.write(b); }
     }
 
+    /**
+     * The visitor's address: the first X-Forwarded-For entry. Through the website this is set by Vercel, which
+     * overwrites any value the browser sends; a client calling the API server directly can put anything there, so the
+     * limits also apply to connectingIp().
+     */
+    static String clientIp(HttpExchange ex) {
+        String fwd = ex.getRequestHeaders().getFirst("X-Forwarded-For");
+        return fwd != null && !fwd.isBlank() ? fwd.split(",")[0].trim() : ex.getRemoteAddress().getAddress().getHostAddress();
+    }
+
+    /**
+     * The address that actually connected to the API server: Cloudflare's CF-Connecting-IP (Render's edge sets it and
+     * replaces any value a client sends), else the last X-Forwarded-For entry (added by the nearest proxy), else the
+     * socket address. Requests through the website share Vercel's addresses here, so this limit is set well above the
+     * per-visitor one.
+     */
+    static String connectingIp(HttpExchange ex) {
+        String cf = ex.getRequestHeaders().getFirst("CF-Connecting-IP");
+        if (cf != null && !cf.isBlank()) return cf.trim();
+        String fwd = ex.getRequestHeaders().getFirst("X-Forwarded-For");
+        if (fwd != null && !fwd.isBlank()) { String[] p = fwd.split(","); return p[p.length - 1].trim(); }
+        return ex.getRemoteAddress().getAddress().getHostAddress();
+    }
+
     static void handle(HttpExchange ex) throws IOException {
         int ttl = 0;
         try {
@@ -300,17 +324,18 @@ public final class Main {
             if (method.equals("OPTIONS")) { send(ex, 204, Json.obj(), 0); return; }
             if (serveStatic(ex, path)) return;
             if (path.startsWith("/seo/")) {
-                String fwd0 = ex.getRequestHeaders().getFirst("X-Forwarded-For"), ip0 = fwd0 != null && !fwd0.isBlank() ? fwd0.split(",")[0].trim() : ex.getRemoteAddress().getAddress().getHostAddress();
-                if (LIMITER.limited(ip0, "/seo", 120)) { send(ex, 429, Json.obj("error", "Too many requests"), 0); return; }
+                if (LIMITER.limited(clientIp(ex), "/seo", 120) || LIMITER.limited("conn:" + connectingIp(ex), "/seo", 1200)) { send(ex, 429, Json.obj("error", "Too many requests"), 0); return; }
                 Seo.Page pg = Seo.route(path);
                 if (pg != null) { sendPage(ex, pg); return; }
             }
             Route route = ROUTES.get(path);
             if (route == null) { send(ex, 404, Json.obj("error", "Not found"), 0); return; }
             if (!method.equals("GET") && !method.equals("POST")) { send(ex, 405, Json.obj("error", "Method not allowed"), 0); return; }
-            String fwd = ex.getRequestHeaders().getFirst("X-Forwarded-For");
-            String ip = fwd != null && !fwd.isBlank() ? fwd.split(",")[0].trim() : ex.getRemoteAddress().getAddress().getHostAddress();
-            if (LIMITER.limited(ip, path, route.maxPerMin())) { send(ex, 429, Json.obj("error", "Too many requests"), 0); return; }
+            String ip = clientIp(ex), conn = connectingIp(ex);
+            // per visitor, plus a backstop on the address that actually connected, which a client can't fake
+            if (LIMITER.limited(ip, path, route.maxPerMin()) || LIMITER.limited("conn:" + conn, path, Math.max(300, route.maxPerMin() * 10))) {
+                send(ex, 429, Json.obj("error", "Too many requests"), 0); return;
+            }
             Object body = null;
             if (method.equals("POST")) {
                 byte[] raw = ex.getRequestBody().readNBytes(204_801);
