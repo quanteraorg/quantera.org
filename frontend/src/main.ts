@@ -26,6 +26,7 @@ import { initHome } from './home';
 import { initChallenge } from './challenge';
 import { initWatchlists } from './watchlists';
 import { initStatex } from './statex';
+import { initKes } from './kes';
 
 initStates();
 initMotion();
@@ -52,4 +53,5 @@ initHome();
 initChallenge();
 initWatchlists();
 initStatex();
+initKes();
 initUi();

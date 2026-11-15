@@ -79,7 +79,8 @@ async function page(sym?: string): Promise<void> {
     });
     (box.querySelector('#qsxgo') as HTMLElement).remove();
     const d = LS<Record<string, number>>(KEY, {}); d[st.symbol] = Math.max(d[st.symbol] || 0, score); SS(KEY, d);
-    track('statements_exercise'); try { ACT_('statex'); } catch { /* streak helper may not exist */ }
+    track('statements_exercise');
+    (window as any).qKes?.(score === q.Q.length ? 'done' : score > 0 ? 'correct' : 'wrong', `${score} of ${q.Q.length} right. ${score === q.Q.length ? 'Perfect!' : 'Read the explanations: that’s where the learning is.'}`); try { ACT_('statex'); } catch { /* streak helper may not exist */ }
     (box.querySelector('#qsxout') as HTMLElement).innerHTML = `<p class="score"><b>${score} of ${q.Q.length}.</b> The figures behind every answer:</p>${q.table}
       <p class="mu" style="font-size:13px">Source: ${esc(st.name)}’s annual reports (10-K) filed with the SEC. <a href="#/asset/${st.symbol}">See the full statements and every filing →</a></p>
       <p><a class="btn" href="#/statex">Try another company</a> <a class="btn" href="#/challenge">Market reaction challenge</a></p>`;

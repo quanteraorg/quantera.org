@@ -85,7 +85,8 @@ async function play(m: HTMLElement, ev: Ev): Promise<void> {
     });
     (box.querySelector('#qchgo') as HTMLElement).remove();
     const done = LS<Record<string, number>>(KEY, {}); done[ev.key] = Math.max(done[ev.key] || 0, score); SS(KEY, done);
-    track('reaction_challenge'); try { ACT_('challenge'); } catch { /* streak helper may not exist */ }
+    track('reaction_challenge');
+    (window as any).qKes?.(score === 3 ? 'done' : score > 0 ? 'correct' : 'wrong', `${score} of ${3} right. ${score === 3 ? 'Perfect!' : 'Read the explanations: that’s where the learning is.'}`); try { ACT_('challenge'); } catch { /* streak helper may not exist */ }
     const out = box.querySelector('#qchout') as HTMLElement;
     out.innerHTML = `<p class="score"><b>${score} of 3.</b> ${score === 3 ? 'Excellent reading of the market.' : 'The full measurement below shows where each answer comes from.'} Now compare your reasoning with the measured reasons:</p><div id="qchrx"></div>
       <p style="margin-top:14px"><a class="btn" href="#/challenge">Try another event</a> <a class="btn" href="#/insights">Compare any companies yourself</a></p>`;
