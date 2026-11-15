@@ -54,6 +54,22 @@ final class Store {
         } catch (Exception e) { throw new UpstreamException("Storage error"); }
     }
 
+    /** Inserts several rows, skipping any that already exist under the given unique columns (server-side only). */
+    static void insertIgnore(String table, List<Object> rows, String onConflict) {
+        if (!on()) throw new UpstreamException("Storage is not configured", 503);
+        String key = cfg("SUPABASE_SERVICE_KEY", "").trim();
+        if (!key.matches("[A-Za-z0-9._\\-]+")) throw new UpstreamException("Storage is not configured correctly", 503);
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(cfg("SUPABASE_URL", "").replaceAll("/+$", "") + "/rest/v1/" + table + "?on_conflict=" + onConflict))
+                .timeout(Duration.ofSeconds(10)).header("apikey", key).header("Content-Type", "application/json")
+                .header("Prefer", "return=minimal,resolution=ignore-duplicates");
+        if (key.startsWith("eyJ")) b.header("Authorization", "Bearer " + key);
+        try {
+            HttpResponse<String> r = HTTP.send(b.POST(HttpRequest.BodyPublishers.ofString(Json.write(rows))).build(), HttpResponse.BodyHandlers.ofString());
+            if (r.statusCode() / 100 != 2) throw new UpstreamException("Storage error " + r.statusCode());
+        } catch (UpstreamException e) { throw e;
+        } catch (Exception e) { throw new UpstreamException("Storage error"); }
+    }
+
     static Map<String, Object> joinWaitlist(Object body) {
         Map<String, Object> b = map(body);
         String email = String.valueOf(b.getOrDefault("email", "")).trim().toLowerCase(), interest = String.valueOf(b.getOrDefault("interest", "")).trim(), source = String.valueOf(b.getOrDefault("source", "")).trim();

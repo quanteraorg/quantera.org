@@ -108,6 +108,7 @@ public final class Main {
         ROUTES.put("/api/statements", new Route(r -> Statements.of(symbol(r)), 21600, 30));
         ROUTES.put("/api/technicals", new Route(r -> Research.technicals(symbol(r)), 3600, 30));
         ROUTES.put("/api/research", new Route(r -> { if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405); return Research.report(r.body()); }, 0, 6));
+        ROUTES.put("/api/reaction/tracker", new Route(r -> Tracker.view(), 1800, 30));
         ROUTES.put("/api/reaction", new Route(r -> Reaction.of(r.query().getOrDefault("symbols", ""), r.query().getOrDefault("at", ""), r.query().getOrDefault("headline", "")), 3600, 20));
         ROUTES.put("/api/peers", new Route(r -> Peers.of(symbol(r)), 21600, 20));
         ROUTES.put("/api/push/key", new Route(r -> Push.key(), 3600, 30));
@@ -368,5 +369,6 @@ public final class Main {
         startRefresh();
         Providers.startWarmer(); Providers.startPageWarmer();
         Push.start();
+        Tracker.start();
     }
 }
