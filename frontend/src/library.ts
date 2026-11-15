@@ -43,14 +43,15 @@ async function libPage(): Promise<void> {
   try { lib = await library(); } catch { box.innerHTML = '<p class="mu">The library could not be loaded. Please try again.</p>'; return; }
   const draw = () => {
     const q = query.trim().toLowerCase();
-    const list = lib.articles.filter(a => (!cat || a.category === cat) && (!q || `${a.title} ${a.dek} ${a.category} ${(a.tickers || []).join(' ')} ${(a.findings || []).join(' ')}`.toLowerCase().includes(q)));
+    const saved = LS<string[]>('q_rsave', []);
+    const list = lib.articles.filter(a => (!cat || (cat === '★' ? saved.includes(a.slug) : a.category === cat)) && (!q || `${a.title} ${a.dek} ${a.category} ${(a.tickers || []).join(' ')} ${(a.findings || []).join(' ')}`.toLowerCase().includes(q)));
     (box.querySelector('.qrl-list') as HTMLElement).innerHTML = list.map(a => `<a class="qrl-card" href="#/research/${encodeURIComponent(a.slug)}"><small>${esc(a.category)} · ${esc(nice(a.date))} · ${a.readMinutes || 5} min read${a.tickers?.length ? ' · ' + a.tickers.map(esc).join(' ') : ''}</small><b>${esc(a.title)}</b><p>${esc(a.dek)}</p>${a.findings?.length ? `<ul>${a.findings.slice(0, 3).map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}</a>`).join('')
-      || `<p class="mu">No study matches${q ? ` “${esc(query)}”` : ''}${cat ? ` in ${esc(cat)}` : ''} yet.</p>`;
+      || (cat === '★' ? '<p class="mu">No saved studies yet. Use “☆ Save” on any study to keep it here (on this device).</p>' : `<p class="mu">No study matches${q ? ` “${esc(query)}”` : ''}${cat ? ` in ${esc(cat)}` : ''} yet.</p>`);
     box.querySelectorAll<HTMLButtonElement>('[data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === cat));
   };
   const used = new Set(lib.articles.map(a => a.category));
   box.innerHTML = `<div class="qrl-top"><input type="search" id="qrlq" placeholder="Search studies: a company, ticker or topic" aria-label="Search the research library" value="${esc(query)}"></div>
-    <div class="qrl-cats"><button class="chip" data-c="">All</button>${lib.categories.map(c => `<button class="chip" data-c="${esc(c)}"${used.has(c) ? '' : ' title="No studies in this category yet"'}>${esc(c)}</button>`).join('')}</div>
+    <div class="qrl-cats"><button class="chip" data-c="">All</button><button class="chip" data-c="★">★ Saved</button>${lib.categories.map(c => `<button class="chip" data-c="${esc(c)}"${used.has(c) ? '' : ' title="No studies in this category yet"'}>${esc(c)}</button>`).join('')}</div>
     <div class="qrl-list"></div>
     <div class="pan" style="margin-top:22px"><h3 style="margin-top:0">How we research</h3><ul style="margin:0;padding-left:20px;line-height:1.7"><li>Primary sources first: company filings with the SEC, official releases and exchange data.</li><li>No source, no number: if a figure can’t be verified, we say it wasn’t found.</li><li>Facts and interpretation are labelled separately; a coincidence in time is never presented as a cause.</li><li>Every calculation is re-run independently before publication.</li></ul>
     <p class="mu" style="margin:10px 0 0">Want to test a question yourself? <a href="#/insights">Compare how companies reacted to the same news →</a></p></div>`;
@@ -78,14 +79,18 @@ async function reader(slug: string): Promise<void> {
       else if (/^https?:/.test(h)) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); }
     });
     main.querySelector('h1')?.classList.add('qpt');
-    m.innerHTML = `<article class="qra">${main.innerHTML}<p class="mu" style="font-size:13px">Permanent link: <a href="/research/${encodeURIComponent(slug)}">quanteraorg.vercel.app/research/${esc(slug)}</a></p></article>`;
-    document.title = (doc.title || 'Research') ;
+    const isSaved = () => LS<string[]>('q_rsave', []).includes(slug);
+    m.innerHTML = `<article class="qra"><button class="chip" id="qrsv" style="float:right;margin:4px 0 0 12px" aria-pressed="${isSaved()}">${isSaved() ? '★ Saved' : '☆ Save'}</button>${main.innerHTML}<p class="mu" style="font-size:13px">Permanent link: <a href="/research/${encodeURIComponent(slug)}">quanteraorg.vercel.app/research/${esc(slug)}</a></p></article>`;
+    const sv = m.querySelector('#qrsv') as HTMLButtonElement;
+    sv.onclick = () => { const l = LS<string[]>('q_rsave', []), on = l.includes(slug); SS('q_rsave', on ? l.filter(x => x !== slug) : [slug, ...l].slice(0, 100)); sv.textContent = on ? '☆ Save' : '★ Saved'; sv.setAttribute('aria-pressed', String(!on)); if (!on) track('research_save'); };
+    document.title = doc.title || 'Research';
     const seen = LS<string[]>('q_rread', []); if (!seen.includes(slug)) SS('q_rread', [slug, ...seen].slice(0, 50));
     track('research_read');
   } catch { m.innerHTML = '<div class="qra"><h1>Study not found</h1><p class="mu">This study may have moved. <a href="#/research">Browse the research library</a>.</p></div>'; }
 }
 
 export function initLibrary(): void {
+  for (const k of ['q_rsave', 'q_rread']) if (!SYNC.includes(k)) SYNC.push(k); // follow the account like watchlists
   document.head.insertAdjacentHTML('beforeend', `<style id="qrl-css">${CSS}</style>`);
   PAGES.research = (a?: string) => {
     const slug = /^#\/research\/([a-z0-9-]+)/.exec(location.hash)?.[1] || (a && a !== 'research' && /^[a-z0-9-]+$/.test(a) ? a : '');
