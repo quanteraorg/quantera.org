@@ -7,7 +7,7 @@
 import { library } from './library';
 
 const CSS = `
-.qh-eye{font-size:12.5px;letter-spacing:.32em;text-transform:uppercase;color:var(--ac,#c8a96a);margin:0 0 18px;font-weight:600}
+.qh-eye{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 16px;margin:0 0 22px;text-transform:uppercase}.qh-eye .wm{font:300 clamp(34px,4.6vw,64px)/1 Fraunces,Georgia,serif;letter-spacing:.16em;color:var(--tx)}.qh-eye .rs{font-size:clamp(12.5px,1.15vw,16px);letter-spacing:.42em;font-weight:600;color:var(--ac,#c8a96a)}
 .hm .qh-h1{font:300 clamp(46px,8.2vw,112px)/.98 Fraunces,Georgia,serif!important;letter-spacing:-.03em!important;margin:0 0 24px!important;color:var(--tx)}
 .hm .qh-h1 em{font-style:italic;color:var(--ac,#c8a96a)}
 .qh-alt{display:inline-block;margin-top:14px;font-size:14px;color:var(--mu)}.qh-alt:hover{color:var(--tx)}
@@ -37,7 +37,7 @@ function hero(open: HTMLElement): void {
   const inner = open.querySelector(':scope > div'); if (!inner || inner.hasAttribute('data-qh')) return;
   inner.setAttribute('data-qh', '1');
   const facts = inner.querySelector('.hm-facts')?.outerHTML || '';
-  inner.innerHTML = `<p class="qh-eye">Quantera Research</p>
+  inner.innerHTML = `<p class="qh-eye" aria-label="Quantera Research"><span class="wm">Quantera</span><span class="rs">Research</span></p>
     <h1 class="qh-h1">Same news.<br><em>Different world.</em></h1>
     <p class="lead">Student-led, independent research into how companies and markets react to the news, and free tools to check it yourself. Every figure is sourced and every method is shown.</p>
     <div class="cta"><a class="btn p" href="#/research">Read the research</a><a class="btn" href="#/insights">Compare reactions to the news</a></div>
