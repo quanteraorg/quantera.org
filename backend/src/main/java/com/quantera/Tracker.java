@@ -47,7 +47,12 @@ final class Tracker {
     static void run() {
         if (!Store.on()) return;
         int done = 0, seen = 0;
-        for (Object o : Providers.news("", "", 60)) {
+        // the company feed (same query as the daily challenge, so it shares that cache) tags companies far more often than the general feed
+        List<Object> stories = new ArrayList<>();
+        for (String q : List.of("SPY,QQQ,NVDA,AAPL,MSFT,AMZN,TSLA", "")) try { stories.addAll(Providers.news(q, "", 60)); } catch (RuntimeException ignored) { /* one feed down is fine */ }
+        Set<String> keys = new HashSet<>();
+        for (Object o : stories) {
+            if (!keys.add(key(map(o)))) continue;
             if (done >= PER_RUN) break;
             Map<String, Object> a = map(o);
             List<String> syms = tickers(a);
