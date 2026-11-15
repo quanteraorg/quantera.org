@@ -439,6 +439,33 @@ public class TestMain {
                     Json.obj("periods", List.of(Json.obj("period", "FY2025", "filing", "10-K", "link", "https://www.sec.gov/Archives/x.htm")))).toString().contains("https://www.sec.gov/Archives/x.htm"));
             t("grounding: news links skip items without a web address", Grounding.links("get_news", Json.obj(), List.of(Json.obj("title", "A", "url", "https://n.test/1"), Json.obj("title", "B"))).size() == 1);
         }
+        {
+            // Reaction gap, on built prices: market moves +1% on day 0; BIG (beta 2, noisy) jumps 25%, SMALL (beta 0.5, calm) 5%
+            int n = 160; List<String> days = new ArrayList<>(); java.time.LocalDate d0 = java.time.LocalDate.of(2026, 3, 2);
+            for (int i = 0, k = 0; days.size() < n; k++) { java.time.LocalDate d = d0.plusDays(k); if (d.getDayOfWeek().getValue() <= 5) days.add(d.toString()); }
+            double[] mc = new double[n], bc = new double[n], sc = new double[n], bv = new double[n], sv = new double[n]; java.util.Random rnd = new java.util.Random(7);
+            mc[0] = 100; bc[0] = 50; sc[0] = 200; int ev = 140;
+            for (int i = 1; i < n; i++) {
+                double rm = i == ev ? 0.01 : (rnd.nextGaussian() * 0.01), eb = i == ev ? 0.23 : rnd.nextGaussian() * 0.04, es = i == ev ? 0.045 : rnd.nextGaussian() * 0.005;
+                mc[i] = mc[i - 1] * (1 + rm); bc[i] = bc[i - 1] * (1 + 2 * rm + eb); sc[i] = sc[i - 1] * (1 + 0.5 * rm + es);
+                bv[i] = i == ev ? 5000 : 1000; sv[i] = i == ev ? 1500 : 1000;
+            }
+            Reaction.Series M = new Reaction.Series(days, mc, mc), Bs = new Reaction.Series(days, bc, bv), Ss = new Reaction.Series(days, sc, sv);
+            java.time.LocalDate evd = java.time.LocalDate.parse(days.get(ev));
+            Map<String, Object> big = Reaction.measure("BIG", Bs, evd, M, "BigCo wins huge contract", Json.obj("name", "BigCo Inc", "marketCap", 2e9, "pe", 60.0));
+            Map<String, Object> small = Reaction.measure("SMALL", Ss, evd, M, "BigCo wins huge contract", Json.obj("name", "Smallish Corp", "marketCap", 4e11, "pe", 20.0));
+            t("reaction: day-0 move, beta and market part measured", Math.abs(d(big.get("move")) - 25.0) < 0.6 && Math.abs(d(big.get("beta")) - 2) < 0.35 && Math.abs(d(big.get("market")) - 2 * d(big.get("benchmarkMove"))) < 0.6);
+            t("reaction: abnormal = move − market part; measured against its own normal day", Math.abs(d(big.get("abnormal")) - (d(big.get("move")) - d(big.get("market")))) < 0.02 && d(big.get("typicalDay")) > 2.5 && d(big.get("typicalDay")) < 6 && d(small.get("typicalDay")) < 1);
+            t("reaction: volume vs average, named in headline", d(big.get("volumeVsAverage")) == 5.0 && Boolean.TRUE.equals(big.get("namedInHeadline")) && Boolean.FALSE.equals(small.get("namedInHeadline")));
+            List<Object> why = Reaction.explain(big, small);
+            String all = why.toString();
+            t("reaction: reasons cover market, normal volatility, size, who the news names, volume and valuation", all.contains("The whole market") && all.contains("How much each stock normally moves") && all.contains("200× smaller") && all.contains("headline names BIG") && all.contains("5.0× its usual volume") && all.contains("60 times earnings"));
+            t("reaction: patterns are labelled as patterns, measurements as measurements", why.stream().allMatch(o -> List.of("measured", "pattern").contains(((Map<?, ?>) o).get("kind"))));
+            t("reaction: news after the close counts from the next session", Reaction.sessionFor("2026-11-05T21:30:00Z").toString().equals("2026-11-06") && Reaction.sessionFor("2026-11-05T15:00:00Z").toString().equals("2026-11-05") && Reaction.sessionFor("2026-11-05").toString().equals("2026-11-05"));
+            boolean tooEarly; try { Reaction.measure("BIG", Bs, java.time.LocalDate.parse(days.get(10)), M, "", Map.of()); tooEarly = false; } catch (Support.UpstreamException e) { tooEarly = e.code == 404; }
+            t("reaction: refuses when there isn't enough history before the news", tooEarly);
+        }
+        t("reaction API: needs two companies and a real date", call(p, "GET", "/api/reaction?symbols=AAPL&at=2026-10-22", null, ip()).code == 400 && call(p, "GET", "/api/reaction?symbols=AAPL,MSFT&at=yesterday", null, ip()).code == 400);
         t("AI key sent to Anthropic only, with tools", upstreamCalls.stream().anyMatch(u -> u.contains("anthropic key=an-test hasTools=true")) && !r.raw.contains("an-test"));
         t("AI rejects empty messages", call(p, "POST", "/api/ai", "{\"messages\":[]}", ip()).code == 400);
         t("AI rejects oversize message", call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"user\",\"content\":\"" + "x".repeat(3000) + "\"}]}", ip()).code == 400);
