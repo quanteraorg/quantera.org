@@ -23,6 +23,7 @@ import { initUi } from './ui';
 import { initReaction } from './reaction';
 import { initLibrary } from './library';
 import { initHome } from './home';
+import { initChallenge } from './challenge';
 
 initStates();
 initMotion();
@@ -46,4 +47,5 @@ initGrounding();
 initReaction();
 initLibrary();
 initHome();
+initChallenge();
 initUi();

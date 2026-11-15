@@ -83,7 +83,7 @@ function bars(r: Res): string {
 
 function table(r: Res): string {
   const rec = (c: Row) => !c.recovery ? '—' : c.recovery.recoveredAfter != null ? `Back after ${c.recovery.recoveredAfter} day${c.recovery.recoveredAfter > 1 ? 's' : ''}` : `Not within ${c.recovery.sessionsChecked} days (${sgn(c.recovery.nowVsBefore)})`;
-  return `<div class="ov"><table><tr><th>Company</th><th class="r">Move</th><th class="r">Market part</th><th class="r">Company-specific</th><th class="r">Normal day</th><th class="r">× normal</th><th class="r">Beta</th><th class="r">Days 0–2</th><th>Back to pre-news price</th><th class="r">Volume vs usual</th><th class="r">Month before</th><th class="r">Size</th><th class="r">P/E</th><th>In headline</th></tr>
+  return `<div class="ov"><table><tr><th>Company</th><th class="r">Move</th><th class="r">Market part</th><th class="r">Company-specific</th><th class="r">Normal day</th><th class="r">× normal</th><th class="r">Beta</th><th class="r">Days 0–2</th><th>Back to pre-news price</th><th class="r">Volume vs usual</th><th class="r">Month before</th><th class="r">Size (today)</th><th class="r">P/E (today)</th><th>In headline</th></tr>
   ${r.companies.map(c => `<tr><td><a href="#/asset/${enc(c.symbol)}"><b>${esc(c.symbol)}</b></a><br><small class="mu">${esc(c.sector || '')}</small></td>
     <td class="r ${c.move >= 0 ? 'up' : 'dn'}">${sgn(c.move)}</td><td class="r">${sgn(c.market)}</td><td class="r"><b>${sgn(c.abnormal)}</b></td><td class="r">±${fmt(c.typicalDay, 1)}%</td><td class="r">${fmt(Math.abs(c.sigmas), 1)}×</td>
     <td class="r">${fmt(c.beta, 2)}</td><td class="r">${c.threeDay ? sgn(c.threeDay.move) : '—'}</td><td>${rec(c)}</td><td class="r">${c.volumeVsAverage != null ? fmt(c.volumeVsAverage, 1) + '×' : '—'}</td>
@@ -170,7 +170,7 @@ async function insights(): Promise<void> {
   S.onkeydown = e => { if (e.key === 'Enter') (m.querySelector('#qing') as HTMLButtonElement).click(); };
   m.querySelectorAll<HTMLButtonElement>('[data-p]').forEach(b => b.onclick = () => go(PRESETS[+b.dataset.p!].ask));
   const pre = /^#\/insights\/(.+)$/.exec(location.hash);
-  if (pre) { const [s, at] = decodeURIComponent(pre[1]).split('@'); if (s && at) go({ symbols: s.split(','), at }); }
+  if (pre) { const [s, at] = decodeURIComponent(pre[1]).split('@'); if (s && at) { const syms = s.split(','), p = PRESETS.find(x => x.ask.at === at && x.ask.symbols.join(',') === syms.join(',')); go(p ? p.ask : { symbols: syms, at }); } }
   // real stories from the news feed that tag two or more companies
   const ev = m.querySelector('#qinev') as HTMLElement;
   try {
