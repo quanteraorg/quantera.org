@@ -12,6 +12,10 @@ const CSS = `
 #m .body h3,#m .lesson h3{font-size:19px}
 #m .hm-mv h3{font-size:12.5px}
 #m h1.k[data-sp] span{margin-right:0}
+/* the menu bar: Windows draws a full scrollbar when its content is a pixel taller than the bar; hide it (phones still swipe it) */
+#nav{overflow-y:hidden!important;scrollbar-width:none}#nav::-webkit-scrollbar{display:none}
+/* the price ticker keeps moving: no pause button, no pause on hover (founders' decision) */
+#tpb{display:none!important}#tape .tt,#tape.paused .tt,#tape:hover .tt,#tape:focus-within .tt{animation-play-state:running!important}
 /* buttons: one height per size, never wrapping onto two lines */
 #m .btn{min-height:var(--q-ctl);padding:0 15px;font-size:var(--q-fs-ctl);line-height:1.2;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;vertical-align:middle;box-sizing:border-box}
 #m .sc.hx .cta .btn,#m .hm .cta .btn,#m .btn.lg{min-height:var(--q-ctl-lg);padding:0 22px;font-size:15px}
@@ -26,6 +30,7 @@ const CSS = `
 `;
 
 export function initUi(): void {
+  try { localStorage.removeItem('q_tp'); } catch { /* an old "ticker paused" choice no longer applies */ }
   const put = () => { document.getElementById('qui-css')?.remove(); document.head.insertAdjacentHTML('beforeend', `<style id="qui-css">${CSS}</style>`); };
   put();
   // page headers are drawn one word per span for an entrance animation, with no spaces between them, so screen
