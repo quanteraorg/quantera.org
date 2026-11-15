@@ -25,6 +25,7 @@ import { initLibrary } from './library';
 import { initHome } from './home';
 import { initChallenge } from './challenge';
 import { initWatchlists } from './watchlists';
+import { initStatex } from './statex';
 
 initStates();
 initMotion();
@@ -50,4 +51,5 @@ initLibrary();
 initHome();
 initChallenge();
 initWatchlists();
+initStatex();
 initUi();
