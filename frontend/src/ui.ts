@@ -15,6 +15,8 @@ const CSS = `
 /* the menu bar: Windows draws a full scrollbar when its content is a pixel taller than the bar; hide it (phones still swipe it) */
 #nav{overflow-y:hidden!important;scrollbar-width:none}#nav::-webkit-scrollbar{display:none}
 /* the price ticker keeps moving: no pause button, no pause on hover (founders' decision) */
+/* the logo artwork is cream for the dark theme: darken it on light backgrounds so it stays visible */
+:root[data-theme="light"] img[src="/logo-mark.png"]{filter:brightness(.28) sepia(.35) saturate(1.4)}
 #tpb{display:none!important}#tape .tt,#tape.paused .tt,#tape:hover .tt,#tape:focus-within .tt{animation-play-state:running!important}
 /* buttons: one height per size, never wrapping onto two lines */
 #m .btn{min-height:var(--q-ctl);padding:0 15px;font-size:var(--q-fs-ctl);line-height:1.2;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;vertical-align:middle;box-sizing:border-box}
