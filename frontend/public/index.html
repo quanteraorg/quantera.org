@@ -5,7 +5,7 @@
  const tr=v=>{if(typeof v!='string'||D.dataset.theme!='light')return v;const l=v.trim().toLowerCase();if(l[0]=='#'&&l.length>=7){const m=M[l.slice(0,7)];return m?m+l.slice(7):v}if(l[0]=='#'&&l.length==4)return v;const r=l.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/);if(r){const m=R[r[1]+','+r[2]+','+r[3]];if(m)return `rgba(${m},${r[4]??1})`}return v};
  window.QTC=tr;const PQ=matchMedia('(max-width:800px),(pointer:coarse) and (max-height:500px)');window.PHONE=()=>PQ.matches;const DV=()=>{D.classList.toggle('is-phone',PQ.matches);D.classList.toggle('is-touch',matchMedia('(pointer:coarse)').matches)};DV();try{PQ.addEventListener('change',DV)}catch(e){}const C=window.CanvasRenderingContext2D&&CanvasRenderingContext2D.prototype;if(C)['fillStyle','strokeStyle','shadowColor'].forEach(p=>{const d=Object.getOwnPropertyDescriptor(C,p);if(d&&d.set)Object.defineProperty(C,p,{configurable:true,enumerable:d.enumerable,get:d.get,set(v){d.set.call(this,tr(v))}})});
  const G=window.CanvasGradient&&CanvasGradient.prototype;if(G){const a=G.addColorStop;G.addColorStop=function(o,c){return a.call(this,o,tr(c))}}})();</script><title>Quantera Research: same news, different world</title>
-<meta name="description" content="Student-led research into how companies and markets react to the news, with free tools to check it yourself: SEC financial statements, reaction analysis, charts and a hands-on Academy. Education, not investment advice.">
+<meta name="description" content="Independent, student-led research that explains the reasoning behind the numbers: how companies and markets react to the news, with free tools to check every figure yourself, from SEC financial statements to private-company valuations. Education, not investment advice.">
 <meta name="theme-color" content="#06080c">
 <script>/* Privacy choices. Quantera sets no cookies and shows no ads. Anonymous usage statistics (Vercel Web Analytics and
    Quantera's own feature counts) and error reports (Sentry) are on unless the visitor turns them off in Settings or the
@@ -21,7 +21,7 @@ window.QSTATS=function(){return window.QPRIV()==='all'};</script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Quantera">
 <meta property="og:title" content="Quantera Research: same news, different world">
-<meta property="og:description" content="Student-led research into how companies and markets react to the news, with free tools to check it yourself: SEC financial statements, reaction analysis, charts and a hands-on Academy. Education, not investment advice.">
+<meta property="og:description" content="Independent, student-led research that explains the reasoning behind the numbers: how companies and markets react to the news, with free tools to check every figure yourself, from SEC financial statements to private-company valuations. Education, not investment advice.">
 <meta property="og:url" content="https://quanteraorg.vercel.app/">
 <meta property="og:image" content="https://quanteraorg.vercel.app/og.png">
 <meta property="og:image:width" content="1200">

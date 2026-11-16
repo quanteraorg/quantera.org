@@ -39,7 +39,7 @@ function hero(open: HTMLElement): void {
   const facts = inner.querySelector('.hm-facts')?.outerHTML || '';
   inner.innerHTML = `<div class="qh-brand" role="img" aria-label="Quantera Research"><img class="mk" src="/logo-mark.png" alt="" width="84" height="84"><span class="lk"><span class="wm">Quantera</span><span class="rs"><span>Research</span></span></span></div>
     <h1 class="qh-h1">Same news.<br><em>Different world.</em></h1>
-    <p class="lead">Student-led, independent research into how companies and markets react to the news, and free tools to check it yourself. Every figure is sourced and every method is shown.</p>
+    <p class="lead">Research that explains the reasoning behind the numbers. We study how companies and markets react to the news, and give you free tools to check every figure yourself, from SEC filings to private-company valuations. Independent and student-led, for anyone learning to invest.</p>
     <div class="cta"><a class="btn p" href="#/research">Read the research</a><a class="btn" href="#/insights">Compare reactions to the news</a></div>
     <a class="qh-alt" href="#/trade">Or practise investing with $100,000 of virtual money →</a>
     <div class="fine" style="margin-top:12px">Free. No sign-up needed. For education, not investment advice.</div>${facts}`;
