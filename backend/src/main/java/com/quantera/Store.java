@@ -80,6 +80,33 @@ final class Store {
         return Json.obj("ok", true, "alreadyJoined", added.isEmpty());
     }
 
+    static final java.util.Set<String> FEEDBACK_KINDS = java.util.Set.of("bug", "data", "idea", "other");
+    static final Pattern PAGE = Pattern.compile("^[#/A-Za-z0-9._\\-?=&%]{0,200}$");
+
+    /** Cleans and checks a feedback message. Pure: unit-tested. Returns the row to store, or null for a bot (hidden field filled). */
+    static Map<String, Object> feedbackRow(Object body) {
+        Map<String, Object> b = map(body);
+        if (!String.valueOf(b.getOrDefault("website", "")).isEmpty()) return null; // honeypot: people never see this field
+        String kind = String.valueOf(b.getOrDefault("kind", "")).trim(), page = String.valueOf(b.getOrDefault("page", "")).trim(),
+                email = String.valueOf(b.getOrDefault("email", "")).trim().toLowerCase(),
+                msg = String.valueOf(b.getOrDefault("message", "")).replaceAll("[\\p{Cntrl}&&[^\n\t]]", "").trim();
+        if (!FEEDBACK_KINDS.contains(kind)) throw new UpstreamException("Choose what the feedback is about.", 400);
+        if (msg.length() < 5) throw new UpstreamException("Please write a little more (at least 5 characters).", 400);
+        if (msg.length() > 2000) throw new UpstreamException("Please keep it under 2,000 characters.", 400);
+        if (!email.isEmpty() && !EMAIL.matcher(email).matches()) throw new UpstreamException("That email address doesn't look right. Leave it blank if you'd rather not reply.", 400);
+        if (!PAGE.matcher(page).matches()) page = "";
+        return Json.obj("kind", kind, "message", msg, "page", page, "email", email.isEmpty() ? null : email);
+    }
+
+    /** Feedback form: stored server-side only (table feedback, RLS on with no public policies), never shown back to anyone. */
+    static Map<String, Object> feedback(Object body) {
+        Map<String, Object> row = feedbackRow(body);
+        if (row == null) return Json.obj("ok", true);
+        if (!on()) throw new UpstreamException("Feedback isn't connected yet. Please try again soon.", 503);
+        insert("feedback", row);
+        return Json.obj("ok", true);
+    }
+
     /** Usage events are best effort: without storage, or if storage fails, they are dropped quietly. */
     static Map<String, Object> event(Object body) {
         String name = String.valueOf(map(body).getOrDefault("name", ""));

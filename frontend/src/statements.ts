@@ -115,7 +115,7 @@ function glance(st: St): string {
   if (div != null || bb != null) add('Returned to shareholders', money(Math.abs(div || 0) + Math.abs(bb || 0)), `Dividends ${money(div == null ? null : Math.abs(div))} · buybacks ${money(bb == null ? null : Math.abs(bb))}`, 'Calculated');
   const filing = [...P].reverse().find(p => p.filing && /10-K/.test(p.form || ''));
   const report = filing ? `<div class="qg-rep"><b>From the annual report (${esc(filing.form || '10-K')}, ${esc(filing.label)}):</b> <a href="${esc(filing.filing!)}" target="_blank" rel="noopener noreferrer">open the filing at sec.gov</a> for the company’s own description of its <b>business</b> (Item 1), its <b>risk factors</b> (Item 1A) and management’s <b>discussion of results</b> (Item 7).</div>` : '';
-  return T.length ? `<div class="qg"><div class="qg-h"><h3>At a glance · ${esc(fy)}</h3><span class="mu">Latest fiscal year from SEC filings · USD</span></div><div class="qg-g">${T.join('')}</div>${report}</div>` : '';
+  return T.length ? `<div class="qg"><div class="qg-h"><h3>At a glance · ${esc(fy)}</h3><span class="mu">Latest fiscal year from SEC filings · USD</span></div><div class="qg-g">${T.join('')}</div>${report}<div class="qg-rep"><a href="#/ratios/${encodeURIComponent(st.symbol)}">Work out more ratios from these figures →</a> · <button type="button" class="qfb-link" data-fb="data">Spot a wrong number?</button></div></div>` : '';
 }
 
 function render(host: HTMLElement, st: St): void {

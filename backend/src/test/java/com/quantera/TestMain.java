@@ -506,6 +506,17 @@ public class TestMain {
         }
         t("reaction API: needs two companies and a real date", call(p, "GET", "/api/reaction?symbols=AAPL&at=2026-10-22", null, ip()).code == 400 && call(p, "GET", "/api/reaction?symbols=AAPL,MSFT&at=yesterday", null, ip()).code == 400);
         t("AI key sent to Anthropic only, with tools", upstreamCalls.stream().anyMatch(u -> u.contains("anthropic key=an-test hasTools=true")) && !r.raw.contains("an-test"));
+        {
+            Map<String, Object> ok = Store.feedbackRow(Json.obj("kind", "data", "message", "  NVDA free cash flow\u0007 looks wrong  ", "page", "#/asset/NVDA", "email", ""));
+            t("feedback: cleans the message, keeps the page, no email stored when blank", "NVDA free cash flow looks wrong".equals(ok.get("message")) && "#/asset/NVDA".equals(ok.get("page")) && ok.get("email") == null);
+            t("feedback: bots that fill the hidden field are dropped quietly", Store.feedbackRow(Json.obj("kind", "bug", "message", "hello there", "website", "x")) == null);
+            boolean fbBad = true;
+            for (Map<String, Object> m : List.of(Json.obj("kind", "spam", "message", "hello there"), Json.obj("kind", "bug", "message", "hey"), Json.obj("kind", "bug", "message", "x".repeat(2001)), Json.obj("kind", "bug", "message", "hello there", "email", "not-an-email")))
+                try { Store.feedbackRow(m); fbBad = false; } catch (Support.UpstreamException e) { fbBad &= e.code == 400; }
+            t("feedback: rejects unknown kinds, too short or long messages and bad emails", fbBad);
+            t("feedback: odd page values are dropped, not stored", "".equals(Store.feedbackRow(Json.obj("kind", "idea", "message", "hello there", "page", "<script>")).get("page")));
+            t("feedback API: POST only", call(p, "GET", "/api/feedback", null, ip()).code == 405);
+        }
         t("AI rejects empty messages", call(p, "POST", "/api/ai", "{\"messages\":[]}", ip()).code == 400);
         t("AI rejects oversize message", call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"user\",\"content\":\"" + "x".repeat(3000) + "\"}]}", ip()).code == 400);
         t("AI rejects system role injection", call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"system\",\"content\":\"hack\"},{\"role\":\"user\",\"content\":\"hi\"}]}", ip()).code == 400);

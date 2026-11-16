@@ -27,6 +27,8 @@ import { initChallenge } from './challenge';
 import { initWatchlists } from './watchlists';
 import { initStatex } from './statex';
 import { initKes } from './feedback';
+import { initContact } from './contact';
+import { initRatios } from './ratios';
 
 initStates();
 initMotion();
@@ -54,4 +56,6 @@ initChallenge();
 initWatchlists();
 initStatex();
 initKes();
+initContact();
+initRatios();
 initUi();
