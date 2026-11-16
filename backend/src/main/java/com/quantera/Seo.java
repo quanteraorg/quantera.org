@@ -54,6 +54,32 @@ final class Seo {
 
     static Page notFound(String what) { return new Page(404, "text/html; charset=utf-8", page("Not found | Quantera", "This page was not found on Quantera.", "/", "<h1>" + h(what) + " not found</h1><p><a href=\"/stocks\">Browse stocks</a> or <a href=\"/private-companies\">private companies</a>.</p>", null, false)); }
 
+    static final java.time.ZoneId NY = java.time.ZoneId.of("America/New_York");
+    static final java.time.format.DateTimeFormatter WHEN = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a", Locale.ENGLISH);
+
+    /** "Price as of … New York time; company figures to …; data fetched … UTC". Every date says what it is and its time zone. Pure: unit-tested. */
+    static String asOfLine(String priceTime, String fetched, String latestQuarter, String fiscalYearEnd) {
+        StringBuilder b = new StringBuilder();
+        try { if (priceTime != null) b.append("Price as of ").append(Instant.parse(priceTime).atZone(NY).format(WHEN).replace("AM", "am").replace("PM", "pm")).append(" New York time. "); } catch (RuntimeException ignored) {}
+        if (latestQuarter != null || fiscalYearEnd != null) {
+            b.append("Company figures: ");
+            if (latestQuarter != null) b.append("quarter ended ").append(month(latestQuarter));
+            if (latestQuarter != null && fiscalYearEnd != null) b.append("; ");
+            if (fiscalYearEnd != null) b.append("full year ended ").append(month(fiscalYearEnd));
+            b.append(". ");
+        }
+        try { if (fetched != null) b.append("Data fetched ").append(Instant.parse(fetched).atZone(ZoneOffset.UTC).format(WHEN).replace("AM", "am").replace("PM", "pm")).append(" UTC."); } catch (RuntimeException ignored) {}
+        return b.toString().trim();
+    }
+
+    static String fetchedLine(String fetched) {
+        try { return fetched == null ? "" : "Data fetched " + Instant.parse(fetched).atZone(ZoneOffset.UTC).format(WHEN).replace("AM", "am").replace("PM", "pm") + " UTC."; } catch (RuntimeException e) { return ""; }
+    }
+
+    static String asOfPrice(String priceTime) {
+        try { return priceTime == null ? "" : " <small>as of " + h(Instant.parse(priceTime).atZone(NY).format(WHEN).replace("AM", "am").replace("PM", "pm")) + " New York time · delayed</small>"; } catch (RuntimeException e) { return ""; }
+    }
+
     /** One stock: the numbers that matter, a plain-English summary, statements and related stocks. Only companies with real fundamentals get an indexable page. */
     static Page stock(String raw) {
         String s = raw.toUpperCase(Locale.ROOT);
@@ -71,7 +97,7 @@ final class Seo {
         boolean pence = q != null && !q.equals(q.toUpperCase(Locale.ROOT));
         String capCcy = pence ? q.toUpperCase(Locale.ROOT) : q, price = px == null ? "—" : (pence ? num(px, "#,##0.00") + " " + q : money(px, q));
         String desc = name + " (" + s + ") stock: " + (cap != null ? "market cap " + money(cap, capCcy) + ", " : "") + (pe != null ? "P/E " + num(pe, "0.0") + ", " : "") + (rev != null ? "revenue " + money(rev, c) + " in the latest full year. " : ". ") + "Financials, analyst targets and a plain-English summary.";
-        StringBuilder m = new StringBuilder("<p class=\"crumb\"><a href=\"/stocks\">Stocks</a> › " + h(s) + "</p><h1>" + h(name) + " <span>" + h(s) + "</span></h1><p class=\"px\">" + h(price) + "</p><div class=\"kn\">");
+        StringBuilder m = new StringBuilder("<p class=\"crumb\"><a href=\"/stocks\">Stocks</a> › " + h(s) + "</p><h1>" + h(name) + " <span>" + h(s) + "</span></h1><p class=\"px\">" + h(price) + asOfPrice(str(f.get("priceTime"))) + "</p><div class=\"kn\">");
         if (cap != null) m.append(tile("Company value", money(cap, capCcy), "Market cap at the latest price"));
         if (pe != null) m.append(tile("Price vs profit", num(pe, "0.0"), "P/E ratio, past 12 months of profit")); else if (d(k, "eps") != null && d(k, "eps") < 0) m.append(tile("Price vs profit", "Loss", "No P/E: earnings are negative"));
         if (rg != null) m.append(tile("Sales growth", signed(rg), "Latest quarter, vs a year ago"));
@@ -109,7 +135,7 @@ final class Seo {
             for (String[] p : Yahoo.POPULAR) if (p[1].equals(sector) && !p[0].equals(s) && n++ < 12) m.append("<a href=\"/stock/").append(h(p[0])).append("\">").append(h(p[0])).append("</a>");
             m.append("</p>");
         }
-        m.append("<p class=\"src\">Source: ").append(h(f.get("source"))).append(", updated ").append(LocalDate.now(ZoneOffset.UTC)).append(". Amounts in ").append(h(c)).append(". Not investment advice.</p>");
+        m.append("<p class=\"src\">Source: ").append(h(f.get("source"))).append(". ").append(h(asOfLine(str(f.get("priceTime")), str(f.get("fetched")), lq, str(last.get("date"))))).append(" Amounts in ").append(h(c)).append(". Not investment advice.</p>");
         return new Page(200, "text/html; charset=utf-8", page(name + " (" + s + ") Stock: Price, Financials and Analysis | Quantera", desc, path, m.toString(), crumbs(s, "/stocks", "Stocks", path), true));
     }
 
@@ -125,6 +151,24 @@ final class Seo {
         return reported != null && sum > 0 && sum < reported / 2 ? sum : null;
     }
 
+    static final String PVT_METHOD = "How these estimates are made: the estimated valuation is Forge Global's latest price per share multiplied by its estimate of the company's shares. "
+            + "That price comes from the latest funding round or, where shares change hands, from secondary-market trades between investors, so it can differ from the valuation the company agreed in its last round. "
+            + "Private companies don't publish audited accounts or a daily share price, so treat every figure as an estimate. Funding-round figures are as reported to Forge Global and may be incomplete.";
+
+    /** How the estimate compares with the last round that set a valuation. Pure: unit-tested. */
+    static String pvtBasis(Double estimate, List<Object> rounds) {
+        if (estimate == null) return "";
+        for (Object o : rounds) { // newest first
+            Map<String, Object> r = map(o); Double v = d(r, "valuation");
+            if (v == null || v <= 0) continue;
+            double gap = estimate / v - 1;
+            String when = str(r.get("date")) == null ? "" : " on " + str(r.get("date")), round = str(r.get("round")) == null ? "its last round" : "its " + str(r.get("round")) + " round";
+            if (Math.abs(gap) < 0.02) return "This matches the post-money valuation of " + round + when + " (" + money(v, "USD") + ").";
+            return "This is " + pct(Math.abs(gap)) + (gap > 0 ? " above" : " below") + " the " + money(v, "USD") + " valuation of " + round + when + ", because it reflects later secondary-market prices.";
+        }
+        return "No funding round with a published valuation is listed, so this estimate rests on secondary-market prices only.";
+    }
+
     /** One private company: valuation, funding rounds and what funds report it is worth. */
     static Page privateCompany(String sl) {
         Map<String, Object> co = privateBySlug(sl.toLowerCase(Locale.ROOT));
@@ -137,7 +181,7 @@ final class Seo {
         Double listed = listedRaised(fund, rounds);
         if (listed != null) fund = listed;
         String desc = name + " valuation: estimated " + money(val, "USD") + (fund != null ? ", with " + money(fund, "USD") + (listed != null ? " raised in listed rounds" : " raised") : "") + ". Funding rounds, price per share and what mutual funds report it is worth.";
-        StringBuilder m = new StringBuilder("<p class=\"crumb\"><a href=\"/private-companies\">Private companies</a> › " + h(name) + "</p><h1>" + h(name) + " valuation</h1><p class=\"px\">" + h(money(val, "USD")) + " <small>estimated</small></p><div class=\"kn\">");
+        StringBuilder m = new StringBuilder("<p class=\"crumb\"><a href=\"/private-companies\">Private companies</a> › " + h(name) + "</p><h1>" + h(name) + " valuation</h1><p class=\"px\">" + h(money(val, "USD")) + " <small>estimated</small></p><p class=\"basis\">" + h(pvtBasis(val, rounds)) + "</p><div class=\"kn\">");
         m.append(tile("Past year", d(co, "change52w") == null ? "—" : signed(d(co, "change52w") / 100), "Change in estimated price"));
         if (d(co, "price") != null) m.append(tile("Price per share", money(d(co, "price"), "USD"), "Estimated"));
         if (fund != null) m.append(listed != null ? tile("Total raised (listed rounds)", money(fund, "USD"), "Sum of the rounds below") : tile("Total raised", money(fund, "USD"), "Reported total"));
@@ -149,7 +193,7 @@ final class Seo {
             for (Object o : rounds) { Map<String, Object> r = map(o); m.append("<tr><td>").append(h(r.get("date"))).append("</td><td>").append(h(r.get("round"))).append("</td><td>").append(h(money(d(r, "raised"), "USD"))).append("</td><td>").append(d(r, "issuePrice") == null ? "—" : "$" + h(num(d(r, "issuePrice"), "#,##0.00"))).append("</td><td>").append(h(money(d(r, "valuation"), "USD"))).append("</td></tr>"); }
             m.append("</table></div>");
         }
-        m.append("<p class=\"src\">Source: ").append(h(f.get("source"))).append(". Private company values are estimates and can differ a lot from what shares would sell for. Not investment advice.</p>");
+        m.append("<p class=\"src\">Source: ").append(h(f.get("source"))).append(". ").append(h(PVT_METHOD)).append(" ").append(h(fetchedLine(str(Yahoo.privates().get("updated"))))).append(" Not investment advice.</p>");
         return new Page(200, "text/html; charset=utf-8", page(name + " Valuation, Funding Rounds and Share Price | Quantera", desc, path, m.toString(), crumbs(name, "/private-companies", "Private companies", path), true));
     }
 
@@ -162,9 +206,9 @@ final class Seo {
     }
 
     static Page privates() {
-        StringBuilder m = new StringBuilder("<h1>Private company valuations</h1><p>What OpenAI, Anthropic, Stripe and other private companies are estimated to be worth, how much they have raised, and their latest funding rounds.</p><div class=\"tw\"><table><tr><th>Company</th><th>Sector</th><th>Estimated valuation</th><th>Total raised</th><th>Past year</th></tr>");
-        for (Object o : list(Yahoo.privates().get("companies"))) { Map<String, Object> c = map(o); m.append("<tr><td><a href=\"/private-company/").append(h(slug(str(c.get("name"))))).append("\">").append(h(c.get("name"))).append("</a></td><td>").append(h(c.get("sector"))).append("</td><td>").append(h(money(d(c, "valuation"), "USD"))).append("</td><td>").append(h(money(d(c, "funding"), "USD"))).append("</td><td>").append(d(c, "change52w") == null ? "—" : h(signed(d(c, "change52w") / 100))).append("</td></tr>"); }
-        m.append("</table></div><p class=\"src\">Source: Yahoo Finance (Forge Global). Estimates only. Not investment advice.</p>");
+        StringBuilder m = new StringBuilder("<h1>Private company valuations</h1><p>What OpenAI, Anthropic, Stripe and other private companies are estimated to be worth, how much they have raised, and their latest funding rounds.</p><div class=\"tw\"><table><tr><th>Company</th><th>Sector</th><th>Estimated valuation</th><th>Latest round</th><th>Total raised</th><th>Past year</th></tr>");
+        for (Object o : list(Yahoo.privates().get("companies"))) { Map<String, Object> c = map(o); m.append("<tr><td><a href=\"/private-company/").append(h(slug(str(c.get("name"))))).append("\">").append(h(c.get("name"))).append("</a></td><td>").append(h(c.get("sector"))).append("</td><td>").append(h(money(d(c, "valuation"), "USD"))).append("</td><td>").append(str(c.get("lastRound")) == null ? "—" : h(str(c.get("lastRound"))) + (str(c.get("lastRoundDate")) == null ? "" : "<br><small>" + h(str(c.get("lastRoundDate"))) + "</small>")).append("</td><td>").append(h(money(d(c, "funding"), "USD"))).append("</td><td>").append(d(c, "change52w") == null ? "—" : h(signed(d(c, "change52w") / 100))).append("</td></tr>"); }
+        m.append("</table></div><p class=\"src\">Source: Yahoo Finance, with valuations and funding data from Forge Global. ").append(h(PVT_METHOD)).append(" Each company's page compares its estimate with its last funding round. ").append(h(fetchedLine(str(Yahoo.privates().get("updated"))))).append(" Not investment advice.</p>");
         return new Page(200, "text/html; charset=utf-8", page("Private Company Valuations: OpenAI, Anthropic, Stripe and More | Quantera", "Estimated valuations, funding totals and latest rounds for the biggest private companies, including OpenAI, Anthropic and Stripe.", "/private-companies", m.toString(), null, true));
     }
 
