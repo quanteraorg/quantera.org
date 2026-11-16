@@ -42,7 +42,7 @@ const CSS = `
 .qin-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mu)}
 .qin-form input{font:inherit;font-size:14px;padding:10px 12px!important;min-width:0}
 @media (max-width:760px){.qin-form{grid-template-columns:minmax(0,1fr)}}
-.qin-pre{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}.qin-pre .chip{white-space:normal;text-align:left;max-width:100%;padding-top:6px;padding-bottom:6px}
+.qin-pre{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}#m .qin-pre .chip{white-space:normal!important;height:auto!important;min-height:38px;text-align:left;max-width:100%;padding-top:6px;padding-bottom:6px;overflow-wrap:anywhere}
 .qin-ev{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin-top:10px}
 .qin-ev button{text-align:left;border:1px solid var(--ln);border-radius:12px;padding:12px 14px;background:var(--s1);color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:5px}
 .qin-ev button:hover{border-color:rgba(var(--acc),.5)}.qin-ev b{font-size:14px;line-height:1.35}.qin-ev small{color:var(--mu);font-size:12px}
