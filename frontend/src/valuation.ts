@@ -53,7 +53,7 @@ export function dcf(x: Inputs, g = x.g, d = x.d) {
 /**
  * The model's starting inputs from a company's filings and price, so every page that shows a DCF uses the same rules:
  * latest reported free cash flow, revenue growth (compound, up to 5 years) kept between 0% and 20%, a 9% discount rate,
- * 2.5% terminal growth, latest diluted shares, and cash plus short-term investments minus total debt (including debt due within a year).
+ * 2.5% terminal growth, the latest year's average diluted shares, and cash plus short-term investments minus total debt (including debt due within a year).
  * Returns null when a needed figure isn't filed (nothing is guessed) or the company is a bank or insurer.
  */
 export function startingInputs(st: St, price: number): { x: Inputs; cagr: number | null; years: number } | null {
@@ -125,7 +125,7 @@ function page(sym?: string): void {
         g: cagr == null ? 'Revenue history wasn’t available, so this starts at 5%.' : `${esc(st.name || sym)}’s revenue grew ${pct(cagr)} a year over the last ${yrs} year${yrs > 1 ? 's' : ''}${cagr > 20 ? ', capped at 20% because very few companies keep that up for five years' : cagr < 0 ? ', floored at 0%' : ''}. Years 6–10 fade to the terminal rate.`,
         d: 'The return investors expect for the risk. 8–10% is typical for a large US company; riskier businesses use more.',
         t: 'Growth forever after year 10. Kept near long-run inflation and economic growth; it must be below the discount rate.',
-        shares: `${fy(sh[1])} diluted shares${link(sh[1])}.`,
+        shares: `Average diluted shares during ${fy(sh[1])}, the count used for earnings per share${link(sh[1])}. A company buying back shares ends the year with fewer, which would raise the value per share a little.`,
         net: `Cash and short-term investments minus total debt (long-term debt plus debt due within a year) at the end of ${fy((cash || debt || [0, P.length - 1])[1])}. Added to the value of the business to get the value for shareholders.`,
         price: 'Live or delayed up to 15 minutes.',
       },
