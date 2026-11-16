@@ -42,7 +42,7 @@ const CSS = `
 .qin-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mu)}
 .qin-form input{font:inherit;font-size:14px;padding:10px 12px!important;min-width:0}
 @media (max-width:760px){.qin-form{grid-template-columns:minmax(0,1fr)}}
-.qin-pre{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}.qin-pre .chip{white-space:normal;text-align:left;max-width:100%;padding-top:6px;padding-bottom:6px}
+.qin-pre{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}#m .qin-pre .chip{max-width:100%;min-width:0;overflow:hidden;text-align:left}#m .qin-pre .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .qin-ev{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin-top:10px}
 .qin-ev button{text-align:left;border:1px solid var(--ln);border-radius:12px;padding:12px 14px;background:var(--s1);color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:5px}
 .qin-ev button:hover{border-color:rgba(var(--acc),.5)}.qin-ev b{font-size:14px;line-height:1.35}.qin-ev small{color:var(--mu);font-size:12px}
@@ -173,7 +173,7 @@ async function insights(): Promise<void> {
       <div class="qin-form"><label>Companies (2 to 8 tickers)<input id="qins" placeholder="e.g. NVDA, AMD, SMCI" autocomplete="off"></label>
       <label>Date of the news<input id="qind" type="date"></label><button class="btn p" id="qing">Compare</button></div>
       <label style="display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mu);margin-top:10px">Headline (optional: used to see which companies the news names)<input id="qinh" maxlength="300" style="font:inherit;font-size:14px;padding:10px 12px!important"></label>
-      <div class="qin-pre">${PRESETS.map((p, i) => `<button class="chip" data-p="${i}">${esc(p.label)}</button>`).join('')}</div>
+      <div class="qin-pre">${PRESETS.map((p, i) => `<button class="chip" data-p="${i}" title="${esc(p.label)}"><span>${esc(p.label)}</span></button>`).join('')}</div>
       <div id="qinout" style="margin-top:18px"></div></div>
     <div class="pan"><h3 style="margin-top:0">Today’s stories that moved more than one company</h3><p class="mu" style="margin:0">Pick one to compare how each company reacted.</p><div class="qin-ev" id="qinev"><div class="qrx-sk" style="height:70px"></div></div></div>
     <div class="pan" id="qtrk"><h3 style="margin-top:0">Reaction tracker: do smaller companies react more?</h3><div class="qrx-sk" style="height:120px"></div></div>
