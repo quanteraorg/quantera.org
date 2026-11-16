@@ -66,8 +66,9 @@ final class Tracker {
             Map<String, Object> r;
             try { r = Reaction.of(String.join(",", syms), at, title); } catch (UpstreamException e) { continue; }
             List<Object> rows = new ArrayList<>();
-            for (Object c : list(r.get("companies"))) rows.add(row(k, title, at, map(c)));
-            if (rows.isEmpty()) continue;
+            // companies only: funds (SPY, QQQ, sector ETFs) have no company size, and the study compares company sizes
+            for (Object c : list(r.get("companies"))) if (num(map(c).get("marketCap")) != null) rows.add(row(k, title, at, map(c)));
+            if (rows.size() < 2) continue;
             try { Store.insertIgnore("reaction_events", rows, "event_key,symbol"); done++; }
             catch (UpstreamException e) { lastError = "storage: " + e.getMessage(); return; }
         }
@@ -102,9 +103,11 @@ final class Tracker {
         List<List<Double>> z = new ArrayList<>(), ab = new ArrayList<>();
         for (int i = 0; i < 4; i++) { z.add(new ArrayList<>()); ab.add(new ArrayList<>()); }
         List<double[]> pairs = new ArrayList<>();
-        Set<String> events = new HashSet<>(); String first = null, last = null;
+        Set<String> events = new HashSet<>(), seenMoves = new HashSet<>(); String first = null, last = null;
         for (Object o : rows) {
             Map<String, Object> r = map(o);
+            // the same company on the same day is one move, however many stories tagged it
+            if (!seenMoves.add(r.get("symbol") + "|" + r.get("day0"))) { events.add(String.valueOf(r.get("event_key"))); continue; }
             Double cap = num(r.get("market_cap")), s = num(r.get("sigmas")), a = num(r.get("abnormal_pct"));
             events.add(String.valueOf(r.get("event_key")));
             String d = str(r.get("day0")); if (d != null) { if (first == null || d.compareTo(first) < 0) first = d; if (last == null || d.compareTo(last) > 0) last = d; }
@@ -136,7 +139,7 @@ final class Tracker {
 
     static Map<String, Object> view() {
         if (!Store.on()) throw new UpstreamException("The reaction tracker isn't connected yet", 503);
-        List<Object> rows = list(Store.rest("GET", "reaction_events?select=event_key,headline,day0,symbol,market_cap,move_pct,abnormal_pct,typical_day,sigmas,named&order=day0.desc&limit=2000", null));
+        List<Object> rows = list(Store.rest("GET", "reaction_events?select=event_key,headline,day0,symbol,market_cap,move_pct,abnormal_pct,typical_day,sigmas,named&market_cap=not.is.null&order=day0.desc&limit=2000", null));
         Map<String, Object> s = summarise(rows);
         s.put("recent", rows.subList(0, Math.min(rows.size(), 400)));
         s.put("lastRun", lastRun); s.put("lastCandidates", lastCandidates); s.put("lastAdded", lastAdded);
