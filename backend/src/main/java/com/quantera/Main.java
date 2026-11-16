@@ -160,6 +160,10 @@ public final class Main {
             if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405);
             return Store.joinWaitlist(r.body());
         }, 0, 5));
+        ROUTES.put("/api/feedback", new Route(r -> {
+            if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405);
+            return Store.feedback(r.body());
+        }, 0, 3));
         ROUTES.put("/api/events", new Route(r -> {
             if (!r.method().equals("POST")) throw new UpstreamException("Use POST", 405);
             return Store.event(r.body());
