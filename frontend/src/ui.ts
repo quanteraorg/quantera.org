@@ -17,6 +17,8 @@ const CSS = `
 /* the price ticker keeps moving: no pause button, no pause on hover (founders' decision) */
 /* the logo artwork is cream for the dark theme: darken it on light backgrounds so it stays visible */
 :root[data-theme="light"] img[src="/logo-mark.png"]{filter:brightness(.28) sepia(.35) saturate(1.4)}
+/* Compare: the period and source under each company figure */
+.cmpt small.cmsrc{display:block;font-size:11px;line-height:1.3;color:var(--mu);margin-top:2px;font-weight:400;white-space:normal}
 #tpb{display:none!important}#tape .tt,#tape.paused .tt,#tape:hover .tt,#tape:focus-within .tt{animation-play-state:running!important}
 /* buttons: one height per size, never wrapping onto two lines */
 #m .btn{min-height:var(--q-ctl);padding:0 15px;font-size:var(--q-fs-ctl);line-height:1.2;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;vertical-align:middle;box-sizing:border-box}

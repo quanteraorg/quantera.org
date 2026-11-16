@@ -105,6 +105,10 @@ function sources(s: string): void {
     if (f?.key) {
       const lq = when(f.latestQuarter);
       parts.push(`<span><b>Key figures:</b> ${esc(f.source || 'Yahoo Finance')} · last 12 months${lq ? ' to ' + dayStr(lq) : ''}</span>`);
+      // a company can report its accounts in a different currency from the one its shares trade in (Shell: US dollars vs pence)
+      const pc = q?.currency || f.currency, fc = f.financialCurrency;
+      if (fc && pc && fc !== pc && !(fc === 'GBP' && pc === 'GBp')) parts.push(`<span><b>Currencies:</b> company figures in ${esc(fc)}, share price in ${esc(pc === 'GBp' ? 'pence (GBp)' : pc)}</span>`);
+      if (/^[A-Z]{1,5}$/.test(s)) parts.push('<span><b>Full-year figures</b> filed with the SEC are in the Financials tab, labelled by fiscal year</span>');
       if (f.analysts?.count) parts.push(`<span><b>Analyst target:</b> average of ${fmt(f.analysts.count, 0)} analysts · forecast, not fact</span>`);
     }
     parts.push('<span>Tap ⓘ on a figure to see how it’s calculated</span>');

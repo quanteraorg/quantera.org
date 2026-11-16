@@ -111,6 +111,7 @@ final class Statements {
         {"deposits", "Deposits", "USD", "usd", "0", "Deposits"},
         {"currentLiabilities", "Total current liabilities", "USD", "usd", "1", "LiabilitiesCurrent"},
         {"longTermDebt", "Long-term debt", "USD", "usd", "0", "LongTermDebtNoncurrent", "LongTermDebt", "LongTermDebtAndCapitalLeaseObligations"},
+        {"totalDebt", "Total debt (incl. due within a year)", "USD", "usd", "0"},
         {"liabilities", "Total liabilities", "USD", "usd", "1", "Liabilities"},
         {"equity", "Shareholders' equity", "USD", "usd", "1", "StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"},
     };
@@ -217,6 +218,26 @@ final class Statements {
             for (int i = 0; i < fcf.length; i++) fcf[i] = Double.isNaN(ocf[i]) || Double.isNaN(cx[i]) ? Double.NaN : ocf[i] + cx[i]; // capex is already negative
             vals.put("freeCashFlow", fcf);
             replace(cash, CASH, "freeCashFlow", fcf, fin ? "Cash from operations minus capital spending. Not meaningful for banks and insurers, whose operating cash flow includes lending and deposits" : "Cash from operations minus capital spending");
+        }
+        // total debt: long-term debt plus what falls due within a year, without counting the current portion twice.
+        // Filings report long-term debt either excluding the current portion (LongTermDebtNoncurrent) or including it
+        // (LongTermDebt); short-term borrowings and commercial paper are separate in both cases.
+        double[] ltd = vals.get("longTermDebt");
+        if (ltd != null && !fin) {
+            Map<String, double[]> t = new HashMap<>(); Map<String, long[]> tf = new HashMap<>();
+            lines(g, new String[][]{{"_nc", "", "USD", "usd", "0", "LongTermDebtNoncurrent"}, {"_dc", "", "USD", "usd", "0", "DebtCurrent"},
+                    {"_cur", "", "USD", "usd", "0", "LongTermDebtCurrent"}, {"_stb", "", "USD", "usd", "0", "ShortTermBorrowings"}, {"_cp", "", "USD", "usd", "0", "CommercialPaper"}}, keys, ends, true, t, tf, derived);
+            double[] nc = t.get("_nc"), dc = t.get("_dc"), cur = t.get("_cur"), stb = t.get("_stb"), cp = t.get("_cp"), td = nan(keys.size());
+            boolean any = false;
+            for (int i = 0; i < td.length; i++) {
+                if (Double.isNaN(ltd[i])) continue;
+                double z = 0, other = (stb == null || Double.isNaN(stb[i]) ? 0 : stb[i]) + (cp == null || Double.isNaN(cp[i]) ? 0 : cp[i]);
+                boolean excludesCurrent = nc != null && !Double.isNaN(nc[i]) && Math.abs(nc[i] - ltd[i]) < 1;
+                if (excludesCurrent) z = dc != null && !Double.isNaN(dc[i]) ? dc[i] : (cur == null || Double.isNaN(cur[i]) ? 0 : cur[i]) + other;
+                else z = other; // long-term debt already includes its current portion
+                td[i] = ltd[i] + z; any |= z != 0;
+            }
+            if (any) { vals.put("totalDebt", td); replace(balance, BALANCE, "totalDebt", td, "Long-term debt plus debt due within a year (current portion of long-term debt, short-term borrowings and commercial paper), each as filed"); }
         }
         double[] liab = vals.get("liabilities");
         if (liab == null || anyNaN(liab)) {
