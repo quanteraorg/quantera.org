@@ -526,6 +526,18 @@ public class TestMain {
                     && Seo.pvtBasis(1.2536e12, List.of(Json.obj("date", "2026-11-06", "round", "Series D", "valuation", 1.25e12))).startsWith("This matches the post-money valuation of its Series D round on 2026-11-06")
                     && Seo.pvtBasis(5e9, List.of()).contains("secondary-market prices only"));
         }
+        {
+            List<Map<String, Object>> g = Seo.groupRounds(List.of(
+                    Json.obj("date", "2026-11-06", "round", "Series D", "raised", 11e9, "issuePrice", 992.0623, "valuation", 1.25e12),
+                    Json.obj("date", "2026-11-04", "round", "Series D", "raised", 20e9, "issuePrice", 992.0623, "valuation", 1.25e12),
+                    Json.obj("date", "2026-03-31", "round", "Series C", "raised", 122e9, "issuePrice", 687.6869, "valuation", 852e9)));
+            t("private rounds: two closings of one round become one row with both dates", g.size() == 2 && "Series D (2 closings)".equals(g.get(0).get("round"))
+                    && "2026-11-04, 2026-11-06".equals(g.get(0).get("date")) && Math.abs((Double) g.get(0).get("raised") - 31e9) < 1 && "Series C".equals(g.get(1).get("round")));
+            List<Map<String, Object>> h = Seo.groupRounds(List.of(
+                    Json.obj("date", "2026-05-28", "round", "Series H-2", "raised", 18.2e9, "issuePrice", 589.0095, "valuation", 965e9),
+                    Json.obj("date", "2026-05-28", "round", "Series H-3", "raised", 1.9e9, "issuePrice", 20.928, "valuation", 965e9)));
+            t("private rounds: share classes issued together become one row; differing prices are flagged", h.size() == 1 && "Series H (2 share classes)".equals(h.get(0).get("round")) && Boolean.TRUE.equals(h.get(0).get("priceVaries")));
+        }
         t("AI rejects empty messages", call(p, "POST", "/api/ai", "{\"messages\":[]}", ip()).code == 400);
         t("AI rejects oversize message", call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"user\",\"content\":\"" + "x".repeat(3000) + "\"}]}", ip()).code == 400);
         t("AI rejects system role injection", call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"system\",\"content\":\"hack\"},{\"role\":\"user\",\"content\":\"hi\"}]}", ip()).code == 400);

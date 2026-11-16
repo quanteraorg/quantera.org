@@ -80,6 +80,47 @@ final class Seo {
         try { return priceTime == null ? "" : " <small>as of " + h(Instant.parse(priceTime).atZone(NY).format(WHEN).replace("AM", "am").replace("PM", "pm")) + " New York time · delayed</small>"; } catch (RuntimeException e) { return ""; }
     }
 
+    /** Yearly figures straight from the company's 10-K filings with the SEC, each year linked to its filing. Null when the SEC has no
+     *  US-GAAP statements for the symbol (foreign companies, funds), so the page falls back to the Yahoo Finance table. */
+    static String secTable(String s) {
+        if (!s.matches("[A-Z]{1,5}")) return null;
+        Map<String, Object> st;
+        try { st = Statements.of(s); } catch (RuntimeException e) { return null; }
+        Map<String, Object> a = map(st.get("annual"));
+        List<Object> per = list(a.get("periods"));
+        if (per.isEmpty()) return null;
+        int n = per.size(), from = Math.max(0, n - 5);
+        Map<String, List<Object>> v = new HashMap<>();
+        for (String k : List.of("income", "balance", "cashflow")) for (Object o : list(a.get(k))) v.put(str(map(o).get("key")), list(map(o).get("values")));
+        boolean fin = Boolean.TRUE.equals(st.get("financial"));
+        String[][] rows = fin
+                ? new String[][]{{"Revenue", "revenue"}, {"Net income", "netIncome"}, {"Total assets", "assets"}, {"Shareholders' equity", "equity"}}
+                : new String[][]{{"Revenue", "revenue"}, {"Gross profit", "grossProfit"}, {"Operating income", "operatingIncome"}, {"Net income", "netIncome"}, {"Free cash flow", "freeCashFlow"}, {"Cash and equivalents", "cash"}, {"Total debt", "totalDebt"}, {"Shareholders' equity", "equity"}};
+        StringBuilder m = new StringBuilder("<h2>").append(h(s)).append(" yearly financials</h2><div class=\"tw\"><table><tr><th>Fiscal year</th>");
+        for (int i = from; i < n; i++) {
+            Map<String, Object> p = map(per.get(i)); String f = str(p.get("filing"));
+            m.append("<th>").append(f != null && f.startsWith("https://www.sec.gov/") ? "<a href=\"" + h(f) + "\" rel=\"nofollow noopener\" target=\"_blank\">" + h(p.get("label")) + "</a>" : h(p.get("label"))).append("</th>");
+        }
+        m.append("</tr>");
+        int shown = 0;
+        for (String[] r : rows) {
+            List<Object> vals = v.get(r[1]);
+            if (vals == null) continue;
+            boolean any = false; for (int i = from; i < n && i < vals.size(); i++) if (Support.num(vals.get(i)) != null) any = true;
+            if (!any) continue;
+            shown++;
+            m.append("<tr><td>").append(r[0]).append("</td>");
+            for (int i = from; i < n; i++) m.append("<td>").append(h(money(i < vals.size() ? Support.num(vals.get(i)) : null, "USD"))).append("</td>");
+            m.append("</tr>");
+        }
+        if (shown < 2) return null;
+        Map<String, Object> last = map(per.get(n - 1));
+        m.append("</table></div><p class=\"src\">Yearly figures from ").append(h(str(st.get("name")) == null ? s : str(st.get("name")))).append("'s annual reports (Form 10-K) filed with the SEC; each year links to its filing. Latest: ")
+                .append(h(last.get("label"))).append(", year ended ").append(h(last.get("end"))).append(". Free cash flow is calculated (cash from operations minus capital spending)")
+                .append(fin ? "" : "; total debt includes debt due within a year").append(". The headline numbers above use the latest quarter or the past 12 months (Yahoo Finance), so they can differ from this table.</p>");
+        return m.toString();
+    }
+
     /** One stock: the numbers that matter, a plain-English summary, statements and related stocks. Only companies with real fundamentals get an indexable page. */
     static Page stock(String raw) {
         String s = raw.toUpperCase(Locale.ROOT);
@@ -111,18 +152,22 @@ final class Seo {
         if (pe != null) m.append("At this price, investors pay about ").append(h(num(pe, "0"))).append(" times its profit over the past 12 months. ");
         if (cash != null && debt != null) m.append(cash >= debt ? "At the latest quarter, it held more cash and short-term investments than debt." : "At the latest quarter, it owed more in debt than it held in cash and short-term investments.");
         m.append("</p>");
-        m.append("<h2>").append(h(s)).append(" yearly financials</h2><div class=\"tw\"><table><tr><th>Year ending</th>");
-        for (Object o : annual) m.append("<th>").append(month(str(map(o).get("date")))).append("</th>");
-        m.append("</tr>");
-        String[][] rows = {{"Revenue", "revenue"}, {"Gross profit", "grossProfit"}, {"Operating income", "operatingIncome"}, {"Net income", "netIncome"}, {"Free cash flow", "freeCashFlow"}, {"Cash and equivalents", "cash"}, {"Total debt", "debt"}};
-        for (String[] r : rows) {
-            boolean any = annual.stream().anyMatch(o -> d(map(o), r[1]) != null);
-            if (!any) continue;
-            m.append("<tr><td>").append(r[0]).append("</td>");
-            for (Object o : annual) m.append("<td>").append(h(money(d(map(o), r[1]), c))).append("</td>");
+        String secTbl = secTable(s);
+        if (secTbl != null) m.append(secTbl).append("<h2>Common questions about ").append(h(name)).append("</h2>");
+        else {
+            m.append("<h2>").append(h(s)).append(" yearly financials</h2><div class=\"tw\"><table><tr><th>Year ending</th>");
+            for (Object o : annual) m.append("<th>").append(month(str(map(o).get("date")))).append("</th>");
             m.append("</tr>");
+            String[][] rows = {{"Revenue", "revenue"}, {"Gross profit", "grossProfit"}, {"Operating income", "operatingIncome"}, {"Net income", "netIncome"}, {"Free cash flow", "freeCashFlow"}, {"Cash and equivalents", "cash"}, {"Total debt", "debt"}};
+            for (String[] r : rows) {
+                boolean any = annual.stream().anyMatch(o -> d(map(o), r[1]) != null);
+                if (!any) continue;
+                m.append("<tr><td>").append(r[0]).append("</td>");
+                for (Object o : annual) m.append("<td>").append(h(money(d(map(o), r[1]), c))).append("</td>");
+                m.append("</tr>");
+            }
+            m.append("</table></div><p class=\"src\">Full-year figures. The headline numbers above use the latest quarter or the past 12 months, and include short-term investments in cash, so they can differ from this table.</p><h2>Common questions about ").append(h(name)).append("</h2>");
         }
-        m.append("</table></div><p class=\"src\">Full-year figures. The headline numbers above use the latest quarter or the past 12 months, and include short-term investments in cash, so they can differ from this table.</p><h2>Common questions about ").append(h(name)).append("</h2>");
         if (cap != null) m.append(faq("What is " + name + " worth?", name + "’s market cap, the value of all its shares, is about " + money(cap, capCcy) + "."));
         if (pe != null) m.append(faq("What is " + s + "’s P/E ratio?", "About " + num(pe, "0.0") + ", based on the past 12 months of profit. The P/E ratio compares the share price with profit per share."));
         if (target != null && d(a, "count") != null) m.append(faq("What do analysts expect for " + s + "?", "The average 12-month price target from " + num(d(a, "count"), "0") + " analysts is " + (pence ? num(target, "#,##0.00") + " " + q : money(target, q)) + ". Analyst targets are opinions and are often wrong."));
@@ -154,6 +199,31 @@ final class Seo {
     static final String PVT_METHOD = "How these estimates are made: the estimated valuation is Forge Global's latest price per share multiplied by its estimate of the company's shares. "
             + "That price comes from the latest funding round or, where shares change hands, from secondary-market trades between investors, so it can differ from the valuation the company agreed in its last round. "
             + "Private companies don't publish audited accounts or a daily share price, so treat every figure as an estimate. Funding-round figures are as reported to Forge Global and may be incomplete.";
+
+    /** One row per funding round: closings of the same round on different days, and share classes issued together
+     *  (Series H-1, H-2 …), are combined. Rounds arrive newest first. Pure: unit-tested. */
+    static List<Map<String, Object>> groupRounds(List<Object> rounds) {
+        Map<String, Map<String, Object>> by = new LinkedHashMap<>();
+        for (Object o : rounds) {
+            Map<String, Object> r = map(o);
+            String label = str(r.get("round")) == null ? "Round" : str(r.get("round")), base = label.replaceAll("-[0-9A-Z]{1,3}$", "");
+            Double val = d(r, "valuation");
+            String key = base + "|" + (val == null ? "?" + r.get("date") : Math.round(val / 1e8));
+            Map<String, Object> g = by.computeIfAbsent(key, k -> { Map<String, Object> x = new LinkedHashMap<>(); x.put("round", base); x.put("valuation", val); x.put("dates", new TreeSet<String>()); x.put("labels", new LinkedHashSet<String>()); x.put("prices", new LinkedHashSet<Double>()); x.put("raised", null); return x; });
+            if (str(r.get("date")) != null) ((TreeSet<String>) g.get("dates")).add(str(r.get("date")));
+            ((LinkedHashSet<String>) g.get("labels")).add(label);
+            if (d(r, "issuePrice") != null && d(r, "issuePrice") > 0) ((LinkedHashSet<Double>) g.get("prices")).add(Math.round(d(r, "issuePrice") * 100) / 100.0);
+            if (d(r, "raised") != null) g.put("raised", (g.get("raised") == null ? 0 : (Double) g.get("raised")) + d(r, "raised"));
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> g : by.values()) {
+            TreeSet<String> dates = (TreeSet<String>) g.get("dates"); LinkedHashSet<String> labels = (LinkedHashSet<String>) g.get("labels"); LinkedHashSet<Double> prices = (LinkedHashSet<Double>) g.get("prices");
+            String note = dates.size() > 1 ? dates.size() + " closings" : labels.size() > 1 ? labels.size() + " share classes" : null;
+            out.add(Json.obj("date", String.join(", ", dates), "round", note == null ? labels.iterator().next() : g.get("round") + " (" + note + ")",
+                    "raised", g.get("raised"), "issuePrice", prices.size() == 1 ? prices.iterator().next() : null, "priceVaries", prices.size() > 1, "valuation", g.get("valuation")));
+        }
+        return out;
+    }
 
     /** How the estimate compares with the last round that set a valuation. Pure: unit-tested. */
     static String pvtBasis(Double estimate, List<Object> rounds) {
@@ -190,8 +260,8 @@ final class Seo {
         m.append("<h2>Can you buy ").append(h(name)).append(" stock?</h2><p>").append(h(name)).append(" is a private company, so its shares aren’t sold on a stock exchange or through a normal brokerage. Its value is estimated from funding rounds and secondary-market trades, and it updates only when new deals happen.</p>");
         if (!rounds.isEmpty()) {
             m.append("<h2>").append(h(name)).append(" funding rounds</h2><div class=\"tw\"><table><tr><th>Date</th><th>Round</th><th>Raised</th><th>Price per share</th><th>Post-money valuation</th></tr>");
-            for (Object o : rounds) { Map<String, Object> r = map(o); m.append("<tr><td>").append(h(r.get("date"))).append("</td><td>").append(h(r.get("round"))).append("</td><td>").append(h(money(d(r, "raised"), "USD"))).append("</td><td>").append(d(r, "issuePrice") == null ? "—" : "$" + h(num(d(r, "issuePrice"), "#,##0.00"))).append("</td><td>").append(h(money(d(r, "valuation"), "USD"))).append("</td></tr>"); }
-            m.append("</table></div>");
+            for (Map<String, Object> r : groupRounds(rounds)) { m.append("<tr><td>").append(h(r.get("date"))).append("</td><td>").append(h(r.get("round"))).append("</td><td>").append(h(money(d(r, "raised"), "USD"))).append("</td><td>").append(Boolean.TRUE.equals(r.get("priceVaries")) ? "Varies by class" : d(r, "issuePrice") == null ? "—" : "$" + h(num(d(r, "issuePrice"), "#,##0.00"))).append("</td><td>").append(h(money(d(r, "valuation"), "USD"))).append("</td></tr>"); }
+            m.append("</table></div><p class=\"src\">Rounds that closed in several parts, or issued several share classes together, are combined into one row. Amounts are as reported to Forge Global and can differ from press reports.</p>");
         }
         m.append("<p class=\"src\">Source: ").append(h(f.get("source"))).append(". ").append(h(PVT_METHOD)).append(" ").append(h(fetchedLine(str(Yahoo.privates().get("updated"))))).append(" Not investment advice.</p>");
         return new Page(200, "text/html; charset=utf-8", page(name + " Valuation, Funding Rounds and Share Price | Quantera", desc, path, m.toString(), crumbs(name, "/private-companies", "Private companies", path), true));
