@@ -517,6 +517,15 @@ public class TestMain {
             t("feedback: odd page values are dropped, not stored", "".equals(Store.feedbackRow(Json.obj("kind", "idea", "message", "hello there", "page", "<script>")).get("page")));
             t("feedback API: POST only", call(p, "GET", "/api/feedback", null, ip()).code == 405);
         }
+        {
+            String line = Seo.asOfLine("2026-11-14T21:00:00Z", "2026-11-16T01:20:00Z", "2026-09-30", "2025-12-31");
+            t("stock page dates: price in New York time, company periods, fetch time in UTC (not the page-build date)",
+                    line.contains("Price as of 14 Nov 2026, 4:00 pm New York time") && line.contains("quarter ended Sep 2026") && line.contains("full year ended Dec 2025") && line.contains("Data fetched 16 Nov 2026, 1:20 am UTC"));
+            List<Object> rounds = List.of(Json.obj("date", "2026-02-24", "round", "Tender 3", "valuation", 159e9), Json.obj("date", "2025-02-27", "round", "Tender 2", "valuation", 91.5e9));
+            t("private valuation: compared with the last priced round, with its date", Seo.pvtBasis(199.1e9, rounds).contains("25.2% above the $159.0B valuation of its Tender 3 round on 2026-02-24")
+                    && Seo.pvtBasis(1.2536e12, List.of(Json.obj("date", "2026-11-06", "round", "Series D", "valuation", 1.25e12))).startsWith("This matches the post-money valuation of its Series D round on 2026-11-06")
+                    && Seo.pvtBasis(5e9, List.of()).contains("secondary-market prices only"));
+        }
         t("AI rejects empty messages", call(p, "POST", "/api/ai", "{\"messages\":[]}", ip()).code == 400);
         t("AI rejects oversize message", call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"user\",\"content\":\"" + "x".repeat(3000) + "\"}]}", ip()).code == 400);
         t("AI rejects system role injection", call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"system\",\"content\":\"hack\"},{\"role\":\"user\",\"content\":\"hi\"}]}", ip()).code == 400);

@@ -717,7 +717,8 @@ final class Yahoo {
             String fin = str(fd.get("financialCurrency")) != null ? str(fd.get("financialCurrency")) : reported;
             return Json.obj("symbol", s, "name", str(p.get("longName")) != null ? str(p.get("longName")) : str(p.get("shortName")), "type", str(p.get("quoteType")), "currency", str(p.get("currency")), "financialCurrency", fin, "price", raw(p.get("regularMarketPrice")),
                     "latestQuarter", day(ks.get("mostRecentQuarter")), "key", key, "analysts", analysts, "nextEarnings", next != null && next.compareTo(LocalDate.now(ZoneOffset.UTC).toString()) >= 0 ? next : null, "earnings", earnings,
-                    "annual", statements(annual, quarterly, "annual"), "quarterly", statements(annual, quarterly, "quarterly"), "source", "Yahoo Finance");
+                    "annual", statements(annual, quarterly, "annual"), "quarterly", statements(annual, quarterly, "quarterly"), "source", "Yahoo Finance",
+                    "priceTime", raw(p.get("regularMarketTime")) == null ? null : Instant.ofEpochSecond(raw(p.get("regularMarketTime")).longValue()).toString(), "fetched", Instant.now().toString());
         });
     }
 
