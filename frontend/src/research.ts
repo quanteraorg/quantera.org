@@ -47,6 +47,7 @@ const METHODS: Record<string, { f: string; p: string; l?: string }> = {
 };
 
 const CSS = `
+.qstd{margin:10px 0 4px;display:flex;flex-direction:column;gap:6px;border:1px solid var(--ln);border-left:3px solid var(--ac);border-radius:10px;padding:10px 14px;font-size:13.5px}.qstd b{font-weight:600}.qstd a{color:var(--tx);text-decoration:none;font-weight:500}.qstd a:hover{color:var(--ac)}.qstd small{display:block;color:var(--mu);font-size:12px;font-weight:400}
 .qinfo{display:inline-grid;place-items:center;width:17px;height:17px;margin-left:5px;border-radius:50%;border:1px solid rgba(var(--fgc),.25);background:none;color:var(--mu);font:600 10.5px/1 inherit;cursor:pointer;vertical-align:1px;padding:0}
 .qinfo:hover,.qinfo[aria-expanded=true]{border-color:var(--ac);color:var(--ac)}
 .qmeth{position:fixed;z-index:130;width:min(320px,calc(100vw - 24px));padding:12px 14px;border-radius:14px;font-size:13px;line-height:1.5;color:var(--tx);
@@ -89,6 +90,22 @@ const cache = new Map<string, Promise<any>>();
 const get = (url: string) => { if (!cache.has(url)) cache.set(url, jf(url).then(r => r.ok ? r.b : null).catch(() => null)); return cache.get(url)!; };
 
 // ---------- 1. sources under the key numbers ----------
+// Quantera's own studies of this company, linked right under the sources line, so research and the stock page connect
+let studyIdx: Promise<any[]> | null = null;
+function studies(s: string): void {
+  const src = document.getElementById('qsrc');
+  if (!src || document.getElementById('qstd')) return;
+  const box = document.createElement('div'); box.id = 'qstd'; box.className = 'qstd'; box.hidden = true;
+  src.insertAdjacentElement('afterend', box);
+  studyIdx ||= fetch('/research/index.json').then(r => r.ok ? r.json() : { articles: [] }).then(j => j.articles || []).catch(() => []);
+  studyIdx.then(arts => {
+    const mine = arts.filter((a: any) => (a.tickers || []).includes(s)).slice(0, 3);
+    if (!box.isConnected || !mine.length) return;
+    box.innerHTML = `<b>Quantera research on ${esc(s)}</b>` + mine.map((a: any) => `<a href="/research/${encodeURIComponent(a.slug)}">${esc(a.title)}<small>${esc(a.category || 'Study')} · ${esc(a.date || '')}</small></a>`).join('');
+    box.hidden = false;
+  });
+}
+
 function sources(s: string): void {
   const kn = document.querySelector<HTMLElement>('#m .kn');
   if (!kn || document.getElementById('qsrc')) return;
@@ -243,6 +260,7 @@ export function initResearch(): void {
     const s = sym(); if (!s) return;
     methods();
     sources(s);
+    studies(s);
     // the tab bar may have been drawn before this module loaded: add the Research tab if it's missing
     const bar = main.querySelector('.ktabs');
     if (bar && !bar.querySelector('[data-k=research]')) {
