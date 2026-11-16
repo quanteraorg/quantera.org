@@ -72,14 +72,18 @@ final class Store {
 
     static Map<String, Object> joinWaitlist(Object body) {
         Map<String, Object> b = map(body);
+        String name = String.valueOf(b.getOrDefault("name", "")).replaceAll("[\\p{Cntrl}<>\"]", "").trim();
+        if (name.length() > 40) name = name.substring(0, 40);
+        if (!name.isEmpty() && !NAME.matcher(name).matches()) throw new UpstreamException("Please use letters only for your first name, or leave it blank.", 400);
         String email = String.valueOf(b.getOrDefault("email", "")).trim().toLowerCase(), interest = String.valueOf(b.getOrDefault("interest", "")).trim(), source = String.valueOf(b.getOrDefault("source", "")).trim();
         if (!EMAIL.matcher(email).matches()) throw new UpstreamException("Enter a valid email address.", 400);
         if (!TAG.matcher(interest).matches() || !TAG.matcher(source).matches()) throw new UpstreamException("Invalid request", 400);
         if (!on()) throw new UpstreamException("The waitlist is not connected yet. Please try again soon.", 503);
-        List<Object> added = insert("waitlist", Json.obj("email", email, "interest", interest, "source", source));
+        List<Object> added = insert("waitlist", Json.obj("email", email, "interest", interest, "source", source, "first_name", name.isEmpty() ? null : name));
         return Json.obj("ok", true, "alreadyJoined", added.isEmpty());
     }
 
+    static final Pattern NAME = Pattern.compile("^[\\p{L}][\\p{L}\\p{M} '\\-.]{0,39}$");
     static final java.util.Set<String> FEEDBACK_KINDS = java.util.Set.of("bug", "data", "idea", "other");
     static final Pattern PAGE = Pattern.compile("^[#/A-Za-z0-9._\\-?=&%]{0,200}$");
 
