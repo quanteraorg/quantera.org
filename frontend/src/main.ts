@@ -29,6 +29,7 @@ import { initStatex } from './statex';
 import { initKes } from './feedback';
 import { initContact } from './contact';
 import { initRatios } from './ratios';
+import { initIntro } from './intro';
 
 initStates();
 initMotion();
@@ -58,4 +59,5 @@ initStatex();
 initKes();
 initContact();
 initRatios();
+initIntro();
 initUi();

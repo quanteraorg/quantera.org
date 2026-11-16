@@ -1,6 +1,6 @@
 // Chart extras on top of the chart engine in app.js:
 // - indicator search: type "RSI", "bands", "volatility" or "trend" to filter the Indicators menu
-// - named chart templates: save the current chart set-up (type, indicators and their settings, colours) under a name,
+// - named chart templates: save the current chart set-up (type, indicators and their settings, colors) under a name,
 //   switch between saved set-ups, delete them. Synced with the account like other chart settings.
 // The engine keeps its own single template slot (q_tpl); named templates are copied in and out of it, so the engine's
 // save/load code stays the single place that knows what a template contains.
@@ -65,7 +65,7 @@ function templates(panel: HTMLElement): void {
   sv.style.display = 'none'; ld.style.display = 'none';
   const list = all();
   const host = document.createElement('div'); host.className = 'qtp';
-  host.innerHTML = `<h4>Chart templates</h4><p>Save this set-up (chart type, indicators and their settings, colours) and switch back to it on any stock.</p>
+  host.innerHTML = `<h4>Chart templates</h4><p>Save this set-up (chart type, indicators and their settings, colors) and switch back to it on any stock.</p>
     <div class="row"><input class="qtpn" maxlength="40" placeholder="Name, e.g. Swing trading" aria-label="Template name"><button class="btn p qtps">Save template</button></div>
     <ul>${list.map((t, i) => `<li><b title="${esc(t.name)}">${esc(t.name)}</b><button class="btn qtpl" data-i="${i}">Apply</button><button class="btn qtpd" data-i="${i}" aria-label="Delete template ${esc(t.name)}">Delete</button></li>`).join('') || '<li class="mu">No templates yet.</li>'}</ul>`;
   panel.appendChild(host);

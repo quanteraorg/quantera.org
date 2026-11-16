@@ -1,8 +1,8 @@
-// News story page: first a detailed, organised breakdown of the story (built from the story itself and live data, so it
+// News story page: first a detailed, organized breakdown of the story (built from the story itself and live data, so it
 // works without AI), then two choices the reader can open: AI deep research on the companies involved, and an analysis
 // of how the story touches their own practice portfolio and watchlist.
 //
-// Everything shown is either from the story, from market data with its time, or a clearly labelled typical pattern
+// Everything shown is either from the story, from market data with its time, or a clearly labeled typical pattern
 // ("stories like this usually..."). Nothing predicts prices.
 
 interface Ent { symbol?: string; name?: string; industry?: string; sentiment?: number | null; changePct?: number | null; highlights?: { text: string; sentiment?: number }[] }
@@ -54,7 +54,7 @@ const TOPICS: { k: string; re: RegExp; label: string; why: string; sectors: RegE
     why: 'Tariffs and export rules raise costs for companies that import parts or sell abroad. Manufacturers, chipmakers, carmakers and retailers with global supply chains are usually most exposed.',
     sectors: /industrial|machinery|semicond|tech|auto|retail|consumer|electrical|textile|apparel/i, releases: /retail|industrial production/i },
   { k: 'geo', re: /\b(war|wars|missiles?|attack\w*|drones?|houthis?|invasion|invaded|conflict|military|ceasefire|geopolitic\w*|troops|airstrikes?)\b/i, label: 'War and geopolitics',
-    why: 'Conflict tends to push money towards safe havens such as gold and government bonds, lift defence and energy companies, and hurt airlines and companies with business in the affected region.',
+    why: 'Conflict tends to push money towards safe havens such as gold and government bonds, lift defense and energy companies, and hurt airlines and companies with business in the affected region.',
     sectors: /aerospace|defen[cs]e|energy|oil|airline|gold|metals|mining/i, releases: /$^/ },
   { k: 'ai', re: /\b(ai|artificial intelligence|chips?|semiconductors?|gpus?|data cent(er|re)s?|nvidia)\b/i, label: 'AI and chips',
     why: 'AI spending decisions move the whole chip supply chain together: chip designers, manufacturers, equipment makers and the cloud companies buying them.',
@@ -231,7 +231,7 @@ function render(host: HTMLElement, a: Story, ents: Ent[]): void {
     <div class="qnx-opts">
       <div class="qnx-opt" data-o="dr"><b>AI deep research</b><p>${syms.length ? `On ${syms.map(esc).join(', ')}: an AI outlook (positive, neutral or negative), Wall Street’s consensus, the technical picture and a full sourced report.` : 'Pick any company for an AI outlook, Wall Street’s consensus, technicals and a full sourced report.'}</p><button class="btn p" data-o="dr">Run deep research</button></div>
       ${syms.length >= 2 && a.publishedAt ? `<div class="qnx-opt" data-o="rx"><b>Why did these stocks move differently?</b><p>Same news, different reactions: how much of each move was the whole market, how unusual it was for each stock, and what usually explains the gap (size, volatility, who the news names).</p><button class="btn p" data-o="rx">Compare the reactions</button></div>` : ''}
-      <div class="qnx-opt" data-o="pf"><b>How does this affect my portfolio?</b><p>Checks your practice portfolio and watchlist against this story: what’s directly or indirectly exposed, your share at stake and today’s change.</p><button class="btn p" data-o="pf">Analyse my portfolio</button></div>
+      <div class="qnx-opt" data-o="pf"><b>How does this affect my portfolio?</b><p>Checks your practice portfolio and watchlist against this story: what’s directly or indirectly exposed, your share at stake and today’s change.</p><button class="btn p" data-o="pf">Analyze my portfolio</button></div>
     </div><div id="qnxrun" style="margin-top:14px"></div></div>`;
   breakdown(host.querySelector('#qnxx') as HTMLElement, a, ents);
   const dup = document.getElementById('shl'); if (dup) dup.style.display = 'none'; // its content is now in the breakdown

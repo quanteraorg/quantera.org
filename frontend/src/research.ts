@@ -74,7 +74,7 @@ const CSS = `
 #qres .qr-kv span{display:block;font-size:12px;color:var(--mu)}#qres .qr-kv b{font-variant-numeric:tabular-nums}
 #qres .qr-note{font-size:12.5px;color:var(--mu);line-height:1.55;margin-top:10px}
 #qres .qr-load{height:120px;border-radius:12px;background:linear-gradient(90deg,var(--s1),rgba(var(--fgc),.05),var(--s1));background-size:200% 100%;animation:sktm 1.3s linear infinite}
-html[data-theme=light] .ntag{color:color-mix(in srgb,var(--c) 55%,#000)} /* topic tags: the pale tag colours need darker text on light backgrounds */
+html[data-theme=light] .ntag{color:color-mix(in srgb,var(--c) 55%,#000)} /* topic tags: the pale tag colors need darker text on light backgrounds */
 @media(prefers-reduced-motion:reduce){#qres .qr-load{animation:none}.qmeth{animation:none}}`;
 
 // ---------- formatting ----------
@@ -125,7 +125,7 @@ function sources(s: string): void {
       // a company can report its accounts in a different currency from the one its shares trade in (Shell: US dollars vs pence)
       const pc = q?.currency || f.currency, fc = f.financialCurrency;
       if (fc && pc && fc !== pc && !(fc === 'GBP' && pc === 'GBp')) parts.push(`<span><b>Currencies:</b> company figures in ${esc(fc)}, share price in ${esc(pc === 'GBp' ? 'pence (GBp)' : pc)}</span>`);
-      if (/^[A-Z]{1,5}$/.test(s)) parts.push('<span><b>Full-year figures</b> filed with the SEC are in the Financials tab, labelled by fiscal year</span>');
+      if (/^[A-Z]{1,5}$/.test(s)) parts.push('<span><b>Full-year figures</b> filed with the SEC are in the Financials tab, labeled by fiscal year</span>');
       if (f.analysts?.count) parts.push(`<span><b>Analyst target:</b> average of ${fmt(f.analysts.count, 0)} analysts · forecast, not fact</span>`);
     }
     parts.push('<span>Tap ⓘ on a figure to see how it’s calculated</span>');

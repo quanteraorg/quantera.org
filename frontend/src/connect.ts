@@ -34,7 +34,7 @@ const TRY: Record<string, [string, string]> = {
   orders: ['#/trade/{s}', 'Place a practice limit order on {s}'],
   sizing: ['#/trade/{s}', 'Size a practice position in {s}'],
   riskreward: ['#/trade/{s}', 'Set a stop loss and take profit on {s} (practice money)'],
-  leverage: ['#/trade/{s}', 'Practise a trade on {s} with virtual money'],
+  leverage: ['#/trade/{s}', 'Practice a trade on {s} with virtual money'],
   divers: ['#/portfolio', 'Test how a mix of investments would have done'],
   drawdown: ['#/portfolio', 'See the biggest drop of a mix of investments'],
   sharpe: ['#/portfolio', 'Compare risk and return of a mix of investments'],

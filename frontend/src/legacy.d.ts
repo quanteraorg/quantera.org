@@ -13,7 +13,7 @@ declare function ACT_(kind: string): void;
 declare function checkBadges(): void;
 declare function route(): void;
 declare const SYNC: string[];
-/** Lessons: [id, title, category, level, colour, colour, description, link, [question, options[], answerIndex], fact] */
+/** Lessons: [id, title, category, level, color, color, description, link, [question, options[], answerIndex], fact] */
 declare const LES: [string, string, string, string, string, string, string, string, [string, string[], number], string][];
 declare const BADGES: [string, string, string, string, (d: any) => boolean][];
 declare const DONE: Set<string>;

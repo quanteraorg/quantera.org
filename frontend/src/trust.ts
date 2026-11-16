@@ -69,7 +69,7 @@ export function trustPanel(b: Co): string {
   <div style="margin-top:10px;font-size:14px">${hi / lo < 1.03 ? `The current evidence agrees closely: about <b>${money(head)}</b>` : `Taken together, the evidence points to roughly <b>${money(lo)} – ${money(hi)}</b> (a ${fmt((hi / lo - 1) * 100, 0)}% spread)`}${mark && !markCurrent ? ', leaving out the fund mark because it predates the latest round' : ''}.</div>
   <ul><li>Round prices are usually for <b>preferred shares</b>, which carry protections that common shares (what employees hold) don’t, so they tend to overstate what common shares are worth.</li>
   <li>Secondary prices come from a small number of private trades and can move a lot on one deal.</li>
-  <li>Fund marks are each fund’s own fair-value judgement, reported with a delay of one to two months.</li>
+  <li>Fund marks are each fund’s own fair-value judgment, reported with a delay of one to two months.</li>
   <li>Source: ${esc(b.source || 'Yahoo Finance (Forge Global)')}; fund marks from SEC filings (Form N-PORT). Not investment advice.</li></ul></div>`;
 }
 
