@@ -1,5 +1,5 @@
 // Number typography, loading skeletons, and honest error and freshness states.
-// Moved out of public/app.js (layer v51) as the first TypeScript module; behaviour is unchanged.
+// Moved out of public/app.js (layer v51) as the first TypeScript module; behavior is unchanged.
 
 const CSS = `
 body,.big,.k,h1,h2,h3,td,th,.p,.sv,.pill,#tape,.hl,.hmv,.cmpt{font-variant-numeric:tabular-nums lining-nums}.hmk{font-variant-numeric:normal}

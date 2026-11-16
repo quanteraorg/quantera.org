@@ -41,10 +41,10 @@ function hero(open: HTMLElement): void {
     <h1 class="qh-h1">Same news.<br><em>Different world.</em></h1>
     <p class="lead">Research that explains the reasoning behind the numbers. We study how companies and markets react to the news, and give you free tools to check every figure yourself, from SEC filings to private-company valuations. Independent and student-led, for anyone learning to invest.</p>
     <div class="cta"><a class="btn p" href="#/research">Read the research</a><a class="btn" href="#/insights">Compare reactions to the news</a></div>
-    <a class="qh-alt" href="#/trade">Or practise investing with $100,000 of virtual money →</a>
+    <a class="qh-alt" href="#/trade">Or practice investing with $100,000 of virtual money →</a>
     <div class="fine" style="margin-top:12px">Free. No sign-up needed. For education, not investment advice.</div>${facts}`;
   const f = inner.querySelector('.hm-facts');
-  if (f) f.innerHTML = `<span><b>SEC financials</b> for every US stock</span><span><b>44 countries</b> of market prices</span><span><b>38</b> free lessons</span><a href="#/private"><b>100+</b> private company valuations →</a>`;
+  if (f) f.innerHTML = `<span><b>SEC financials</b> for every US stock</span><span><b>44 countries</b> of market prices</span><span><b>39</b> free lessons</span><a href="#/private"><b>100+</b> private company valuations →</a>`;
 }
 
 async function desk(hm: HTMLElement): Promise<void> {
@@ -53,7 +53,7 @@ async function desk(hm: HTMLElement): Promise<void> {
   sec.innerHTML = `<h2>From the research desk</h2><p class="sub">Original studies and the questions behind them. <a href="#/research">All research →</a></p>
     <div class="qh-grid"><a class="qh-card" id="qhst" href="#/research"><small>Latest study</small><b>Loading…</b></a>
     <a class="qh-card" href="#/insights/NVDA,AMD,SMCI,AVGO@2026-08-26T21:00:00Z"><small>Insights</small><b>Same results, different reactions</b><p>Nvidia's results on 26 August moved chip stocks by very different amounts. See how much of each move was the whole market, how unusual it was for each stock, and what usually explains the gap.</p><span class="go">Compare the reactions →</span></a>
-    <a class="qh-card" href="#/about"><small>How we work</small><b>No source, no number</b><ul><li>Primary sources first: SEC filings and official releases</li><li>Facts and interpretation labelled separately</li><li>Every calculation re-run before publication</li></ul><span class="go">About Quantera Research →</span></a></div>`;
+    <a class="qh-card" href="#/about"><small>How we work</small><b>No source, no number</b><ul><li>Primary sources first: SEC filings and official releases</li><li>Facts and interpretation labeled separately</li><li>Every calculation re-run before publication</li></ul><span class="go">About Quantera Research →</span></a></div>`;
   open.after(sec);
   try {
     const lib = await library(), a = lib.articles[0], c = sec.querySelector('#qhst') as HTMLAnchorElement;
@@ -105,15 +105,15 @@ function about(): void {
     <div class="rules">
       <div><b>Primary sources first</b><p>Company filings with the SEC, official releases and exchange data come before news coverage or opinion.</p></div>
       <div><b>No source, no number</b><p>If we can’t verify a figure, we say it wasn’t found rather than estimate it.</p></div>
-      <div><b>Facts apart from interpretation</b><p>What happened is labelled separately from what it might mean. Things that happen at the same time are never presented as cause and effect.</p></div>
+      <div><b>Facts apart from interpretation</b><p>What happened is labeled separately from what it might mean. Things that happen at the same time are never presented as cause and effect.</p></div>
       <div><b>Checked before publishing</b><p>Every calculation is re-run independently, and every study states its limits.</p></div>
     </div>
     <h2>What you’ll find here</h2>
     <ul><li><a href="#/research">Research</a>: our published studies of companies, earnings and market events.</li>
       <li><a href="#/insights">Insights</a>: compare how different companies reacted to the same news, measured against the market and each stock’s normal day.</li>
       <li><a href="#/stocks">Company research</a>: financial statements from SEC filings, valuation, competitors and earnings history for any US stock.</li>
-      <li><a href="#/learn">Academy</a>: 38 short lessons and exercises, from reading a chart to valuing a company.</li>
-      <li><a href="#/trade">Practice</a>: paper trading with $100,000 of virtual money, always labelled as practice.</li></ul>
+      <li><a href="#/learn">Academy</a>: 39 short lessons and exercises, from reading a chart to valuing a company.</li>
+      <li><a href="#/trade">Practice</a>: paper trading with $100,000 of virtual money, always labeled as practice.</li></ul>
     <h2>Our educational mission</h2>
     <p>Learning finance should start from real companies and real events, not abstract definitions. Every lesson links to a company you can open, every ratio explains how it is calculated, and the Academy includes exercises where you interpret what actually happened before seeing the answer.</p>
     <h2>What’s next</h2>
@@ -136,7 +136,7 @@ const TITLES: Record<string, [string, string]> = {
   ipos: ['IPO calendar', 'Upcoming and recent stock market listings.'],
   calendar: ['Earnings and economic calendar', 'Earnings dates, IPOs and official US economic releases.'],
   macro: ['Economy', 'Inflation, jobs, growth and interest rates from official sources.'],
-  trade: ['Paper trading', 'Practise investing with $100,000 of virtual money on real prices.'],
+  trade: ['Paper trading', 'Practice investing with $100,000 of virtual money on real prices.'],
   portfolio: ['Practice portfolio', 'Your paper portfolio against the S&P 500, with risk and a trade journal.'],
   planner: ['Goal planner', 'How much to invest each month to reach a goal.'],
   learn: ['Academy', 'Short lessons and exercises, from reading a chart to valuing a company.'],

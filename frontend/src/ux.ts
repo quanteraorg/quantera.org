@@ -1,4 +1,4 @@
-// Small app-wide behaviour fixes found by the interaction tests (tests/interact.mjs).
+// Small app-wide behavior fixes found by the interaction tests (tests/interact.mjs).
 
 /** Pop-ups (.qm: order receipts, sign-in, shortcuts…) belong to the page they were opened on. Leaving the page,
  *  e.g. with the bottom navigation or the back button, closes them instead of leaving them covering the next page. */

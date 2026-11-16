@@ -24,7 +24,7 @@ final class Macro {
     static final List<S> SERIES = List.of(
         new S("CPIAUCSL", "Inflation", "Inflation (CPI)", "yoy", "%", "How much prices rose over the past year. The Fed aims for about 2%. Higher inflation usually means higher interest rates, which weighs on stocks and bonds.", "down"),
         new S("CPILFESL", "Inflation", "Core inflation", "yoy", "%", "Inflation without food and energy, which jump around. Central banks watch it to see the underlying trend.", "down"),
-        new S("PCEPILFE", "Inflation", "Fed’s favourite inflation (core PCE)", "yoy", "%", "The inflation measure the Federal Reserve targets at 2%.", "down"),
+        new S("PCEPILFE", "Inflation", "Fed’s favorite inflation (core PCE)", "yoy", "%", "The inflation measure the Federal Reserve targets at 2%.", "down"),
         new S("UNRATE", "Jobs", "Unemployment rate", "level", "%", "Share of people who want a job but don’t have one. Rising unemployment can signal a slowdown.", "down"),
         new S("PAYEMS", "Jobs", "Jobs added last month", "mom", "k", "New jobs created in the month (thousands). Strong hiring supports spending, but very strong numbers can keep rates high.", "up"),
         new S("ICSA", "Jobs", "Weekly jobless claims", "level", "k", "People filing for unemployment benefits each week (thousands). A quick early warning for layoffs.", "down"),

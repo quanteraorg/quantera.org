@@ -1,5 +1,5 @@
-// Practice portfolio analytics: the paper-trading account analysed, not just listed. Return against the S&P 500
-// over the same period, allocation by holding and by sector, concentration, weighted beta, realised results, and a
+// Practice portfolio analytics: the paper-trading account analyzed, not just listed. Return against the S&P 500
+// over the same period, allocation by holding and by sector, concentration, weighted beta, realized results, and a
 // trade journal where each trade can carry the reason it was made. Everything is computed from the user's own
 // paper trades and live or delayed prices; nothing is estimated. Shown at the top of the Portfolio page.
 
@@ -30,10 +30,10 @@ async function render(host: HTMLElement): Promise<void> {
   const A = LS<Acct | null>('q_pt', null);
   const hist = (A?.hist || []).slice().sort((x, y) => x.t - y.t);
   if (!A || !hist.length) {
-    host.innerHTML = `<div class="pan"><h3>Your practice portfolio, analysed</h3><p class="sub">Make a practice trade with virtual money and this section shows how it's doing against the S&P 500, what you own by sector, how concentrated you are, and a journal of every trade with your reasons.</p><a class="btn p" href="#/trade">Make a practice trade →</a></div>`;
+    host.innerHTML = `<div class="pan"><h3>Your practice portfolio, analyzed</h3><p class="sub">Make a practice trade with virtual money and this section shows how it's doing against the S&P 500, what you own by sector, how concentrated you are, and a journal of every trade with your reasons.</p><a class="btn p" href="#/trade">Make a practice trade →</a></div>`;
     return;
   }
-  host.innerHTML = '<div class="pan"><h3>Your practice portfolio, analysed</h3><p class="sub">Loading live prices…</p></div>';
+  host.innerHTML = '<div class="pan"><h3>Your practice portfolio, analyzed</h3><p class="sub">Loading live prices…</p></div>';
   const syms = Object.keys(A.pos || {}).filter(s => (A.pos[s]?.q || 0) > 0);
   const qs: Record<string, any> = {};
   if (syms.length) { const r = await jf('/api/quotes?symbols=' + encodeURIComponent(syms.join(','))).catch(() => ({ ok: false, b: {} } as any)); for (const q of (r.ok ? r.b.quotes : []) || []) qs[q.symbol] = q; }
@@ -60,10 +60,10 @@ async function render(host: HTMLElement): Promise<void> {
   const beta = betaW > 0 ? betaKnown.reduce((a, l) => a + l.v * (meta[l.s].beta as number), 0) / betaW : null;
   const top = lines.slice().sort((x, y) => y.v - x.v)[0];
   const sells = hist.filter(t => t.side === 's' && t.real != null), wins = sells.filter(t => (t.real as number) > 0).length;
-  const realised = A.real ?? sells.reduce((a, t) => a + (t.real || 0), 0);
+  const realized = A.real ?? sells.reduce((a, t) => a + (t.real || 0), 0);
   const J = LS<Record<string, string>>(JKEY, {});
   const bars = (rows: [string, number][], of: number) => rows.sort((x, y) => y[1] - x[1]).map(([k, v]) => `<div class="qbar"><span>${esc(k)}</span><div class="t"><i style="width:${Math.max(2, v / of * 100)}%"></i></div><em>${fmt(v / of * 100, 0)}%</em></div>`).join('');
-  host.innerHTML = `<div class="pan"><h3>Your practice portfolio, analysed</h3>
+  host.innerHTML = `<div class="pan"><h3>Your practice portfolio, analyzed</h3>
     <p class="sub">Virtual money only: nothing real was bought. Prices are live or delayed up to 15 minutes; sectors and betas come from each company's profile (Finnhub and Yahoo Finance).</p>
     <div class="kp"><div><span>Account value</span><b>${money(total)}</b><small>started at ${money(start)}</small></div>
       <div><span>Your return</span><b class="${ret >= 0 ? 'up' : 'dn'}">${pct(ret)}</b><small>since ${day(first)}</small></div>
@@ -74,7 +74,7 @@ async function render(host: HTMLElement): Promise<void> {
     ${lines.length ? `<div class="g2"><div><h4>By holding</h4>${bars(lines.map(l => [l.s, l.v] as [string, number]), invested)}</div><div><h4>By sector</h4>${bars(Object.entries(bySector), invested)}</div></div>
       ${top && top.v / total > 0.4 ? `<div class="warn">${esc(top.s)} is ${fmt(top.v / total * 100, 0)}% of your account. One company that large means its news moves your whole result. <a href="#/lesson/divers">Learn about diversification →</a></div>` : ''}` : '<p class="sub">You hold only cash right now.</p>'}
     <h4 style="margin-top:18px">Trade journal</h4>
-    <p class="sub" style="margin-bottom:8px">${hist.length} trade${hist.length === 1 ? '' : 's'}${sells.length ? ` · ${wins} of ${sells.length} sales made money · realised ${money(realised)}` : ''}. Write why you made each trade; looking back at your reasons is how investors learn.</p>
+    <p class="sub" style="margin-bottom:8px">${hist.length} trade${hist.length === 1 ? '' : 's'}${sells.length ? ` · ${wins} of ${sells.length} sales made money · realized ${money(realized)}` : ''}. Write why you made each trade; looking back at your reasons is how investors learn.</p>
     <div class="ov"><table><tr><th>Date</th><th class="n">Trade</th><th>Shares</th><th>Price</th><th>Result</th><th class="n">Why I made it</th></tr>
       ${hist.slice().reverse().slice(0, 50).map(t => `<tr><td>${day(t.t)}</td><td class="n"><b>${t.side === 'b' ? 'Bought' : 'Sold'}</b> <a href="#/asset/${encodeURIComponent(t.sym)}/research">${esc(t.sym)}</a></td><td>${fmt(t.q, t.q % 1 ? 2 : 0)}</td><td>$${fmt(t.px, 2)}</td><td class="${(t.real || 0) >= 0 ? 'up' : 'dn'}">${t.side === 's' && t.real != null ? money(t.real) : '—'}</td><td class="n"><input data-j="${t.t}" value="${esc(J[String(t.t)] || '')}" placeholder="e.g. earnings beat, valuation looked low" aria-label="Why I made this trade"></td></tr>`).join('')}</table></div>
     <p class="note">Return compares your account value with the starting $${fmt(start, 0)}. The S&P 500 figure is the SPY fund's price change from the first trading day on or after your first trade (dividends not included). Beta is weighted by the value of each holding.</p></div>`;
