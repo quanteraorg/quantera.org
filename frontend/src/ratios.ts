@@ -3,7 +3,7 @@
 // plus its current market value (/api/fundamentals) for the valuation ratios. Every input says where it came from,
 // and changes to "You entered" when edited. Any field can also be typed by hand, so it works for any company.
 
-type Src = { label: string; kind: 'sec' | 'mkt' | 'you' };
+type Src = { label: string; kind: 'sec' | 'mkt' | 'yh' | 'you' };
 const F: [string, string, string][] = [
   // key, label, hint
   ['revenue', 'Revenue', 'Total sales for the year'],
@@ -55,7 +55,7 @@ const CSS = `
 #qra .qri{display:flex;flex-direction:column;gap:10px}
 #qra .qri label{display:grid;grid-template-columns:1fr 150px;gap:2px 10px;align-items:center;font-size:13.5px}
 #qra .qri label small{grid-column:1/-1;font-size:11.5px;color:var(--mu)}#qra .qri label small i{font-style:normal}
-#qra .qri label small i.sec{color:#4fd1a5}#qra .qri label small i.mkt{color:#8fb4ff}#qra .qri label small i.you{color:#e8c77a}
+#qra .qri label small i.yh{color:#c9a7ff}#qra .qri label small i.sec{color:#4fd1a5}#qra .qri label small i.mkt{color:#8fb4ff}#qra .qri label small i.you{color:#e8c77a}
 #qra .qri input{font:inherit;font-size:14px;padding:7px 9px!important;text-align:right;font-variant-numeric:tabular-nums;width:100%;box-sizing:border-box}
 #qra .unit{font-size:12px;color:var(--mu);margin:-4px 0 4px}
 #qra .grp h3{margin:4px 0 8px;font-size:16px}
@@ -65,15 +65,15 @@ const CSS = `
 #qra .r .f{font-size:12px;color:var(--mu)}#qra .r p{margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--mu)}
 #qra .note{font-size:12.5px;color:var(--mu);line-height:1.55;max-width:760px}`;
 
-let vals: Record<string, number | null> = {}, src: Record<string, Src> = {}, period = '', tok = 0;
+let vals: Record<string, number | null> = {}, src: Record<string, Src> = {}, period = '', tok = 0, ccy = 'USD', origin: '' | 'sec' | 'yahoo' = '';
 const dirty = new Set<string>();
-const money = (v: number) => (v < 0 ? '−' : '') + '$' + (Math.abs(v) >= 1e12 ? fmt(Math.abs(v) / 1e12, 2) + 'T' : Math.abs(v) >= 1e9 ? fmt(Math.abs(v) / 1e9, 2) + 'B' : Math.abs(v) >= 1e6 ? fmt(Math.abs(v) / 1e6, 1) + 'M' : fmt(Math.abs(v), 0));
+const money = (v: number) => (v < 0 ? '−' : '') + (ccy === 'USD' ? '$' : ccy + ' ') + (Math.abs(v) >= 1e12 ? fmt(Math.abs(v) / 1e12, 2) + 'T' : Math.abs(v) >= 1e9 ? fmt(Math.abs(v) / 1e9, 2) + 'B' : Math.abs(v) >= 1e6 ? fmt(Math.abs(v) / 1e6, 1) + 'M' : fmt(Math.abs(v), 0));
 const show = (r: R, v: number | null) => v == null || !isFinite(v) ? '—' : r.unit === 'pct' ? fmt(v * 100, 1) + '%' : r.unit === 'x' ? fmt(v, 2) + '×' : money(v);
 const toM = (v: number | null) => v == null ? '' : String(Math.round(v / 1e4) / 100); // inputs are in millions of USD
 
 function paint(host: HTMLElement): void {
   const inp = host.querySelector('.qri') as HTMLElement;
-  inp.innerHTML = `<div class="unit">All amounts in millions of US dollars.</div>` + F.map(([k, l, h]) => `<label>${esc(l)}<input inputmode="decimal" data-k="${k}" value="${toM(vals[k] ?? null)}" aria-describedby="qra-${k}"><small id="qra-${k}">${esc(h)}${src[k] ? ` · <i class="${src[k].kind}">${esc(src[k].label)}</i>` : ''}</small></label>`).join('');
+  inp.innerHTML = `<div class="unit">All amounts in millions of ${ccy === 'USD' ? 'US dollars' : esc(ccy)}.</div>` + F.map(([k, l, h]) => `<label>${esc(l)}<input inputmode="decimal" data-k="${k}" value="${toM(vals[k] ?? null)}" aria-describedby="qra-${k}"><small id="qra-${k}">${esc(h)}${src[k] ? ` · <i class="${src[k].kind}">${esc(src[k].label)}</i>` : ''}</small></label>`).join('');
   inp.querySelectorAll<HTMLInputElement>('input').forEach(i => i.addEventListener('input', () => {
     const k = i.dataset.k!, t = i.value.replace(/[, $]/g, '');
     vals[k] = t === '' || isNaN(+t) ? null : +t * 1e6;
@@ -87,23 +87,23 @@ function paint(host: HTMLElement): void {
 function results(host: HTMLElement): void {
   const out = host.querySelector('.qro') as HTMLElement;
   out.innerHTML = RATIOS.map(([g, rs]) => `<div class="grp"><h3>${g}</h3><div class="rs">${rs.map(r => { const v = r.v(vals); return `<div class="r"><div class="n">${esc(r.name)}</div><div class="v">${show(r, v)}</div><div class="f">${esc(r.f)}</div><p>${esc(r.why)}</p></div>`; }).join('')}</div></div>`).join('')
-    + `<p class="note">${period ? `Company figures are from the ${esc(period)} annual report filed with the SEC; market value is the latest available and changes every trading day, so valuation ratios mix a past year's results with today's price. ` : ''}All ratios here are <b>calculated</b> from the inputs on the left. A dash means an input is missing or the ratio isn't meaningful (for example P/E when the company made a loss). Education, not investment advice. <button type="button" class="qfb-link" data-fb="data">Spot a wrong number?</button></p>`;
+    + `<p class="note">${origin === 'sec' ? `Company figures are from the ${esc(period)} annual report filed with the SEC; market value` : ''}${origin === 'yahoo' ? `Company figures are Yahoo Finance's summary of the annual report for the ${esc(period)}, in ${esc(ccy)}. They haven't been checked against the filing itself, so confirm important numbers in the company's annual report. Market value` : ''}${period ? ` is the latest available and changes every trading day, so valuation ratios mix a past year's results with today's price. ` : ''}All ratios here are <b>calculated</b> from the inputs on the left. A dash means an input is missing or the ratio isn't meaningful (for example P/E when the company made a loss). Education, not investment advice. <button type="button" class="qfb-link" data-fb="data">Spot a wrong number?</button></p>`;
 }
 
 async function load(host: HTMLElement, sym: string): Promise<void> {
   const st = host.querySelector('.st') as HTMLElement;
   sym = sym.trim().toUpperCase();
-  if (!/^[A-Z]{1,5}(\.[A-Z])?$/.test(sym)) { st.className = 'st err'; st.textContent = 'Enter a US stock ticker such as AAPL, or type the numbers in yourself.'; return; }
+  if (!/^[A-Z0-9]{1,6}([.\-][A-Z]{1,3})?$/.test(sym)) { st.className = 'st err'; st.textContent = 'Enter a stock ticker such as AAPL, SAP.DE or 7203.T, or type the numbers in yourself.'; return; }
   st.className = 'st'; st.textContent = `Loading ${sym}'s latest annual report…`;
   const t = ++tok; dirty.clear();
   if (location.hash !== '#/ratios/' + sym) history.replaceState(null, '', '#/ratios/' + sym);
   const [s, f] = await Promise.all([jf('/api/statements?symbol=' + encodeURIComponent(sym)), jf('/api/fundamentals?symbol=' + encodeURIComponent(sym))]);
   if (t !== tok || !host.isConnected) return;
   const keep = Object.fromEntries([...dirty].map(k => [k, vals[k]]));
-  vals = {}; src = {}; period = '';
+  vals = {}; src = {}; period = ''; ccy = 'USD'; origin = '';
   if (s.ok && s.b?.annual?.periods?.length) {
     const A = s.b.annual, L = A.periods.length - 1, p = A.periods[L], lines = [...A.income, ...A.balance, ...A.cashflow];
-    period = `${p.label} (${p.form || '10-K'}, year to ${p.end})`;
+    period = `${p.label} (${p.form || '10-K'}, year to ${p.end})`; origin = 'sec';
     for (const [k] of F) {
       if (k === 'marketCap') continue;
       let l = lines.find((x: any) => x.key === k); if (k === 'totalDebt' && (!l || l.values[L] == null)) l = lines.find((x: any) => x.key === 'longTermDebt');
@@ -111,11 +111,19 @@ async function load(host: HTMLElement, sym: string): Promise<void> {
     }
     if (vals.grossProfit == null && vals.revenue != null) { const c = lines.find((x: any) => x.key === 'costOfRevenue')?.values?.[L]; if (c != null) { vals.grossProfit = vals.revenue - c; src.grossProfit = { label: `Calculated from SEC ${p.label}`, kind: 'sec' }; } }
   }
+  // no SEC filing (most companies listed outside the US): Yahoo Finance's annual summary, in the company's reporting currency
+  const ya = !origin && f.ok && Array.isArray(f.b?.annual) ? [...f.b.annual].filter((y: any) => y && y.date).sort((a: any, b: any) => String(a.date).localeCompare(String(b.date))).pop() : null;
+  if (ya) {
+    ccy = String(f.b.financialCurrency || f.b.currency || 'USD'); origin = 'yahoo'; period = `year to ${ya.date}`;
+    const Y: Record<string, string> = { revenue: 'revenue', grossProfit: 'grossProfit', operatingIncome: 'operatingIncome', netIncome: 'netIncome', assets: 'assets', equity: 'equity', cash: 'cash', totalDebt: 'debt', operatingCashFlow: 'operatingCashFlow', capex: 'capex' };
+    for (const [k, y] of Object.entries(Y)) { const v = ya[y]; if (typeof v === 'number' && isFinite(v)) { vals[k] = v; src[k] = { label: `Yahoo Finance, year to ${ya.date}`, kind: 'yh' }; } }
+  }
   const cur = f.ok ? (f.b?.currency || 'USD') : '';
-  if (f.ok && f.b?.key?.marketCap && cur === 'USD') { vals.marketCap = f.b.key.marketCap; src.marketCap = { label: 'Latest, Yahoo Finance', kind: 'mkt' }; }
+  if (f.ok && f.b?.key?.marketCap && cur === ccy) { vals.marketCap = f.b.key.marketCap; src.marketCap = { label: 'Latest, Yahoo Finance', kind: 'mkt' }; }
   for (const k of Object.keys(keep)) { vals[k] = keep[k]; src[k] = { label: 'You entered', kind: 'you' }; }
   const name = (s.ok && s.b?.name) || (f.ok && f.b?.name) || sym;
-  if (!period) { st.className = 'st err'; st.textContent = `No SEC annual report found for ${sym} (banks, funds and companies listed outside the US often aren't covered). You can still type the numbers in yourself.`; }
+  if (!period) { st.className = 'st err'; st.textContent = `No annual figures found for ${sym} (funds and some banks aren't covered). You can still type the numbers in yourself.`; }
+  else if (origin === 'yahoo') st.textContent = `${name}: no SEC filing, so figures come from Yahoo Finance (${period}, in ${ccy}). Current assets and liabilities aren't in this source; type them in for the current ratio.${vals.marketCap == null ? ' Market value is in a different currency or unavailable, so valuation ratios are blank.' : ''}`;
   else st.textContent = `${name}: figures from the ${period}.${s.b.financial ? ' This is a bank or insurer, so margins, debt and cash-flow ratios work differently and some are left out.' : ''}${vals.marketCap == null ? ' Market value unavailable, so valuation ratios are blank.' : ''}`;
   try { track('ratios_load'); } catch { /* optional */ }
   paint(host);
@@ -128,8 +136,8 @@ function page(arg?: string): void {
 <div class="st" role="status"></div><div class="cols"><div class="qri"></div><div class="qro"></div></div></div>`;
   const host = m.querySelector('#qra') as HTMLElement, box = host.querySelector('.ld input') as HTMLInputElement;
   host.querySelector('.ld')!.addEventListener('submit', e => { e.preventDefault(); load(host, box.value); });
-  host.querySelector('[data-clear]')!.addEventListener('click', () => { vals = {}; src = {}; period = ''; box.value = ''; (host.querySelector('.st') as HTMLElement).textContent = ''; history.replaceState(null, '', '#/ratios'); paint(host); });
-  vals = {}; src = {}; period = '';
+  host.querySelector('[data-clear]')!.addEventListener('click', () => { vals = {}; src = {}; period = ''; ccy = 'USD'; origin = ''; box.value = ''; (host.querySelector('.st') as HTMLElement).textContent = ''; history.replaceState(null, '', '#/ratios'); paint(host); });
+  vals = {}; src = {}; period = ''; ccy = 'USD'; origin = '';
   paint(host);
   const sym = (arg || '').split('/')[0];
   if (sym) { box.value = sym.toUpperCase(); load(host, sym); }
