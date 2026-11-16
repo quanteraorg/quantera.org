@@ -53,7 +53,7 @@ export function dcf(x: Inputs, g = x.g, d = x.d) {
 /**
  * The model's starting inputs from a company's filings and price, so every page that shows a DCF uses the same rules:
  * latest reported free cash flow, revenue growth (compound, up to 5 years) kept between 0% and 20%, a 9% discount rate,
- * 2.5% terminal growth, latest diluted shares, and cash plus short-term investments minus long-term debt.
+ * 2.5% terminal growth, latest diluted shares, and cash plus short-term investments minus total debt (including debt due within a year).
  * Returns null when a needed figure isn't filed (nothing is guessed) or the company is a bank or insurer.
  */
 export function startingInputs(st: St, price: number): { x: Inputs; cagr: number | null; years: number } | null {
@@ -63,7 +63,7 @@ export function startingInputs(st: St, price: number): { x: Inputs; cagr: number
   let cagr: number | null = null, years = 0;
   if (rev) { const v = rev.values, iL = v.length - 1; for (let k = Math.min(5, iL); k >= 1; k--) { const a = v[iL], b = v[iL - k]; if (a != null && b != null && a > 0 && b > 0) { cagr = (Math.pow(a / b, 1 / k) - 1) * 100; years = k; break; } } }
   const g0 = cagr == null ? 5 : Math.max(0, Math.min(20, cagr));
-  const cash = last(find(A.balance, 'cash')), sti = last(find(A.balance, 'shortTermInvestments')), debt = last(find(A.balance, 'longTermDebt'));
+  const cash = last(find(A.balance, 'cash')), sti = last(find(A.balance, 'shortTermInvestments')), debt = last(find(A.balance, 'totalDebt')) || last(find(A.balance, 'longTermDebt'));
   const net = (cash?.[0] || 0) + (sti?.[0] || 0) - (debt?.[0] || 0);
   return { x: { fcf: f[0] / 1e9, g: Math.round(g0 * 2) / 2, d: 9, t: 2.5, shares: sh[0] / 1e9, net: net / 1e9, price }, cagr, years };
 }
@@ -105,7 +105,7 @@ function page(sym?: string): void {
     let cagr: number | null = null, yrs = 0;
     if (rev) { const v = rev.values, iL = v.length - 1; for (let k = Math.min(5, iL); k >= 1; k--) { const a = v[iL], b = v[iL - k]; if (a != null && b != null && a > 0 && b > 0) { cagr = (Math.pow(a / b, 1 / k) - 1) * 100; yrs = k; break; } } }
     const g0 = cagr == null ? 5 : Math.max(0, Math.min(20, cagr));
-    const cash = last(find(bal, 'cash')), sti = last(find(bal, 'shortTermInvestments')), debt = last(find(bal, 'longTermDebt'));
+    const cash = last(find(bal, 'cash')), sti = last(find(bal, 'shortTermInvestments')), debt = last(find(bal, 'totalDebt')) || last(find(bal, 'longTermDebt'));
     const net = (cash?.[0] || 0) + (sti?.[0] || 0) - (debt?.[0] || 0);
     const fy = (i: number) => P[i]?.label || '', link = (i: number) => P[i]?.filing ? ` (<a href="${esc(P[i].filing!)}" target="_blank" rel="noopener noreferrer">${esc(P[i].form || 'filing')} ↗</a>)` : '';
     // one unusual year (a one-off payment, a big tax bill) can swing a DCF, so compare it with the 3-year average
@@ -126,7 +126,7 @@ function page(sym?: string): void {
         d: 'The return investors expect for the risk. 8–10% is typical for a large US company; riskier businesses use more.',
         t: 'Growth forever after year 10. Kept near long-run inflation and economic growth; it must be below the discount rate.',
         shares: `${fy(sh[1])} diluted shares${link(sh[1])}.`,
-        net: `Cash and short-term investments minus long-term debt at the end of ${fy((cash || debt || [0, P.length - 1])[1])}. Added to the value of the business to get the value for shareholders.`,
+        net: `Cash and short-term investments minus total debt (long-term debt plus debt due within a year) at the end of ${fy((cash || debt || [0, P.length - 1])[1])}. Added to the value of the business to get the value for shareholders.`,
         price: 'Live or delayed up to 15 minutes.',
       },
     };
