@@ -95,7 +95,7 @@ export function initStatex(): void {
   const main = document.getElementById('m');
   const card = () => {
     const c = main?.querySelector('.qch-card'); if (!c || main!.querySelector('.qsx-card')) return;
-    c.insertAdjacentHTML('afterend', `<div class="qch-card qsx-card"><span style="font-size:26px" aria-hidden="true">📑</span><div><b>Read the statements</b><p>Four analyst questions about a real company, answered from its SEC filings.</p></div><a class="btn p" href="#/statex">Start</a></div>`);
+    c.insertAdjacentHTML('afterend', `<div class="qch-card qsx-card"><span style="font-size:26px" aria-hidden="true">≡</span><div><b>Read the statements</b><p>Four analyst questions about a real company, answered from its SEC filings.</p></div><a class="btn p" href="#/statex">Start</a></div>`);
   };
   if (main) { let t = 0; new MutationObserver(() => { clearTimeout(t); t = window.setTimeout(card, 60); }).observe(main, { childList: true }); }
 }

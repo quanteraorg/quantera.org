@@ -96,7 +96,7 @@ function page(sym?: string): void {
     if (!box.isConnected) return;
     if (!s.ok) { box.innerHTML = `<div class="pan qv-warn">${esc(s.b?.error || 'Financial statements for ' + sym + ' could not be loaded.')} The model needs a company’s SEC filings, so it works for US-listed companies that file 10-Ks.</div>`; return; }
     const st = s.b as St;
-    if (st.financial) { box.innerHTML = `<div class="pan qv-warn">🏦 <b>${esc(st.name || sym)} is a bank, insurer or other financial company.</b> This model values the free cash flow a business generates, but for a lender, cash moving through loans and deposits is the business itself, so free cash flow doesn’t describe it. Analysts value these companies with other tools, such as price to book value and return on equity (see the Financials tab on its stock page).</div>`; return; }
+    if (st.financial) { box.innerHTML = `<div class="pan qv-warn"><b>${esc(st.name || sym)} is a bank, insurer or other financial company.</b> This model values the free cash flow a business generates, but for a lender, cash moving through loans and deposits is the business itself, so free cash flow doesn’t describe it. Analysts value these companies with other tools, such as price to book value and return on equity (see the Financials tab on its stock page).</div>`; return; }
     const A = st.annual, P = A.periods, cf = A.cashflow, inc = A.income, bal = A.balance;
     const f = last(find(cf, 'freeCashFlow')), sh = last(find(inc, 'shares')), rev = find(inc, 'revenue');
     const price = q.ok && q.b?.price ? Number(q.b.price) : NaN;
