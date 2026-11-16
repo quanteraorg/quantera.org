@@ -50,3 +50,28 @@ jobs:
           (cd frontend/public && python3 -m http.server 8124 >/dev/null 2>&1 &)
           for i in $(seq 1 20); do curl -sf http://localhost:8124/ >/dev/null && break; sleep 0.5; done
           cd frontend/tests && npm run smoke
+
+  interact:
+    name: Frontend interaction test (every button and flow, desktop and phone)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build TypeScript modules
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Install test tools and Chromium
+        working-directory: frontend/tests
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Serve the site and click through every page (recorded data, no network or keys)
+        run: |
+          (cd frontend/public && python3 -m http.server 8124 >/dev/null 2>&1 &)
+          for i in $(seq 1 20); do curl -sf http://localhost:8124/ >/dev/null && break; sleep 0.5; done
+          cd frontend/tests && npm run interact
