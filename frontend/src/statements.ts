@@ -20,6 +20,14 @@ const PLAIN: Record<string, string> = {
 };
 
 const CSS = `
+#qst .qg{margin-bottom:22px}#qst .qg-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}#qst .qg-h h3{margin:0}#qst .qg-h .mu{font-size:12.5px}
+#qst .qg-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+#qst .qg-t{border:1px solid var(--ln);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+#qst .qg-l{font-size:12.5px;color:var(--mu)}#qst .qg-v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}#qst .qg-s{font-size:12.5px;color:var(--mu)}
+#qst .qg-m{margin-top:auto;padding-top:6px;font-size:11px;color:var(--mu)}
+#qst .qg-tag{display:inline-block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:1px 7px;margin-right:4px;border:1px solid var(--ln)}
+#qst .qg-tag.r{color:#4fd1a5;border-color:rgba(79,209,165,.4)}#qst .qg-tag.c{color:#e8c77a;border-color:rgba(232,199,122,.4)}
+#qst .qg-rep{margin-top:12px;font-size:13.5px;line-height:1.55;color:var(--mu)}#qst .qg-rep b{color:var(--tx);font-weight:600}
 #m.asp:not([data-tab=fin]) #qst{display:none}#fin.qsec>.pre,#fin.qsec>.ov{display:none}
 #qst{margin-top:16px}#qst .qst-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}#qst h3{margin:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 #qst .qst-src{font-size:12px;font-weight:500;padding:3px 10px;border-radius:99px;border:1px solid rgba(var(--upc),.4);color:var(--up)}
@@ -82,6 +90,34 @@ function spark(vals: (number | null)[]): string {
 interface View { tab: keyof Block; q: boolean; all: boolean }
 const view: View = { tab: 'income', q: false, all: false };
 
+// ---------- "At a glance": the latest fiscal year in six figures, each with its period, source and how it was produced ----------
+function glance(st: St): string {
+  const A = st.annual, P = A.periods; if (!P.length) return '';
+  const all = [...A.income, ...A.balance, ...A.cashflow, ...A.ratios];
+  const ln = (k: string) => all.find(l => l.key === k);
+  const at = (k: string, i = P.length - 1) => { const l = ln(k); return l ? l.values[i] ?? null : null; };
+  const L = P.length - 1, fy = P[L].label, prevFy = L > 0 ? P[L - 1].label : '';
+  const money = (v: number | null) => v == null ? '—' : (v < 0 ? '−' : '') + '$' + (Math.abs(v) >= 1e12 ? fmt(Math.abs(v) / 1e12, 2) + 'T' : Math.abs(v) >= 1e9 ? fmt(Math.abs(v) / 1e9, 1) + 'B' : fmt(Math.abs(v) / 1e6, 0) + 'M');
+  const pct = (v: number | null, d = 1) => v == null ? '—' : fmt(v * 100, d) + '%';
+  const chg = (k: string) => { const a = at(k), b = L > 0 ? at(k, L - 1) : null; return a != null && b != null && b > 0 ? a / b - 1 : null; };
+  const tag = (t: 'Reported' | 'Calculated') => `<span class="qg-tag ${t === 'Reported' ? 'r' : 'c'}" title="${t === 'Reported' ? 'As filed by the company' : 'Worked out by Quantera from filed figures'}">${t}</span>`;
+  const T: string[] = [];
+  const add = (label: string, value: string, sub: string, how: 'Reported' | 'Calculated') => T.push(`<div class="qg-t"><div class="qg-l">${label}</div><div class="qg-v">${value}</div><div class="qg-s">${sub}</div><div class="qg-m">${tag(how)} ${esc(fy)} · SEC 10-K</div></div>`);
+  const rev = at('revenue'), g = chg('revenue');
+  if (rev != null) add('Revenue', money(rev), g == null ? 'Total sales' : `${g >= 0 ? '+' : '−'}${fmt(Math.abs(g) * 100, 1)}% vs ${esc(prevFy)}`, 'Reported');
+  if (!st.financial && at('operatingMargin') != null) add('Operating margin', pct(at('operatingMargin')), `Net margin ${pct(at('netMargin'))}`, 'Calculated');
+  else if (at('netIncome') != null) add('Net income', money(at('netIncome')), at('netMargin') != null ? `Net margin ${pct(at('netMargin'))}` : 'Profit after all costs and tax', 'Reported');
+  if (!st.financial && at('freeCashFlow') != null) add('Free cash flow', money(at('freeCashFlow')), `Operating cash flow ${money(at('operatingCashFlow'))} − capex`, 'Calculated');
+  const cash = at('cash'), debt = at('totalDebt') ?? at('longTermDebt');
+  if (cash != null && debt != null && !st.financial) add(cash >= debt ? 'Net cash' : 'Net debt', money(Math.abs(cash - debt)), `Cash ${money(cash)} · debt ${money(debt)}${at('totalDebt') == null ? ' (long-term only)' : ''}`, 'Calculated');
+  if (at('currentRatio') != null && !st.financial) add('Current ratio', fmt(at('currentRatio') as number, 2) + '×', 'Current assets ÷ bills due within a year', 'Calculated');
+  const div = at('dividends'), bb = at('buybacks');
+  if (div != null || bb != null) add('Returned to shareholders', money(Math.abs(div || 0) + Math.abs(bb || 0)), `Dividends ${money(div == null ? null : Math.abs(div))} · buybacks ${money(bb == null ? null : Math.abs(bb))}`, 'Calculated');
+  const filing = [...P].reverse().find(p => p.filing && /10-K/.test(p.form || ''));
+  const report = filing ? `<div class="qg-rep"><b>From the annual report (${esc(filing.form || '10-K')}, ${esc(filing.label)}):</b> <a href="${esc(filing.filing!)}" target="_blank" rel="noopener noreferrer">open the filing at sec.gov</a> for the company’s own description of its <b>business</b> (Item 1), its <b>risk factors</b> (Item 1A) and management’s <b>discussion of results</b> (Item 7).</div>` : '';
+  return T.length ? `<div class="qg"><div class="qg-h"><h3>At a glance · ${esc(fy)}</h3><span class="mu">Latest fiscal year from SEC filings · USD</span></div><div class="qg-g">${T.join('')}</div>${report}</div>` : '';
+}
+
 function render(host: HTMLElement, st: St): void {
   const B = view.q ? st.quarterly : st.annual;
   const simple = typeof isSimple === 'function' && isSimple() && !view.all;
@@ -98,7 +134,7 @@ function render(host: HTMLElement, st: St): void {
   const head = `<tr><th>${view.q ? 'Quarter ending' : 'Fiscal year'}</th>${P.map(p => `<th>${esc(p.label)}${dMark(p)}${p.filing ? `<a href="${esc(p.filing)}" target="_blank" rel="noopener noreferrer" title="Open the ${esc(p.form || 'filing')} at sec.gov">${esc(p.form || 'Filing')} ↗</a>` : ''}</th>`).join('')}<th>${view.q ? 'vs year ago' : 'vs prior year'}</th><th>Trend</th></tr>`;
   const body = lines.map(l => `<tr class="${l.total ? 't' : ''}"><td>${esc(l.label)}${mark(l)}${simple && PLAIN[l.key] ? `<small>${esc(PLAIN[l.key])}</small>` : ''}</td>${l.values.map(v => `<td class="${v == null ? 'na' : v < 0 && l.kind !== 'usd' ? 'neg' : ''}">${show(l.kind, v)}</td>`).join('')}${growth(l, view.q)}${spark(l.values)}</tr>`).join('');
   const empty = !lines.length ? `<tr><td colspan="${P.length + 3}" style="text-align:left;padding:18px 14px" class="mu">${view.q && view.tab === 'cashflow' ? 'Most companies report cash flow only as year-to-date totals in their quarterly filings, so there are no separate quarterly figures to show. Switch to Annual.' : 'This company doesn’t report these lines in a form we can read.'}</td></tr>` : '';
-  host.innerHTML = `<div class="qst-h"><h3>Financial statements <span class="qst-src" title="Straight from the company's filings with the US Securities and Exchange Commission">From SEC filings</span></h3>
+  host.innerHTML = `${glance(st)}<div class="qst-h"><h3>Financial statements <span class="qst-src" title="Straight from the company's filings with the US Securities and Exchange Commission">From SEC filings</span></h3>
     <span class="mu" style="font-size:12.5px">${P.length} ${view.q ? 'quarters' : 'years'} · USD · each column links to its filing</span></div>
     ${st.financial ? `<div class="qst-warn" style="margin-top:12px">🏦 <b>${esc(st.name || st.symbol)} files as a financial company</b>${st.industry ? ` (SEC industry: ${esc(st.industry)})` : ''}. Banks and insurers report differently: there’s no gross profit or current assets, and free cash flow and the current ratio are left out because lending and deposits make them misleading.</div>` : ''}
     <div class="qst-bar"><div class="pre" role="tablist">${TABS.map(([k, n]) => `<button class="chip ${view.tab === k ? 'on' : ''}" data-t="${k}" role="tab" aria-selected="${view.tab === k}">${n}</button>`).join('')}</div>
