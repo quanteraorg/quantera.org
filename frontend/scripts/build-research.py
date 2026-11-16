@@ -63,23 +63,25 @@ def chart_svg(c):
     n, k = len(c['labels']), len(c['series'])
     gw = (W - L - 10) / n
     bw = min(26, gw / (k + 1))
-    Y = lambda v: T + (H - B - T) / 2 * (1 - v / top)
+    plain = c.get('plain') and min(vals) >= 0  # positive-only data: baseline at the bottom, no + signs
+    Y = (lambda v: T + (H - B - T) * (1 - v / top)) if plain else (lambda v: T + (H - B - T) / 2 * (1 - v / top))
     cols = ['#c8a96a', '#8e97a8', '#4fd1a5']
     out = [f'<line x1="{L}" x2="{W-10}" y1="{Y(0):.1f}" y2="{Y(0):.1f}" stroke="rgba(142,151,168,.45)"/>']
-    step = 2 if top <= 10 else 5
-    v = -int(top // step) * step
+    step = c.get('step') or (2 if top <= 10 else 5)
+    v = 0 if plain else -int(top // step) * step
     while v <= top:
-        out.append(f'<text x="{L-6}" y="{Y(v)+4:.1f}" text-anchor="end">{v:+g}{E(c.get("unit",""))}</text>' if v else f'<text x="{L-6}" y="{Y(0)+4:.1f}" text-anchor="end">0</text>')
+        lab = (f'{v:g}' if plain else f'{v:+g}') + c.get("unit", "")
+        out.append(f'<text x="{L-6}" y="{Y(v)+4:.1f}" text-anchor="end">{E(lab)}</text>' if v else f'<text x="{L-6}" y="{Y(0)+4:.1f}" text-anchor="end">0</text>')
         v += step
     for i, lab in enumerate(c['labels']):
         x0 = L + gw * i + (gw - bw * k) / 2
         for j, s in enumerate(c['series']):
             val = s['values'][i]
             y, h = (Y(val), Y(0) - Y(val)) if val >= 0 else (Y(0), Y(val) - Y(0))
-            out.append(f'<rect x="{x0 + j*bw:.1f}" y="{y:.1f}" width="{bw-3:.1f}" height="{max(1,h):.1f}" fill="{cols[j % 3]}" rx="2"><title>{E(s["name"])} {E(lab)}: {val:+.2f}{E(c.get("unit",""))}</title></rect>')
+            out.append(f'<rect x="{x0 + j*bw:.1f}" y="{y:.1f}" width="{bw-3:.1f}" height="{max(1,h):.1f}" fill="{cols[j % 3]}" rx="2"><title>{E(s["name"])} {E(lab)}: {(f'{val:.2f}' if plain else f'{val:+.2f}')}{E(c.get("unit",""))}</title></rect>')
         out.append(f'<text x="{L + gw*i + gw/2:.1f}" y="{H-8}" text-anchor="middle">{E(lab)}</text>')
     legend = ' · '.join(f'<span style="color:{cols[j % 3]}">■</span> {E(s["name"])}' for j, s in enumerate(c['series']))
-    desc = '; '.join(f'{s["name"]}: ' + ', '.join(f'{l} {v:+.2f}{c.get("unit","")}' for l, v in zip(c['labels'], s['values'])) for s in c['series'])
+    desc = '; '.join(f'{s["name"]}: ' + ', '.join(f'{l} ' + (f'{v:.2f}' if plain else f'{v:+.2f}') + c.get("unit", "") for l, v in zip(c['labels'], s['values'])) for s in c['series'])
     return (f'<figure class="chart"><figcaption><b>{E(c["title"])}</b> <span class="src">{legend}</span></figcaption>'
             f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="{E(c["title"])}. {E(desc)}">{"".join(out)}</svg><p class="src">{E(c.get("source",""))}</p></figure>')
 
