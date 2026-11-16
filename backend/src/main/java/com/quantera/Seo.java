@@ -82,7 +82,7 @@ final class Seo {
 
     /** Yearly figures straight from the company's 10-K filings with the SEC, each year linked to its filing. Null when the SEC has no
      *  US-GAAP statements for the symbol (foreign companies, funds), so the page falls back to the Yahoo Finance table. */
-    static String secTable(String s) {
+    static String secTable(String s, String display) {
         if (!s.matches("[A-Z]{1,5}")) return null;
         Map<String, Object> st;
         try { st = Statements.of(s); } catch (RuntimeException e) { return null; }
@@ -115,7 +115,7 @@ final class Seo {
         }
         if (shown < 2) return null;
         Map<String, Object> last = map(per.get(n - 1));
-        m.append("</table></div><p class=\"src\">Yearly figures from ").append(h(str(st.get("name")) == null ? s : str(st.get("name")))).append("'s annual reports (Form 10-K) filed with the SEC; each year links to its filing. Latest: ")
+        m.append("</table></div><p class=\"src\">Yearly figures from ").append(h(display == null ? s : display)).append("'s annual reports (Form 10-K) filed with the SEC; each year links to its filing. Latest: ")
                 .append(h(last.get("label"))).append(", year ended ").append(h(last.get("end"))).append(". Free cash flow is calculated (cash from operations minus capital spending)")
                 .append(fin ? "" : "; total debt includes debt due within a year").append(". The headline numbers above use the latest quarter or the past 12 months (Yahoo Finance), so they can differ from this table.</p>");
         return m.toString();
@@ -152,7 +152,7 @@ final class Seo {
         if (pe != null) m.append("At this price, investors pay about ").append(h(num(pe, "0"))).append(" times its profit over the past 12 months. ");
         if (cash != null && debt != null) m.append(cash >= debt ? "At the latest quarter, it held more cash and short-term investments than debt." : "At the latest quarter, it owed more in debt than it held in cash and short-term investments.");
         m.append("</p>");
-        String secTbl = secTable(s);
+        String secTbl = secTable(s, name);
         if (secTbl != null) m.append(secTbl).append("<h2>Common questions about ").append(h(name)).append("</h2>");
         else {
             m.append("<h2>").append(h(s)).append(" yearly financials</h2><div class=\"tw\"><table><tr><th>Year ending</th>");
