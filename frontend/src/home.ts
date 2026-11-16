@@ -22,7 +22,7 @@ a.qh-card:hover{border-color:rgba(var(--acc),.55)}
 .qh-card ul{margin:0;padding-left:18px;color:var(--mu);font-size:14px;line-height:1.6}
 .qh-nl{display:grid;grid-template-columns:1fr minmax(0,420px);gap:20px;align-items:center;border:1px solid var(--ln);border-radius:16px;padding:22px 24px;background:var(--s1)}
 .qh-nl h3{margin:0 0 4px;font-family:Fraunces,Georgia,serif;font-weight:400;font-size:24px}.qh-nl p{margin:0;color:var(--mu);font-size:14.5px}
-.qh-nl form{display:flex;gap:8px}.qh-nl input{flex:1;min-width:0;font:inherit;font-size:14px;padding:10px 12px!important}
+.qh-nl form{display:flex;gap:8px;flex-wrap:wrap}.qh-nl input.nm{flex:0 1 170px}.qh-nl input{flex:1;min-width:0;font:inherit;font-size:14px;padding:10px 12px!important}
 .qh-nl .msg{grid-column:1/-1;font-size:13.5px;margin:0}
 @media (max-width:760px){.qh-nl{grid-template-columns:1fr}}
 .qab{max-width:820px}.qab .lede{font-size:clamp(18px,1.7vw,21px);line-height:1.6;color:rgba(var(--fgc),.86);margin:6px 0 26px}
@@ -65,17 +65,17 @@ function newsletter(hm: HTMLElement): void {
   const faq = hm.querySelector('#faq'); if (!faq || hm.querySelector('.qh-nl')) return;
   const sec = document.createElement('section'); sec.className = 'qin'; sec.style.marginBottom = '8px';
   sec.innerHTML = `<div class="qh-nl"><div><h3>New research, by email</h3><p>One short email when we publish a new study. No spam, no selling your address, unsubscribe any time.</p></div>
-    <form novalidate><input type="email" required placeholder="you@example.com" aria-label="Email address" autocomplete="email"><button class="btn p" type="submit">Notify me</button></form><p class="msg" aria-live="polite"></p></div>`;
+    <form novalidate><input class="nm" type="text" placeholder="First name (optional)" aria-label="First name (optional)" autocomplete="given-name" maxlength="40"><input class="em" type="email" required placeholder="you@example.com" aria-label="Email address" autocomplete="email"><button class="btn p" type="submit">Notify me</button></form><p class="msg" aria-live="polite"></p></div>`;
   faq.before(sec);
-  const form = sec.querySelector('form') as HTMLFormElement, inp = form.querySelector('input') as HTMLInputElement, msg = sec.querySelector('.msg') as HTMLElement;
+  const form = sec.querySelector('form') as HTMLFormElement, inp = form.querySelector('input.em') as HTMLInputElement, nm = form.querySelector('input.nm') as HTMLInputElement, msg = sec.querySelector('.msg') as HTMLElement;
   form.onsubmit = async e => {
     e.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(inp.value.trim())) { msg.textContent = 'Please enter a valid email address.'; return; }
     msg.textContent = 'Signing you up…';
     try {
-      const r = await fetch('/api/waitlist', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: inp.value.trim(), interest: 'research-updates', source: 'home' }) });
+      const r = await fetch('/api/waitlist', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: inp.value.trim(), name: nm.value.trim(), interest: 'research-updates', source: 'home' }) });
       const j = await r.json().catch(() => ({}));
-      if (r.ok) { msg.textContent = 'Thanks. We’ll email you when the next study is published.'; inp.value = ''; track('newsletter_join'); }
+      if (r.ok) { msg.textContent = 'Thanks. We’ll email you when the next study is published.'; inp.value = ''; nm.value = ''; track('newsletter_join'); }
       else msg.innerHTML = r.status === 503 ? 'Email sign-ups open soon. Meanwhile, follow <a href="https://instagram.com/quantera.research" target="_blank" rel="noopener">@quantera.research</a> for new research.' : esc(j.error || 'That didn’t work. Please try again.');
     } catch { msg.textContent = 'Could not reach the server. Please try again.'; }
   };
