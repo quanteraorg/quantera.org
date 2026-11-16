@@ -57,10 +57,10 @@ function burst(from: Element): void {
 
 function header(d: Daily): string {
   const lv = level(d.total), st = streak(), pct = d.day === today() && d.done ? 100 : 0;
-  return `<div class="qd-h"><div class="qd-ring" style="--p:${pct}" title="Daily goal"><span>${pct === 100 ? '✓' : '🎯'}</span></div>
+  return `<div class="qd-h"><div class="qd-ring" style="--p:${pct}" title="Daily goal"><span>${pct === 100 ? '✓' : '◎'}</span></div>
     <div class="qd-t"><b>${pct === 100 ? 'Daily goal complete' : 'Today’s challenge'}</b><span>${pct === 100 ? 'Come back tomorrow to keep your streak going.' : 'One news story, two quick questions. About two minutes.'}</span>
     <div class="qd-lv" title="${lv.into} of ${lv.need} XP to level ${lv.lv + 1}"><i style="width:${Math.round(lv.into / lv.need * 100)}%"></i></div></div>
-    <div class="qd-stats"><div class="qd-stat"><b>🔥 ${st}</b><small>day streak</small></div><div class="qd-stat"><b>⭐ ${d.total}</b><small>XP</small></div><div class="qd-stat"><b>${lv.lv}</b><small>level</small></div></div></div>`;
+    <div class="qd-stats"><div class="qd-stat"><b>${st}</b><small>day streak</small></div><div class="qd-stat"><b>${d.total}</b><small>XP</small></div><div class="qd-stat"><b>${lv.lv}</b><small>level</small></div></div></div>`;
 }
 
 async function pickStory(): Promise<{ a: Article; s: NewsSym; spx: number | null } | null> {
@@ -105,14 +105,14 @@ export function renderDaily(host: HTMLElement): void {
       body().innerHTML = `<div style="display:flex;align-items:center"><div class="qd-step">Step 1 · Read the news</div>${dots(0)}</div>
         <p class="qd-q">“${esc(a.title)}”</p><div class="qd-src">${esc(a.source || '')}${a.url ? ` · <a href="${esc(a.url)}" target="_blank" rel="noopener">read the story</a>` : ''}</div>
         <div style="margin-bottom:10px"><b>How might this affect ${esc(s.symbol)}?</b></div>
-        <div class="qd-opts"><button class="qd-o" data-c="up">📈 Good news<small>Could push the price up</small></button><button class="qd-o" data-c="down">📉 Bad news<small>Could push the price down</small></button><button class="qd-o" data-c="mixed">⚖️ Mixed or unclear<small>Hard to say from this alone</small></button></div>`;
+        <div class="qd-opts"><button class="qd-o" data-c="up">Good news<small>Could push the price up</small></button><button class="qd-o" data-c="down">Bad news<small>Could push the price down</small></button><button class="qd-o" data-c="mixed">Mixed or unclear<small>Hard to say from this alone</small></button></div>`;
       body().querySelectorAll<HTMLButtonElement>('.qd-o').forEach(b => b.onclick = () => {
         const c = b.dataset.c as Call, pc = s.changePct as number, actual: Call = Math.abs(pc) < 1 ? 'mixed' : pc > 0 ? 'up' : 'down';
         matchedToday = c === actual; xp += 5 + (matchedToday ? 5 : 0);
         body().querySelectorAll<HTMLButtonElement>('.qd-o').forEach(x => { x.disabled = true; if (x === b) x.classList.add('pick'); });
         const word = actual === 'mixed' ? 'barely moved' : actual === 'up' ? 'rose' : 'fell';
         const spx = story!.spx;
-        body().insertAdjacentHTML('beforeend', `<div class="qd-fb">${matchedToday ? '✅ Your read matched how the market moved today.' : '🤔 The market moved differently today.'}
+        body().insertAdjacentHTML('beforeend', `<div class="qd-fb">${matchedToday ? 'Your read matched how the market moved today.' : 'The market moved differently today.'}
           <b class="${pc >= 0 ? 'up' : 'dn'}">${esc(s.symbol)} ${word} ${pc >= 0 ? '+' : '−'}${fmt(Math.abs(pc), 2)}%</b> today${spx != null ? `, while the S&amp;P 500 moved ${spx >= 0 ? '+' : '−'}${fmt(Math.abs(spx), 2)}%` : ''}.
           <br><span class="mu">Remember: one headline rarely explains a whole day’s move. Prices also react to what investors already expected, other news the same day and the overall market. That’s why there’s no single right answer here.</span>
           <div class="qd-next"><button class="btn p">Next question →</button></div></div>`);
@@ -130,7 +130,7 @@ export function renderDaily(host: HTMLElement): void {
         body().querySelectorAll<HTMLButtonElement>('.qd-o').forEach(x => { x.disabled = true; const k = Number(x.dataset.i); if (k === ans) x.classList.add('good'); else if (x === b) x.classList.add('bad'); });
         if (right) burst(b);
         (window as any).qKes?.(right ? 'correct' : 'wrong');
-        body().insertAdjacentHTML('beforeend', `<div class="qd-fb">${right ? '✅ Correct! +10 XP' : `Not quite: the answer is <b>${esc(opts[ans])}</b>.`}<br><span class="mu">${esc(l[9])}</span>
+        body().insertAdjacentHTML('beforeend', `<div class="qd-fb">${right ? 'Correct! +10 XP' : `Not quite: the answer is <b>${esc(opts[ans])}</b>.`}<br><span class="mu">${esc(l[9])}</span>
           <div class="qd-next"><button class="btn p">${qi + 1 < quiz.length ? 'Next question →' : 'Finish'}</button> <a class="btn" href="#/lesson/${esc(l[0])}">Open the lesson</a></div></div>`);
         (body().querySelector('.qd-next .btn') as HTMLButtonElement).onclick = next;
       });
@@ -142,7 +142,7 @@ export function renderDaily(host: HTMLElement): void {
       try { ACT_('daily'); } catch { /* streak is optional */ }
       (window as any).qKes?.('done', `Today’s challenge done: <b>+${xp} XP</b>. See you tomorrow!`);
       track('daily_done');
-      box.innerHTML = header(s) + `<div class="qd-done"><div class="mu">Challenge complete</div><div class="big">+${xp} XP</div><div class="mu">🔥 ${streak()}-day streak. See you tomorrow!</div></div>`;
+      box.innerHTML = header(s) + `<div class="qd-done"><div class="mu">Challenge complete</div><div class="big">+${xp} XP</div><div class="mu">${streak()}-day streak. See you tomorrow!</div></div>`;
       burst(box.querySelector('.big') as Element);
       try { checkBadges(); } catch { /* badges are optional */ }
     };
@@ -153,15 +153,15 @@ export function renderDaily(host: HTMLElement): void {
 /** Compact "today's challenge" strip for the home page. */
 function homeStrip(host: Element): void {
   const d = load(), done = d.day === today() && d.done, st = streak();
-  host.insertAdjacentHTML('beforebegin', `<section id="qdhome"><div class="pan qdh"><span style="font-size:26px">${done ? '✅' : '🎯'}</span><div><b>${done ? 'Today’s challenge done' : 'Today’s 2-minute challenge'}</b><div class="mu">${done ? `+${d.xp} XP · come back tomorrow` : 'Read one real news story, make a call, then two quick questions.'}${st ? ` · 🔥 ${st}-day streak` : ''}</div></div><a class="btn ${done ? '' : 'p'}" href="#/learn">${done ? 'See progress' : 'Start'}</a></div></section>`);
+  host.insertAdjacentHTML('beforebegin', `<section id="qdhome"><div class="pan qdh"><span style="font-size:26px">${done ? '✓' : '◎'}</span><div><b>${done ? 'Today’s challenge done' : 'Today’s 2-minute challenge'}</b><div class="mu">${done ? `+${d.xp} XP · come back tomorrow` : 'Read one real news story, make a call, then two quick questions.'}${st ? ` · ${st}-day streak` : ''}</div></div><a class="btn ${done ? '' : 'p'}" href="#/learn">${done ? 'See progress' : 'Start'}</a></div></section>`);
 }
 
 export function initDaily(): void {
   document.head.insertAdjacentHTML('beforeend', `<style id="qdaily-css">${CSS}</style>`);
   if (!SYNC.includes(KEY)) SYNC.push(KEY);
-  BADGES.push(['daily1', '🎯', 'Challenger', 'Finish a daily challenge', () => load().days >= 1]);
-  BADGES.push(['daily7', '🗓️', 'Habit builder', 'Finish 7 daily challenges', () => load().days >= 7]);
-  BADGES.push(['reader2', '🧠', 'Market reader', 'Match the market’s move on 5 daily stories', () => load().matched >= 5]);
+  BADGES.push(['daily1', '★', 'Challenger', 'Finish a daily challenge', () => load().days >= 1]);
+  BADGES.push(['daily7', '★', 'Habit builder', 'Finish 7 daily challenges', () => load().days >= 7]);
+  BADGES.push(['reader2', '★', 'Market reader', 'Match the market’s move on 5 daily stories', () => load().matched >= 5]);
   const learn = PAGES.learn;
   PAGES.learn = (a?: string) => { learn(a); const host = document.querySelector('#m .body') as HTMLElement || document.getElementById('m'); if (host && !document.getElementById('qdaily')) renderDaily(host); };
   const home = PAGES.home;

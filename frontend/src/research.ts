@@ -187,7 +187,7 @@ function research(s: string): void {
       <a class="chip" href="#/trade/${encodeURIComponent(s)}">Practice trade</a>
       <a class="chip" href="#/lesson/research">Learn: how to research a company</a></div>
     <div class="qr-g">
-      <div class="pan" id="qrth"><h3>My research</h3><p class="qr-sub">Your own thinking about ${esc(s)}, saved automatically in this browser (and synced when you're signed in). ${folders.length ? 'In folders: ' + folders.map(f => `<a href="#/notes">${esc(f.emoji || '📁')} ${esc(f.name)}</a>`).join(', ') + '.' : '<a href="#/notes">Add it to a research folder →</a>'}</p>
+      <div class="pan" id="qrth"><h3>My research</h3><p class="qr-sub">Your own thinking about ${esc(s)}, saved automatically in this browser (and synced when you're signed in). ${folders.length ? 'In folders: ' + folders.map(f => `<a href="#/notes">${'▤'} ${esc(f.name)}</a>`).join(', ') + '.' : '<a href="#/notes">Add it to a research folder →</a>'}</p>
         ${[['line', 'My thesis in one line', 'e.g. Services growth keeps margins rising even if iPhone sales are flat'], ['bull', 'Bull case: what goes right', ''], ['bear', 'Bear case: what goes wrong', ''], ['assume', 'Key assumptions I’m making', 'e.g. revenue grows 6% a year; margins stay above 45%'], ['change', 'What would change my mind', '']].map(([k, l, ph]) => `<label for="qr-${k}">${l}</label><textarea id="qr-${k}" data-k="${k}" placeholder="${esc(ph)}">${esc((t as any)[k] || '')}</textarea>`).join('')}
         <div class="qr-saved" id="qrsv">${t.at ? 'Last saved ' + timeStr(new Date(t.at)) : 'Not written yet'}</div></div>
       <div><div class="pan" id="qrval"><h3>Valuation snapshot</h3><div class="qr-load"></div></div>

@@ -5,7 +5,9 @@
 interface Item { t: 's' | 'n'; sym?: string; k?: string; title?: string; url?: string; source?: string }
 interface Folder { id: string; name: string; emoji: string; note: string; items: Item[]; at: number }
 const KEY = 'q_col';
-const EMOJI = ['📁', '🔬', '💡', '🚀', '🏦', '⚡', '🌍', '🧠'];
+const EMOJI = ['▤', '◆', '◇', '●', '■', '▲', '◎', '✦'];
+// folders made before the switch to plain symbols may still hold an emoji: show a plain symbol for those
+const ico = (e?: string): string => (e && EMOJI.includes(e) ? e : '▤');
 const load = (): Folder[] => LS<Folder[]>(KEY, []);
 const save = (f: Folder[]) => SS(KEY, f);
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -44,7 +46,7 @@ function renderSection(host: HTMLElement): void {
   if (!sec) { sec = document.createElement('div'); sec.id = 'qfsec'; sec.className = 'qf-sec'; host.prepend(sec); }
   const F = load();
   sec.innerHTML = `<div class="qf-h"><h3>Research folders</h3><span class="mu" style="font-size:13.5px">Group stocks, stories and notes, like pages in Notion.</span><button class="btn p" id="qfnew">+ New folder</button></div>
-    <div class="qf-grid">${F.map(f => `<button class="pan qf-card ${f.id === openId ? 'on' : ''}" data-f="${f.id}"><span class="e">${f.emoji}</span><b>${esc(f.name)}</b><small>${f.items.length} item${f.items.length === 1 ? '' : 's'}${f.note ? ' · notes' : ''}</small></button>`).join('')}
+    <div class="qf-grid">${F.map(f => `<button class="pan qf-card ${f.id === openId ? 'on' : ''}" data-f="${f.id}"><span class="e">${ico(f.emoji)}</span><b>${esc(f.name)}</b><small>${f.items.length} item${f.items.length === 1 ? '' : 's'}${f.note ? ' · notes' : ''}</small></button>`).join('')}
     ${F.length ? '' : '<button class="pan qf-card qf-new" id="qfnew2">Create your first folder, e.g. “AI chip makers”</button>'}</div><div id="qfopen"></div>`;
   const create = () => { const f: Folder = { id: uid(), name: 'Untitled folder', emoji: EMOJI[F.length % EMOJI.length], note: '', items: [], at: Date.now() }; save([f, ...load()]); openId = f.id; track('folder_new'); renderSection(host); const t = document.querySelector<HTMLInputElement>('#qfopen .qf-title input'); t?.focus(); t?.select(); };
   (sec.querySelector('#qfnew') as HTMLButtonElement).onclick = create;
@@ -59,7 +61,7 @@ function renderOpen(host: HTMLElement): void {
   const upd = (fn: (f: Folder) => void, redraw = true) => { const all = load(), g = all.find(x => x.id === f.id); if (!g) return; fn(g); g.at = Date.now(); save(all); if (redraw) renderSection(host); };
   const stocks = f.items.filter(i => i.t === 's'), news = f.items.filter(i => i.t === 'n');
   const saved = LS<any[]>('q_saved', []).filter(a => !news.some(n => n.k === String(a.id || a.url)));
-  box.innerHTML = `<div class="pan qf-open"><div class="qf-title"><button class="e" title="Change icon">${f.emoji}</button><input value="${esc(f.name)}" aria-label="Folder name" maxlength="60"></div>
+  box.innerHTML = `<div class="pan qf-open"><div class="qf-title"><button class="e" title="Change icon">${ico(f.emoji)}</button><input value="${esc(f.name)}" aria-label="Folder name" maxlength="60"></div>
     <textarea class="qf-note" placeholder="Write your thinking here: why these companies, what you're watching for, questions to answer…" aria-label="Folder notes">${esc(f.note)}</textarea>
     <div class="qf-items"><h4>Stocks (${stocks.length})</h4>${stocks.map(i => `<div class="qf-row" data-sym="${esc(i.sym)}"><a class="n" href="#/asset/${encodeURIComponent(i.sym!)}"><b>${esc(i.sym)}</b></a><span class="p mu">…</span><button class="x" title="Remove" data-rm="s:${esc(i.sym)}">×</button></div>`).join('') || '<div class="mu" style="padding:6px 0">No stocks yet.</div>'}
     <div class="qf-add"><input placeholder="Add a stock by ticker, e.g. NVDA" aria-label="Add a stock" id="qfsym"><button class="btn" id="qfaddsym">Add</button></div>
@@ -94,7 +96,7 @@ function stockButton(): void {
   const sym = decodeURIComponent(m[1]).toUpperCase();
   const watch = Array.from(document.querySelectorAll<HTMLElement>('#m [onclick^="WT_("]'))[0];
   if (!watch || document.getElementById('qfbtn')) return;
-  watch.insertAdjacentHTML('afterend', `<button class="chip" id="qfbtn" style="margin-left:6px">📁 Add to folder</button>`);
+  watch.insertAdjacentHTML('afterend', `<button class="chip" id="qfbtn" style="margin-left:6px">Add to folder</button>`);
   const btn = document.getElementById('qfbtn') as HTMLButtonElement;
   // the title row spreads its children apart; keep the title left and the action buttons together on the right
   const row = btn.parentElement, title = row?.firstElementChild as HTMLElement | null;
@@ -103,7 +105,7 @@ function stockButton(): void {
     e.stopPropagation(); document.querySelector('.qf-pop')?.remove();
     const F = load(), r = btn.getBoundingClientRect(), pop = document.createElement('div');
     pop.className = 'qf-pop'; pop.style.left = Math.min(r.left, innerWidth - 270) + 'px'; pop.style.top = (r.bottom + 8) + 'px';
-    pop.innerHTML = F.map(f => { const has = f.items.some(i => i.t === 's' && i.sym === sym); return `<button data-f="${f.id}"><span>${f.emoji}</span>${esc(f.name)}<small>${has ? '✓ added' : ''}</small></button>`; }).join('') + `<button data-f="new"><span>＋</span>New folder with ${esc(sym)}</button>`;
+    pop.innerHTML = F.map(f => { const has = f.items.some(i => i.t === 's' && i.sym === sym); return `<button data-f="${f.id}"><span>${ico(f.emoji)}</span>${esc(f.name)}<small>${has ? '✓ added' : ''}</small></button>`; }).join('') + `<button data-f="new"><span>＋</span>New folder with ${esc(sym)}</button>`;
     document.body.appendChild(pop);
     pop.onclick = ev => {
       const b = (ev.target as Element).closest<HTMLElement>('[data-f]'); if (!b) return;
@@ -111,7 +113,7 @@ function stockButton(): void {
       if (!f) { f = { id: uid(), name: sym + ' research', emoji: EMOJI[all.length % EMOJI.length], note: '', items: [], at: Date.now() }; all.unshift(f); }
       if (!f.items.some(i => i.t === 's' && i.sym === sym)) f.items.push({ t: 's', sym });
       f.at = Date.now(); save(all); pop.remove(); track('folder_add_from_stock');
-      qtoast(`📁 Added <b>${esc(sym)}</b> to “${esc(f.name)}”. <a href="#/notes" style="color:var(--ac)">Open folders →</a>`);
+      qtoast(`Added <b>${esc(sym)}</b> to “${esc(f.name)}”. <a href="#/notes" style="color:var(--ac)">Open folders →</a>`);
     };
     setTimeout(() => document.addEventListener('click', () => pop.remove(), { once: true }), 0);
   };
