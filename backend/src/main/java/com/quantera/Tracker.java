@@ -77,13 +77,14 @@ final class Tracker {
 
     static volatile int lastCandidates = 0, lastAdded = 0;
 
-    /** Whether the first trading session that could react to news published at `at` has finished (16:30 New York, allowing for late prints). */
+    /** Whether the first trading session that could react to news published at `at` has finished, with final closing prices in
+     *  (18:00 New York: measuring at 16:30 sometimes caught a close that hadn't settled, e.g. NVDA −4.05% vs its final −4.12% on 16 Nov 2026). */
     static boolean sessionClosed(String at, java.time.ZonedDateTime nowNy) {
         java.time.LocalDate d;
         try { d = Reaction.sessionFor(at); } catch (RuntimeException e) { return false; }
         while (d.getDayOfWeek().getValue() > 5) d = d.plusDays(1); // a weekend story is first traded on Monday
         java.time.LocalDate today = nowNy.toLocalDate();
-        return d.isBefore(today) || (d.equals(today) && nowNy.toLocalTime().isAfter(java.time.LocalTime.of(16, 30)));
+        return d.isBefore(today) || (d.equals(today) && nowNy.toLocalTime().isAfter(java.time.LocalTime.of(18, 0)));
     }
 
     static Map<String, Object> row(String key, String title, String at, Map<String, Object> c) {

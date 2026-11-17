@@ -498,10 +498,11 @@ public class TestMain {
             t("tracker: medians use the size of the reaction, up or down", d(m(b.get(0)).get("medianSigmas")) == 1.35 && d(m(b.get(3)).get("medianSigmas")) == 4.2);
             t("tracker: smaller companies reacting more shows as a negative rank correlation; events and dates counted", d(s.get("rankCorrelation")) < -0.8 && d(s.get("events")) == 4 && "2026-11-01".equals(s.get("from")) && "2026-11-05".equals(s.get("to")));
             t("tracker: correlation only from 10 measurements", Tracker.summarise(rows.subList(0, 5)).get("rankCorrelation") == null);
-            java.time.ZonedDateTime fri5pm = java.time.ZonedDateTime.of(2026, 11, 13, 17, 0, 0, 0, Reaction.NY), fri3pm = fri5pm.withHour(15), mon5pm = fri5pm.plusDays(3);
+            java.time.ZonedDateTime fri5pm = java.time.ZonedDateTime.of(2026, 11, 13, 19, 0, 0, 0, Reaction.NY), fri3pm = fri5pm.withHour(15), mon5pm = fri5pm.plusDays(3);
             t("tracker: waits until the first session after the story has closed (after-close and weekend stories count from Monday)",
                     Tracker.sessionClosed("2026-11-13T15:00:00Z", fri5pm) && !Tracker.sessionClosed("2026-11-13T15:00:00Z", fri3pm)
                     && !Tracker.sessionClosed("2026-11-13T22:00:00Z", fri5pm.plusDays(1)) && Tracker.sessionClosed("2026-11-13T22:00:00Z", mon5pm) && !Tracker.sessionClosed("not a date", mon5pm));
+            t("tracker: waits for final closing prices (not measured at 5 pm New York time)", !Tracker.sessionClosed("2026-11-13T15:00:00Z", fri5pm.withHour(17)));
             t("tracker: only plain US tickers, at most six", Tracker.tickers(Json.obj("symbols", List.of(Json.obj("symbol", "NVDA"), Json.obj("symbol", "7203.T"), Json.obj("symbol", "OPAI.PVT"), "amd"))).equals(List.of("NVDA", "AMD")));
         }
         t("reaction API: needs two companies and a real date", call(p, "GET", "/api/reaction?symbols=AAPL&at=2026-10-22", null, ip()).code == 400 && call(p, "GET", "/api/reaction?symbols=AAPL,MSFT&at=yesterday", null, ip()).code == 400);
