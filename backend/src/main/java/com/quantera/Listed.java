@@ -39,7 +39,8 @@ final class Listed {
     static Map<String, Object> of(String company) {
         String key = "listed" + norm(company);
         Map<String, Object> hit = Providers.CACHE.peek(key);
-        if (hit != null && Providers.CACHE.age(key) < 6 * 3600_000L) return hit;
+        // "listed" is final; "not listed" is rechecked every 30 minutes so a new IPO shows up quickly
+        if (hit != null && Providers.CACHE.age(key) < (Boolean.TRUE.equals(hit.get("listed")) ? 6 * 3600_000L : 30 * 60_000L)) return hit;
         boolean unsure = false;
         String cutoff = Instant.now().minus(3 * 365, ChronoUnit.DAYS).toString().substring(0, 10);
         for (Object o : list(Providers.search(company).get("results"))) {
