@@ -30,6 +30,7 @@ import { initKes } from './feedback';
 import { initContact } from './contact';
 import { initRatios } from './ratios';
 import { initIntro } from './intro';
+import { initListed } from './listed';
 
 initStates();
 initMotion();
@@ -60,4 +61,5 @@ initKes();
 initContact();
 initRatios();
 initIntro();
+initListed();
 initUi();

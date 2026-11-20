@@ -239,6 +239,16 @@ final class Seo {
         return "No funding round with a published valuation is listed, so this estimate rests on secondary-market prices only.";
     }
 
+    /** A company that has since listed (Anthropic → ANT) gets a clear note and links to its stock page. */
+    static String listedNote(String name) {
+        Map<String, Object> l;
+        try { l = Listed.of(name); } catch (RuntimeException e) { return ""; }
+        if (!Boolean.TRUE.equals(l.get("listed"))) return "";
+        String sym = str(l.get("symbol"));
+        return "<p class=\"basis\"><b>" + h(name) + " is now a public company.</b> It began trading in the US as <a href=\"/stock/" + h(sym) + "\">" + h(sym) + "</a>"
+                + (str(l.get("firstTrade")) != null ? " on " + h(l.get("firstTrade")) : "") + ". The figures below are its history before the IPO. <a href=\"/#/trade/" + h(sym) + "\">Paper trade " + h(sym) + "</a>.</p>";
+    }
+
     /** One private company: valuation, funding rounds and what funds report it is worth. */
     static Page privateCompany(String sl) {
         Map<String, Object> co = privateBySlug(sl.toLowerCase(Locale.ROOT));
@@ -251,7 +261,7 @@ final class Seo {
         Double listed = listedRaised(fund, rounds);
         if (listed != null) fund = listed;
         String desc = name + " valuation: estimated " + money(val, "USD") + (fund != null ? ", with " + money(fund, "USD") + (listed != null ? " raised in listed rounds" : " raised") : "") + ". Funding rounds, price per share and what mutual funds report it is worth.";
-        StringBuilder m = new StringBuilder("<p class=\"crumb\"><a href=\"/private-companies\">Private companies</a> › " + h(name) + "</p><h1>" + h(name) + " valuation</h1><p class=\"px\">" + h(money(val, "USD")) + " <small>estimated</small></p><p class=\"basis\">" + h(pvtBasis(val, rounds)) + "</p><div class=\"kn\">");
+        StringBuilder m = new StringBuilder("<p class=\"crumb\"><a href=\"/private-companies\">Private companies</a> › " + h(name) + "</p><h1>" + h(name) + " valuation</h1><p class=\"px\">" + h(money(val, "USD")) + " <small>estimated</small></p><p class=\"basis\">" + h(pvtBasis(val, rounds)) + "</p>" + listedNote(name) + "<div class=\"kn\">");
         m.append(tile("Past year", d(co, "change52w") == null ? "—" : signed(d(co, "change52w") / 100), "Change in estimated price"));
         if (d(co, "price") != null) m.append(tile("Price per share", money(d(co, "price"), "USD"), "Estimated"));
         if (fund != null) m.append(listed != null ? tile("Total raised (listed rounds)", money(fund, "USD"), "Sum of the rounds below") : tile("Total raised", money(fund, "USD"), "Reported total"));

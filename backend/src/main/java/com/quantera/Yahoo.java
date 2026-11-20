@@ -202,6 +202,15 @@ final class Yahoo {
     }
 
     /** Bars from Yahoo's chart API in exchange-local time, oldest first. */
+    /** When a symbol first traded (epoch seconds, from Yahoo's chart metadata), or null when unknown. */
+    static Long firstTrade(String s) {
+        try {
+            Map<String, Object> meta = map(map(list(map(call("/v8/finance/chart/" + enc(ySym(s)) + "?range=5d&interval=1d", null, false).get("chart")).get("result")).stream().findFirst().orElse(null)).get("meta"));
+            Double f = num(meta.get("firstTradeDate"));
+            return f == null ? null : f.longValue();
+        } catch (UpstreamException e) { return null; }
+    }
+
     private static Map<String, Object> chart(String s, String range, String interval) {
         Map<String, Object> res = map(list(map(call("/v8/finance/chart/" + enc(isGlobal(s) ? s : ySym(s)) + "?range=" + range + "&interval=" + interval + "&includePrePost=false", null, false).get("chart")).get("result")).stream().findFirst().orElse(null));
         Map<String, Object> meta = map(res.get("meta")), ind = map(list(map(res.get("indicators")).get("quote")).stream().findFirst().orElse(null));
