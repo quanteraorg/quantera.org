@@ -22,19 +22,39 @@ final class Listed {
     }
     static String norm(String s) { return s == null ? "" : s.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+", " ").trim(); }
 
-    /** First listing that matches by name and started trading within the last three years (null when none). */
+    /** When the company behind a ticker filed its IPO prospectus (Form 424B4 or S-1) with the SEC, or null when none is on file. */
+    static String ipoFiling(String sym) {
+        try {
+            Map<String, Object> r = map(map(Sec.get(cfg("SEC_DATA_URL", "https://data.sec.gov") + "/submissions/CIK" + Sec.pad(Sec.cik(sym)) + ".json", 20)).get("filings"));
+            Map<String, Object> rec = map(r.get("recent"));
+            List<Object> forms = list(rec.get("form")), dates = list(rec.get("filingDate"));
+            for (String want : List.of("424B4", "S-1")) // the final prospectus is dated when trading begins; the S-1 is earlier
+                for (int i = 0; i < forms.size() && i < dates.size(); i++) if (want.equals(String.valueOf(forms.get(i)))) return String.valueOf(dates.get(i));
+        } catch (RuntimeException ignored) { /* not an SEC filer, or SEC unreachable */ }
+        return null;
+    }
+
+    /** Listed when a US equity's name starts with the company's name AND it went public within three years (an IPO filing at
+     *  the SEC, or failing that its first trading day). Only a definite answer is cached, so a failed lookup is retried. */
     static Map<String, Object> of(String company) {
         String key = "listed" + norm(company);
-        return Providers.CACHE.get(key, 6 * 3600_000L, () -> {
-            for (Object o : list(Providers.search(company).get("results"))) {
-                Map<String, Object> r = map(o);
-                String sym = str(r.get("symbol")), type = str(r.get("type")), region = str(r.get("region"));
-                if (sym == null || !sym.matches("[A-Z]{1,5}") || !"Equity".equalsIgnoreCase(type) || !"United States".equals(region) || !nameMatches(company, str(r.get("name")))) continue;
-                Long first = Yahoo.firstTrade(sym);
-                if (first != null && Instant.ofEpochSecond(first).isAfter(Instant.now().minus(3 * 365, ChronoUnit.DAYS)))
-                    return Json.obj("listed", true, "symbol", sym, "name", str(r.get("name")), "firstTrade", Instant.ofEpochSecond(first).toString().substring(0, 10));
+        Map<String, Object> hit = Providers.CACHE.peek(key);
+        if (hit != null && Providers.CACHE.age(key) < 6 * 3600_000L) return hit;
+        boolean unsure = false;
+        String cutoff = Instant.now().minus(3 * 365, ChronoUnit.DAYS).toString().substring(0, 10);
+        for (Object o : list(Providers.search(company).get("results"))) {
+            Map<String, Object> r = map(o);
+            String sym = str(r.get("symbol")), type = str(r.get("type")), region = str(r.get("region"));
+            if (sym == null || !sym.matches("[A-Z]{1,5}") || !"Equity".equalsIgnoreCase(type) || !"United States".equals(region) || !nameMatches(company, str(r.get("name")))) continue;
+            String ipo = ipoFiling(sym);
+            if (ipo == null) { Long first = Yahoo.firstTrade(sym); if (first != null) ipo = Instant.ofEpochSecond(first).toString().substring(0, 10); else unsure = true; }
+            if (ipo != null && ipo.compareTo(cutoff) >= 0) {
+                Map<String, Object> out = Json.obj("listed", true, "symbol", sym, "name", str(r.get("name")), "firstTrade", ipo);
+                Providers.CACHE.put(key, out); return out;
             }
-            return Json.obj("listed", false);
-        });
+        }
+        Map<String, Object> out = Json.obj("listed", false);
+        if (!unsure) Providers.CACHE.put(key, out);
+        return out;
     }
 }
