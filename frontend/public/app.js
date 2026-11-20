@@ -1139,7 +1139,7 @@ const chg0=Data.chg.bind(Data);Data.chg=s=>{const q=QLIVE.quote[s];return q&&q.c
 const liveSync=()=>jf('/api/snapshot').then(({ok,b})=>{if(!ok||!b.quotes.length)return;SNAPQ=b.quotes;let n=0;
  b.quotes.forEach(q=>{QLIVE.quote[q.symbol]=Object.assign({},QLIVE.quote[q.symbol],q);const u=MockProvider.universe.find(x=>x[0]==q.symbol);if(u&&q.price){u[4]=+q.price;n++}});
  if(n&&!/^#\/(trade|practice|chartschool|story)/.test(location.hash))route()}).catch(()=>{});
-(function waitLive(t){if(QLIVE.ok){if(QLIVE.market)liveSync();setInterval(()=>{if(QLIVE.market)liveSync()},120000);return}if(t<40)setTimeout(()=>waitLive(t+1),250)})(0);
+(function waitLive(t){if(QLIVE.ok){if(QLIVE.market)liveSync();setInterval(()=>{if(QLIVE.market&&!document.hidden)liveSync()},60000);return}if(t<40)setTimeout(()=>waitLive(t+1),250)})(0);
 /* 2. News: color the words that matter, tag the topic, and explain why it matters */
 const NCAT=[['Earnings',/\b(earnings|eps|quarter(ly)?|q[1-4]\b|revenue|profit|results|guidance|outlook|forecast)/i,'#c8a96a','Earnings show whether a company is growing faster or slower than expected. Stocks often move most on guidance, the company\'s own forecast.'],
  ['Fed & rates',/\b(fed|federal reserve|powell|rate (cut|hike)|interest rates?|inflation|cpi|pce|yields?|treasur(y|ies)|bond)/i,'#7aa6e8','Interest rates change what every stock is worth: higher rates make future profits worth less today, and cheaper money tends to lift growth stocks.'],
