@@ -97,13 +97,29 @@ final class Yahoo {
     /** Yahoo profile values arrive as {"raw":1.2,"fmt":"1.20"}. */
     private static Double raw(Object o) { return o instanceof Map ? num(map(o).get("raw")) : num(o); }
 
+    /** Price, change and previous price must agree. For crypto Yahoo measures the change over 24 hours but reports the
+     *  previous UTC-midnight price as "previous close" (BTC: -2.79% shown against a previous price that implied +0.04%).
+     *  When they disagree, the previous price becomes the one the change was measured against. Pure: unit-tested. */
+    static Map<String, Object> consistent(Map<String, Object> q) {
+        Double p = num(q.get("price")), ch = num(q.get("change")), prev = num(q.get("prevClose"));
+        if (p == null || ch == null) return q;
+        double base = p - ch;
+        if (base > 0 && (prev == null || Math.abs(prev / base - 1) > 0.0005)) {
+            Map<String, Object> m = new LinkedHashMap<>(q);
+            m.put("prevClose", Math.round(base * 1e6) / 1e6);
+            m.put("changePct", Math.round(ch / base * 100 * 1e6) / 1e6);
+            return m;
+        }
+        return q;
+    }
+
     static Map<String, Object> norm(Map<String, Object> q) {
         Double t = num(q.get("regularMarketTime"));
         String name = str(q.get("longName")) != null ? str(q.get("longName")) : str(q.get("shortName"));
-        return Json.obj("symbol", str(q.get("symbol")), "name", name == null ? null : name.trim(), "price", num(q.get("regularMarketPrice")), "change", num(q.get("regularMarketChange")),
+        return consistent(Json.obj("symbol", str(q.get("symbol")), "name", name == null ? null : name.trim(), "price", num(q.get("regularMarketPrice")), "change", num(q.get("regularMarketChange")),
                 "changePct", num(q.get("regularMarketChangePercent")), "volume", num(q.get("regularMarketVolume")), "prevClose", num(q.get("regularMarketPreviousClose")),
                 "currency", str(q.get("currency")), "exchange", str(q.get("fullExchangeName")), "type", str(q.get("quoteType")), "marketState", str(q.get("marketState")),
-                "marketCap", num(q.get("marketCap")), "asOf", t == null ? null : Instant.ofEpochSecond(t.longValue()).toString(), "source", "Yahoo Finance (delayed)");
+                "marketCap", num(q.get("marketCap")), "asOf", t == null ? null : Instant.ofEpochSecond(t.longValue()).toString(), "source", "Yahoo Finance (delayed)"));
     }
 
     /** Quotes for any symbols worldwide (one call per 50 symbols, cached 60 s each). Unknown symbols are simply absent. */
@@ -197,6 +213,7 @@ final class Yahoo {
         Map<String, Object> q = Json.obj("symbol", s, "name", name, "price", p, "change", ch, "changePct", pct, "volume", num(meta.get("regularMarketVolume")), "prevClose", prev,
                 "currency", str(meta.get("currency")), "exchange", str(meta.get("fullExchangeName")), "type", str(meta.get("instrumentType")), "marketState", null, "marketCap", null,
                 "high52", num(meta.get("fiftyTwoWeekHigh")), "low52", num(meta.get("fiftyTwoWeekLow")), "asOf", t == null ? null : Instant.ofEpochSecond(t.longValue()).toString(), "source", "Yahoo Finance (delayed)");
+        q = consistent(q);
         CACHE.put("yc" + s, q); CACHE.put("yq" + s, q);
         return q;
     }

@@ -550,6 +550,17 @@ public class TestMain {
         t("listed: a private company matches its new listing by whole-word name, not a look-alike",
                 Listed.nameMatches("Anthropic", "ANTHROPIC PBC-CL A") && Listed.nameMatches("Anthropic", "Anthropic, PBC Class A Common Stock")
                 && !Listed.nameMatches("Ramp", "LiveRamp Holdings") && !Listed.nameMatches("Anthropic", "ANTHROPICX CORP") && !Listed.nameMatches("", "ANY"));
+        t("company profile: a US ticker described by its home listing (TSM in TWD, SHEL in London, TTE in Paris) is detected; US listings are not",
+                Providers.foreignProfile("TSM", "TWD", "TAIWAN STOCK EXCHANGE") && Providers.foreignProfile("SHEL", "USD", "LONDON STOCK EXCHANGE")
+                && Providers.foreignProfile("TTE", "USD", "NYSE EURONEXT - EURONEXT PARIS") && Providers.foreignProfile("BABA", "CNY", "NEW YORK STOCK EXCHANGE, INC.")
+                && !Providers.foreignProfile("AAPL", "USD", "NASDAQ NMS - GLOBAL MARKET") && !Providers.foreignProfile("JPM", "USD", "NEW YORK STOCK EXCHANGE, INC.")
+                && !Providers.foreignProfile("SHEL.L", "GBp", "LONDON STOCK EXCHANGE"));
+        {
+            Map<String, Object> btc = Yahoo.consistent(Json.obj("price", 61891.97, "change", -1777.082, "changePct", -2.79, "prevClose", 61904.76));
+            t("quotes: change, % change and previous price always agree (crypto 24h change)", Math.abs((Double) btc.get("prevClose") - 63669.052) < 0.01 && Math.abs((Double) btc.get("changePct") + 2.7911) < 0.001);
+            Map<String, Object> ok = Json.obj("price", 156.14, "change", -6.71, "changePct", -4.1204, "prevClose", 162.85);
+            t("quotes: consistent quotes are left as they are", Yahoo.consistent(ok) == ok);
+        }
         t("AI rejects empty messages", call(p, "POST", "/api/ai", "{\"messages\":[]}", ip()).code == 400);
         t("AI rejects oversize message", call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"user\",\"content\":\"" + "x".repeat(3000) + "\"}]}", ip()).code == 400);
         t("AI rejects system role injection", call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"system\",\"content\":\"hack\"},{\"role\":\"user\",\"content\":\"hi\"}]}", ip()).code == 400);

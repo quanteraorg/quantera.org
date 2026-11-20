@@ -318,7 +318,32 @@ final class Providers {
                 "logo", str(p.get("logo")), "website", str(p.get("weburl")), "source", "Finnhub");
     }
 
+    static final java.util.regex.Pattern US_EXCHANGE = java.util.regex.Pattern.compile("(?i)^(NASDAQ|NEW YORK STOCK EXCHANGE|NYSE( (ARCA|MKT|AMERICAN))?|CBOE|BATS|IEX)\\b(?!.*EURONEXT)");
+
+    /** Whether a company profile describes a different listing than the US ticker asked for (an ADR's home market). Pure: unit-tested. */
+    static boolean foreignProfile(String symbol, Object currency, Object exchange) {
+        if (!US_TICKER.matcher(symbol).matches() || Yahoo.isGlobal(symbol)) return false; // SHEL.L, 7203.T: their home currency is right
+        String c = currency == null ? null : String.valueOf(currency), x = exchange == null ? null : String.valueOf(exchange);
+        return (c != null && !c.equalsIgnoreCase("USD")) || (x != null && !US_EXCHANGE.matcher(x.trim()).find());
+    }
+
+    /** Company profile. For US-listed shares of foreign companies (TSM, TM, SHEL…) the profile providers describe the home listing:
+     *  market value and 52-week range in Taiwan dollars, yen or pence. Those are replaced with the US listing's figures in USD. */
     static Map<String, Object> overview(String s) {
+        return CACHE.get("ou" + s, 24 * 3600_000L, () -> {
+            Map<String, Object> o = new LinkedHashMap<>(overviewRaw(s));
+            if (!foreignProfile(s, o.get("currency"), o.get("exchange"))) return o;
+            o.put("homeCurrency", o.get("currency")); o.put("homeExchange", o.get("exchange"));
+            o.put("currency", "USD"); o.put("marketCap", null); o.put("high52", null); o.put("low52", null);
+            try {
+                Map<String, Object> k = map(Yahoo.fundamentals(s).get("key"));
+                o.put("marketCap", num(k.get("marketCap"))); o.put("high52", num(k.get("high52"))); o.put("low52", num(k.get("low52")));
+            } catch (RuntimeException ignored) { /* better blank than in the wrong currency */ }
+            return o;
+        });
+    }
+
+    static Map<String, Object> overviewRaw(String s) {
         return CACHE.get("o" + s, 24 * 3600_000L, () -> {
             if (Yahoo.on() && (Yahoo.isGlobal(s) || (!finnhubOn() && cfg("ALPHAVANTAGE_API_KEY", null) == null))) return Yahoo.overview(s);
             if (finnhubOn()) {
