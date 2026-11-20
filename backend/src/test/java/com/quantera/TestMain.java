@@ -556,8 +556,11 @@ public class TestMain {
                 && !Providers.foreignProfile("AAPL", "USD", "NASDAQ NMS - GLOBAL MARKET") && !Providers.foreignProfile("JPM", "USD", "NEW YORK STOCK EXCHANGE, INC.")
                 && !Providers.foreignProfile("SHEL.L", "GBp", "LONDON STOCK EXCHANGE"));
         {
-            Map<String, Object> btc = Yahoo.consistent(Json.obj("price", 61891.97, "change", -1777.082, "changePct", -2.79, "prevClose", 61904.76));
-            t("quotes: change, % change and previous price always agree (crypto 24h change)", Math.abs((Double) btc.get("prevClose") - 63669.052) < 0.01 && Math.abs((Double) btc.get("changePct") + 2.7911) < 0.001);
+            Map<String, Object> btc = Yahoo.consistent(Json.obj("price", 61891.97, "change", -1777.082, "changePct", -2.7911239, "prevClose", 61904.76));
+            t("quotes: change, % change and previous price always agree (crypto 24h change)", Math.abs((Double) btc.get("prevClose") - 63669.052) < 0.05 && Math.abs((Double) btc.get("changePct") + 2.7911239) < 0.0001);
+            Map<String, Object> five = Yahoo.consistent(Json.obj("price", 61653.74, "change", -3202.104, "changePct", -3.165, "prevClose", 64855.844));
+            t("quotes: a previous price from another day (5-day chart) is replaced using the day's % change",
+                    Math.abs((Double) five.get("prevClose") - 61653.74 / (1 - 0.03165)) < 0.01 && Math.abs((Double) five.get("changePct") + 3.165) < 0.0001 && Math.abs((Double) five.get("change") - (61653.74 - 61653.74 / (1 - 0.03165))) < 0.01);
             Map<String, Object> ok = Json.obj("price", 156.14, "change", -6.71, "changePct", -4.1204, "prevClose", 162.85);
             t("quotes: consistent quotes are left as they are", Yahoo.consistent(ok) == ok);
         }

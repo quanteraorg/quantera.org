@@ -101,17 +101,21 @@ final class Yahoo {
      *  previous UTC-midnight price as "previous close" (BTC: -2.79% shown against a previous price that implied +0.04%).
      *  When they disagree, the previous price becomes the one the change was measured against. Pure: unit-tested. */
     static Map<String, Object> consistent(Map<String, Object> q) {
-        Double p = num(q.get("price")), ch = num(q.get("change")), prev = num(q.get("prevClose"));
-        if (p == null || ch == null) return q;
-        double base = p - ch;
-        if (base > 0 && (prev == null || Math.abs(prev / base - 1) > 0.0005)) {
-            Map<String, Object> m = new LinkedHashMap<>(q);
-            m.put("prevClose", Math.round(base * 1e6) / 1e6);
-            m.put("changePct", Math.round(ch / base * 100 * 1e6) / 1e6);
-            return m;
-        }
-        return q;
+        Double p = num(q.get("price")), ch = num(q.get("change")), prev = num(q.get("prevClose")), pct = num(q.get("changePct"));
+        if (p == null || p <= 0) return q;
+        // the provider's % change is the day's figure; "previous close" and "change" can come from other reference points
+        // (crypto: midnight UTC; a 5-day chart: the close before the window), so they are worked out from it when they disagree
+        Double base = pct != null && pct > -100 ? p / (1 + pct / 100) : ch != null ? p - ch : null;
+        if (base == null || base <= 0) return q;
+        boolean prevOk = prev != null && Math.abs(prev / base - 1) <= 0.0005, chOk = ch != null && Math.abs((p - ch) / base - 1) <= 0.0005;
+        if (prevOk && chOk && pct != null) return q;
+        Map<String, Object> m = new LinkedHashMap<>(q);
+        m.put("prevClose", Math.round(base * 1e6) / 1e6);
+        m.put("change", Math.round((p - base) * 1e6) / 1e6);
+        m.put("changePct", Math.round((p / base - 1) * 100 * 1e6) / 1e6);
+        return m;
     }
+
 
     static Map<String, Object> norm(Map<String, Object> q) {
         Double t = num(q.get("regularMarketTime"));

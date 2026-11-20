@@ -330,7 +330,7 @@ final class Providers {
     /** Company profile. For US-listed shares of foreign companies (TSM, TM, SHEL…) the profile providers describe the home listing:
      *  market value and 52-week range in Taiwan dollars, yen or pence. Those are replaced with the US listing's figures in USD. */
     static Map<String, Object> overview(String s) {
-        return CACHE.get("ou" + s, 24 * 3600_000L, () -> {
+        {
             Map<String, Object> o = new LinkedHashMap<>(overviewRaw(s));
             if (!foreignProfile(s, o.get("currency"), o.get("exchange"))) return o;
             o.put("homeCurrency", o.get("currency")); o.put("homeExchange", o.get("exchange"));
@@ -338,9 +338,9 @@ final class Providers {
             try {
                 Map<String, Object> k = map(Yahoo.fundamentals(s).get("key"));
                 o.put("marketCap", num(k.get("marketCap"))); o.put("high52", num(k.get("high52"))); o.put("low52", num(k.get("low52")));
-            } catch (RuntimeException ignored) { /* better blank than in the wrong currency */ }
+            } catch (RuntimeException ignored) { /* better blank than in the wrong currency; tried again on the next request */ }
             return o;
-        });
+        }
     }
 
     static Map<String, Object> overviewRaw(String s) {
