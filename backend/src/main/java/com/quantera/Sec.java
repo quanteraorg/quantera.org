@@ -132,12 +132,25 @@ final class Sec {
 
     private static Double at(Map<String, double[]> m, String k) { double[] v = m.get(k); return v == null ? null : v[0]; }
 
+    /** Why a company has no US-GAAP statements: a company that has just listed (an IPO prospectus, but no 10-Q or 10-K yet)
+     *  hasn't published its first report; otherwise it is most often a foreign company reporting under IFRS. */
+    static UpstreamException noStatements(long cik) {
+        try {
+            Map<String, Object> recent = map(map(map(get(cfg("SEC_DATA_URL", "https://data.sec.gov") + "/submissions/CIK" + pad(cik) + ".json", 20)).get("filings")).get("recent"));
+            List<Object> forms = list(recent.get("form"));
+            boolean reports = forms.stream().anyMatch(f -> List.of("10-Q", "10-K", "20-F", "40-F").contains(String.valueOf(f)));
+            boolean ipo = forms.stream().anyMatch(f -> List.of("424B4", "S-1", "S-1/A", "F-1").contains(String.valueOf(f)));
+            if (ipo && !reports) return new UpstreamException("This company has only just listed, so it hasn't filed its first quarterly report (10-Q) yet. Its financial statements will appear here once it does.", 404);
+        } catch (RuntimeException ignored) { /* fall through to the general reason */ }
+        return new UpstreamException("No US-GAAP financial statements for this company (foreign companies often report under IFRS).", 404);
+    }
+
     static Map<String, Object> financials(String symbol) {
         return CACHE.get("secx" + symbol, 12 * 3600_000L, () -> {
             long c = cik(symbol);
             Map<String, Object> facts = map(map(get(cfg("SEC_DATA_URL", "https://data.sec.gov") + "/api/xbrl/companyfacts/CIK" + pad(c) + ".json", 30)).get("facts"));
             Map<String, Object> g = map(facts.get("us-gaap"));
-            if (g.isEmpty()) throw new UpstreamException("No US-GAAP financial statements for this company (foreign companies often report under IFRS).", 404);
+            if (g.isEmpty()) throw Sec.noStatements(c);
             Map<String, double[]> rev = best(g, "USD", REVENUE), ni = best(g, "USD", "NetIncomeLoss", "ProfitLoss"), eps = best(g, "USD/shares", "EarningsPerShareDiluted", "EarningsPerShareBasic"),
                     ocf = best(g, "USD", "NetCashProvidedByUsedInOperatingActivities", "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"), capex = best(g, "USD", "PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"),
                     gross = best(g, "USD", "GrossProfit"), opi = best(g, "USD", "OperatingIncomeLoss");
