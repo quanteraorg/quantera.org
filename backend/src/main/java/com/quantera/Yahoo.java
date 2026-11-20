@@ -693,7 +693,10 @@ final class Yahoo {
             String y = isGlobal(s) ? s : ySym(s); // SHEL.L stays as it is; BRK.B becomes BRK-B
             var summary = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
                 try { return map(list(map(call("/v10/finance/quoteSummary/" + enc(y) + "?modules=price,summaryDetail,defaultKeyStatistics,financialData,calendarEvents,earningsHistory,recommendationTrend", null, true).get("quoteSummary")).get("result")).stream().findFirst().orElse(null)); }
-                catch (UpstreamException e) { if (e.code == 429) throw e; return Map.<String, Object>of(); }
+                // 404: Yahoo has no profile for this symbol (some funds), a real answer. Anything else (rate limit, a failed
+                // cookie or crumb, a server error) is passed on, so the cache keeps serving the last good profile instead of
+                // saving an empty one for an hour (company pages showed blank market caps after one such failure)
+                catch (UpstreamException e) { if (e.code == 404) return Map.<String, Object>of(); throw e; }
             });
             Map<String, Map<String, Object>> annual = new TreeMap<>(), quarterly = new TreeMap<>();
             String reported = null;
