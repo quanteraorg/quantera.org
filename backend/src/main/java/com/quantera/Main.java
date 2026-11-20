@@ -127,6 +127,11 @@ public final class Main {
         }, 300, 30));
         ROUTES.put("/api/fundamentals", new Route(r -> Yahoo.fundamentals(symbol(r)), 900, 60));
         ROUTES.put("/api/private", new Route(r -> Yahoo.privates(), 600, 60));
+        ROUTES.put("/api/listed", new Route(r -> {
+            String n = r.query().getOrDefault("name", "").trim();
+            if (n.length() < 2 || n.length() > 60 || !n.matches("[\\p{L}0-9 .&'\\-]+")) throw new UpstreamException("Provide a company name", 400);
+            return Listed.of(n);
+        }, 3600, 60));
         ROUTES.put("/api/private/company", new Route(r -> {
             String s = r.query().getOrDefault("symbol", "").toUpperCase();
             if (!Yahoo.PVT.matcher(s).matches()) throw new UpstreamException("symbol must look like ANTH.PVT", 400);
