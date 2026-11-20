@@ -102,8 +102,12 @@ final class Providers {
         try { j = map(Json.parse(r.body())); } catch (IllegalArgumentException e) { throw new UpstreamException("Market data provider error"); }
         Double c = num(j.get("c"));
         if (c == null || c == 0) throw new UpstreamException("Symbol not found", 404);
-        Double t = num(j.get("t"));
-        return Json.obj("symbol", s, "price", c, "change", num(j.get("d")), "changePct", num(j.get("dp")), "volume", null, "prevClose", num(j.get("pc")),
+        Double t = num(j.get("t")), pc = num(j.get("pc"));
+        // On a stock's first trading day (an IPO) there is no previous close: Finnhub sends 0, which read as "+0.00%".
+        // Leave the day's change empty instead of inventing one; the next day it has a real previous close.
+        boolean noPrev = pc == null || pc <= 0;
+        return Json.obj("symbol", s, "price", c, "change", noPrev ? null : num(j.get("d")), "changePct", noPrev ? null : num(j.get("dp")), "volume", null, "prevClose", noPrev ? null : pc,
+                "firstDay", noPrev ? Boolean.TRUE : null,
                 "asOf", t == null ? null : java.time.Instant.ofEpochSecond(t.longValue()).toString().substring(0, 10),
                 "time", t == null ? null : java.time.Instant.ofEpochSecond(t.longValue()).toString(), "source", "Finnhub");
     }
@@ -112,7 +116,7 @@ final class Providers {
         if (Yahoo.on() && Yahoo.isGlobal(s)) return Yahoo.quote(s); // indexes and non-US listings
         return CACHE.get("q" + s, ttlMs, () -> {
             if (finnhubOn()) {
-                try { return finnhubQuote(s); }
+                try { return firstDayReference(finnhubQuote(s)); }
                 catch (UpstreamException e) {
                     if (Yahoo.on()) try { return Yahoo.quote(s); } catch (UpstreamException ignored) {}
                     if (e.code == 404 || cfg("ALPHAVANTAGE_API_KEY", null) == null) throw e;
@@ -123,6 +127,21 @@ final class Providers {
             return Json.obj("symbol", s, "price", num(j.get("05. price")), "change", num(j.get("09. change")), "changePct", num(j.get("10. change percent")),
                     "volume", num(j.get("06. volume")), "prevClose", num(j.get("08. previous close")), "asOf", str(j.get("07. latest trading day")), "source", "Alpha Vantage");
         });
+    }
+
+    /** First trading day (Finnhub has no previous close): the change is measured from the IPO price, as exchanges and
+     *  Yahoo do, using Yahoo's reference price. If Yahoo has none, or disagrees on the price, the change stays empty. */
+    static Map<String, Object> firstDayReference(Map<String, Object> q) {
+        if (!Boolean.TRUE.equals(q.get("firstDay")) || !Yahoo.on()) return q;
+        try {
+            Map<String, Object> y = Yahoo.quote(String.valueOf(q.get("symbol")));
+            Double p = num(q.get("price")), yp = num(y.get("price")), ref = num(y.get("prevClose"));
+            if (p == null || yp == null || ref == null || ref <= 0 || Math.abs(yp / p - 1) > 0.05) return q;
+            Map<String, Object> m = new LinkedHashMap<>(q);
+            m.put("prevClose", ref); m.put("change", Math.round((p - ref) * 1e4) / 1e4); m.put("changePct", Math.round((p / ref - 1) * 1e6) / 1e4);
+            m.put("prevCloseNote", "IPO price (first day of trading)");
+            return m;
+        } catch (UpstreamException e) { return q; }
     }
 
     static boolean twelveOn() { return cfg("TWELVEDATA_API_KEY", null) != null; }

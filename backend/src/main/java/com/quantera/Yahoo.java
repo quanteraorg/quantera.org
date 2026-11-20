@@ -735,6 +735,9 @@ final class Yahoo {
                     {"netAssets", ks, "totalAssets"}, {"fundYield", sd, "yield"}, {"grossMargin", fd, "grossMargins"}, {"operatingMargin", fd, "operatingMargins"}, {"profitMargin", fd, "profitMargins"}, {"roe", fd, "returnOnEquity"}, {"roa", fd, "returnOnAssets"},
                     {"revenueGrowth", fd, "revenueGrowth"}, {"earningsGrowth", fd, "earningsGrowth"}, {"cash", fd, "totalCash"}, {"debt", fd, "totalDebt"}, {"debtToEquity", fd, "debtToEquity"}, {"currentRatio", fd, "currentRatio"}, {"freeCashFlow", fd, "freeCashflow"}, {"revenue", fd, "totalRevenue"}};
             for (Object[] f : fields) { @SuppressWarnings("unchecked") Double v = raw(((Map<String, Object>) f[1]).get(f[2])); if (v != null) key.put((String) f[0], v); }
+            // Yahoo sends a profit margin of exactly 0 as a placeholder for some new listings (Anthropic: 0 while losing billions a
+            // quarter). A zero margin next to non-zero earnings per share can't be right, so it is left out rather than shown.
+            if (Double.valueOf(0.0).equals(key.get("profitMargin")) && key.get("eps") instanceof Double e && e != 0) key.remove("profitMargin");
             Map<String, Object> analysts = null;
             if (raw(fd.get("targetMeanPrice")) != null || str(fd.get("recommendationKey")) != null) {
                 Map<String, Object> tr = map(list(map(r.get("recommendationTrend")).get("trend")).stream().findFirst().orElse(null));

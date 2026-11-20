@@ -137,7 +137,7 @@ final class Statements {
             long c = Sec.cik(symbol);
             String data = cfg("SEC_DATA_URL", "https://data.sec.gov");
             Map<String, Object> g = map(map(map(Sec.get(data + "/api/xbrl/companyfacts/CIK" + Sec.pad(c) + ".json", 30)).get("facts")).get("us-gaap"));
-            if (g.isEmpty()) throw new UpstreamException("No US-GAAP financial statements for this company (foreign companies often report under IFRS).", 404);
+            if (g.isEmpty()) throw Sec.noStatements(c);
             Map<String, Object> sub = map(Sec.get(data + "/submissions/CIK" + Sec.pad(c) + ".json", 20));
             boolean fin = financial(sub.get("sic"));
             Map<String, Object> out = new LinkedHashMap<>();

@@ -76,7 +76,7 @@ public class TestMain {
             String sy = ""; for (String q : ex.getRequestURI().getRawQuery().split("&")) if (q.startsWith("symbol=")) sy = q.substring(7);
             String tok = ""; for (String q : ex.getRequestURI().getRawQuery().split("&")) if (q.startsWith("token=")) tok = q.substring(6);
             upstreamCalls.add("finnhub " + sy + " token=" + tok);
-            reply(ex, 200, "application/json", sy.equals("ZZZ") ? "{\"c\":0,\"d\":null,\"dp\":null,\"pc\":0,\"t\":0}" : "{\"c\":226.6,\"d\":0.56,\"dp\":" + (sy.equals("TSLA") ? "-3.1" : sy.equals("NVDA") ? "2.4" : "0.25") + ",\"h\":227,\"l\":224,\"o\":225,\"pc\":226.04,\"t\":1792800000}");
+            reply(ex, 200, "application/json", sy.equals("ZZZ") ? "{\"c\":0,\"d\":null,\"dp\":null,\"pc\":0,\"t\":0}" : sy.startsWith("IPO") ? "{\"c\":97.17,\"d\":null,\"dp\":null,\"pc\":0,\"t\":1792800000}" : "{\"c\":226.6,\"d\":0.56,\"dp\":" + (sy.equals("TSLA") ? "-3.1" : sy.equals("NVDA") ? "2.4" : "0.25") + ",\"h\":227,\"l\":224,\"o\":225,\"pc\":226.04,\"t\":1792800000}");
         });
         fake.createContext("/fh/stock/symbol", ex -> { String mic = ex.getRequestURI().getRawQuery().replaceAll(".*mic=([A-Z]+).*", "$1"); List<Object> rows = l(Json.parse("[{\"symbol\":\"AAPL\",\"description\":\"APPLE INC\",\"type\":\"Common Stock\",\"mic\":\"XNAS\"},{\"symbol\":\"SPY\",\"description\":\"SPDR S&P 500 ETF\",\"type\":\"ETP\",\"mic\":\"ARCX\"},{\"symbol\":\"ABCD\",\"description\":\"OTC CO\",\"type\":\"Common Stock\",\"mic\":\"OOTC\"},{\"symbol\":\"XYZW\",\"description\":\"WARRANT\",\"type\":\"Warrant\",\"mic\":\"XNAS\"}]")); rows.removeIf(o -> !mic.equals(m(o).get("mic"))); reply(ex, 200, "application/json", Json.write(rows)); });
         fake.createContext("/fh/stock/peers", ex -> { String q = ex.getRequestURI().getRawQuery(); reply(ex, 200, "application/json", q.contains("symbol=FNDX") ? "[\"FNDX\",\"FNDY\",\"7203.T\",\"FNDY\"]" : "[]"); });
@@ -182,7 +182,7 @@ public class TestMain {
             if (q.contains("crumb=crumb1")) { reply(ex, 401, "application/json", "{}"); return; }
             List<Object> res = new ArrayList<>();
             for (String sy : java.net.URLDecoder.decode(q.replaceAll(".*symbols=([^&]*).*", "$1"), StandardCharsets.UTF_8).split(","))
-                if (!sy.equals("NOPE.L")) res.add(Json.obj("symbol", sy, "longName", "Name " + sy, "regularMarketPrice", sy.equals("^GSPC") ? 7623.68 : 100.5, "regularMarketChange", -39.75, "regularMarketChangePercent", -0.519, "currency", sy.endsWith(".NS") ? "INR" : "USD", "fullExchangeName", "X", "quoteType", sy.startsWith("^") ? "INDEX" : "EQUITY", "regularMarketTime", 1792787901));
+                if (!sy.equals("NOPE.L")) res.add(Json.obj("symbol", sy, "longName", "Name " + sy, "regularMarketPrice", sy.equals("^GSPC") ? 7623.68 : sy.equals("IPOD") ? 97.17 : sy.equals("IPOX") ? 150.0 : 100.5, "regularMarketChange", sy.equals("IPOD") ? 14.17 : -39.75, "regularMarketChangePercent", sy.equals("IPOD") ? 17.072289 : -0.519, "regularMarketPreviousClose", sy.equals("IPOD") ? 83.0 : null, "currency", sy.endsWith(".NS") ? "INR" : "USD", "fullExchangeName", "X", "quoteType", sy.startsWith("^") ? "INDEX" : "EQUITY", "regularMarketTime", 1792787901));
             reply(ex, 200, "application/json", Json.write(Json.obj("quoteResponse", Json.obj("result", res)))); });
         fake.createContext("/yh/v8/finance/chart/", ex -> { String q = ex.getRequestURI().getRawQuery(); upstreamCalls.add("yahoo chart " + ex.getRequestURI().getPath() + "?" + q);
             boolean intra = q.contains("interval=60m");
@@ -246,6 +246,8 @@ public class TestMain {
         r = get(p, "/api/quote?symbol=AAPL");
         t("Finnhub quote normalised with day change, key kept server-side", r.code == 200 && d(m(r.body).get("changePct")) == 0.25 && "Finnhub".equals(m(r.body).get("source")) && !r.raw.contains("fh-test") && upstreamCalls.stream().anyMatch(u -> u.startsWith("finnhub AAPL token=fh-test")));
         t("Finnhub unknown symbol -> 404", get(p, "/api/quote?symbol=ZZZ").code == 404);
+        r = get(p, "/api/quote?symbol=IPOA");
+        t("first trading day: no previous close means no day change (not +0.00%)", r.code == 200 && m(r.body).get("prevClose") == null && m(r.body).get("changePct") == null && Boolean.TRUE.equals(m(r.body).get("firstDay")));
         r = get(p, "/api/news?symbols=AAPL&limit=3");
         Map<String, Object> s0 = m(l(m(l(m(r.body).get("articles")).get(0)).get("symbols")).get(0));
         t("news symbols carry today's move (AAPL +0.25%), US tickers first", r.code == 200 && "AAPL".equals(s0.get("symbol")) && d(s0.get("changePct")) == 0.25);
@@ -579,6 +581,12 @@ public class TestMain {
         // ---- global markets (Yahoo)
         t("global data off -> /api/world 503", get(p, "/api/world").code == 503);
         System.setProperty("YAHOO_ENABLED", "1"); Providers.CACHE.clear();
+        System.setProperty("FINNHUB_API_KEY", "fh-test");
+        r = get(p, "/api/quote?symbol=IPOD");
+        t("first trading day: the change is measured from the IPO price Yahoo reports", r.code == 200 && d(m(r.body).get("prevClose")) == 83.0 && Math.abs(d(m(r.body).get("changePct")) - 17.0723) < 0.001 && d(m(r.body).get("price")) == 97.17);
+        r = get(p, "/api/quote?symbol=IPOX");
+        t("first trading day: if Yahoo's price disagrees, the change stays empty", r.code == 200 && m(r.body).get("changePct") == null);
+        System.clearProperty("FINNHUB_API_KEY"); Providers.CACHE.clear();
         r = get(p, "/api/quote?symbol=%5EGSPC");
         t("index level from Yahoo, stale crumb refreshed once", r.code == 200 && d(m(r.body).get("price")) == 7623.68 && upstreamCalls.stream().anyMatch(u -> u.startsWith("yahoo quote") && u.contains("crumb=crumb2")));
         r = get(p, "/api/world");
