@@ -25,7 +25,7 @@ const CSS = `
 .qra .lib .card b{display:block;font-family:Fraunces,Georgia,serif;font-weight:400;font-size:19px}.qra .lib .card small{color:var(--mu)}
 @media (max-width:640px){.qra table{display:block;overflow-x:auto}}`;
 
-const nice = (d: string) => { try { return new Date(d + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return d; } };
+const nice = (d: string) => { try { return new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }); } catch { return d; } };
 let LIB: Lib | null = null;
 export async function library(): Promise<Lib> {
   if (LIB) return LIB;

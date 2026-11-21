@@ -40,7 +40,7 @@ const cache = new Map<string, Promise<any>>();
 const get = (u: string) => { if (!cache.has(u)) cache.set(u, jf(u).then(r => (r.ok ? r.b : null)).catch(() => null)); return cache.get(u)!; };
 const DAY = 864e5;
 const dt = (s: string) => new Date(s.length === 10 ? s + 'T12:00:00Z' : s).getTime();
-const dstr = (t: number | string) => new Date(typeof t === 'string' ? dt(t) : t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const dstr = (t: number | string) => new Date(typeof t === 'string' ? dt(t) : t).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const pct = (v: number | null | undefined, dp = 1) => v == null || !isFinite(v) ? '—' : `${v >= 0 ? '+' : '−'}${fmt(Math.abs(v * 100), dp)}%`;
 const money = (v: number | null | undefined) => { if (v == null || !isFinite(v)) return '—'; const a = Math.abs(v), s = v < 0 ? '−' : ''; return a >= 1e12 ? `${s}$${fmt(a / 1e12, 2)}T` : a >= 1e9 ? `${s}$${fmt(a / 1e9, 1)}B` : a >= 1e6 ? `${s}$${fmt(a / 1e6, 0)}M` : `${s}$${fmt(a, 2)}`; };
 const xx = (v: number | null | undefined) => v == null || !isFinite(v) || v <= 0 ? '—' : fmt(v, 1) + '×';

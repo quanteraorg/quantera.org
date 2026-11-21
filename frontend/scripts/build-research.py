@@ -24,12 +24,12 @@ HEAD_JS = ("<script>try{var t=JSON.parse(localStorage.getItem(\"q_theme\"));if(t
            "var ok=v?v==='all':!(navigator.globalPrivacyControl===true||navigator.doNotTrack==='1');"
            "if(ok){window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};var s=document.createElement('script');s.defer=true;s.src='/_vercel/insights/script.js';document.head.appendChild(s)}})()</script>")
 FOOT = ('<footer>Quantera Research is a student-led research and education initiative. Research is for education, not investment advice. '
-        '<a href="/#/about">About</a> · <a href="/research">Research</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/accessibility">Accessibility</a></footer>')
+        '<a href="/about">About</a> · <a href="/research">Research</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/accessibility">Accessibility</a></footer>')
 STYLE = ('<style>main table{border-collapse:collapse;width:100%;font-size:14.5px;margin:10px 0 18px;font-variant-numeric:tabular-nums}'
          'main th,main td{border-bottom:1px solid rgba(127,127,127,.25);padding:8px 10px;text-align:left;vertical-align:top}main th{font-weight:600;font-size:13px;color:var(--mu)}'
          '.dek{font-size:19px;line-height:1.5;color:var(--mu);margin:4px 0 14px}.meta{font-size:13.5px;color:var(--mu);margin:0 0 22px}.meta b{color:var(--ac)}'
          '.box{border:1px solid var(--ln);border-radius:14px;padding:14px 18px;margin:16px 0;background:var(--s1)}.box h2{margin-top:0;font-size:20px}'
-         '.lbl{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;border:1px solid rgba(232,199,122,.45);color:#e8c77a;border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:3px}'
+         '.upd{border-color:rgba(232,199,122,.6)}.upd h2{color:#e8c77a}.lbl{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;border:1px solid rgba(232,199,122,.45);color:#e8c77a;border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:3px}'
          '.chart{margin:8px 0 4px}.chart svg{width:100%;max-width:680px;height:auto}.chart text{fill:var(--mu);font-size:11px}.src{font-size:12.5px;color:var(--mu)}'
          'ol.srcs li{margin:6px 0;font-size:14px}ol.srcs small{color:var(--mu)}.lib a.card{display:block;border:1px solid var(--ln);border-radius:14px;padding:16px 18px;margin:12px 0;color:inherit;text-decoration:none;background:var(--s1)}'
          '.lib a.card:hover{border-color:var(--ac)}.lib .card b{display:block;font-family:Fraunces,Georgia,serif;font-weight:400;font-size:21px;line-height:1.3;margin:4px 0}.lib .card small{color:var(--mu)}'
@@ -47,12 +47,12 @@ def head(path, title, desc, kind='article', ld=None):
             + (f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>' if ld else '') + STYLE +
             '</head><body><a href="#main" style="position:absolute;left:-999px" onfocus="this.style.left=\'12px\'" onblur="this.style.left=\'-999px\'">Skip to content</a>'
             '<header><a class="logo" href="/"><img src="/logo-mark.png" alt="" width="26" height="26">QUANTERA</a><nav><a href="/research">Research</a><a href="/stocks">Stocks</a>'
-            '<a href="/learn">Learn</a><a class="cta" href="/#/insights">Compare reactions</a></nav></header>')
+            '<a href="/private-companies">Private companies</a><a href="/learn">Learn</a><a class="cta" href="/#/markets">Open the app</a></nav></header>')
 
 
 def nice_date(d):
     y, m, dd = d.split('-')
-    return f"{int(dd)} {['January','February','March','April','May','June','July','August','September','October','November','December'][int(m)-1]} {y}"
+    return f"{['January','February','March','April','May','June','July','August','September','October','November','December'][int(m)-1]} {int(dd)}, {y}"
 
 
 def chart_svg(c):
@@ -94,12 +94,15 @@ def cite(s):
 def article_html(a, allarts):
     url = f'research/{a["slug"]}'
     ld = {"@context": "https://schema.org", "@type": "Article", "headline": a['title'], "description": a['dek'], "datePublished": a['date'], "dateModified": a.get('updated', a['date']),
-          "articleSection": a['category'], "author": {"@type": "Organization", "name": "Quantera Research", "url": SITE + "/#/about"},
+          "articleSection": a['category'], "author": {"@type": "Organization", "name": "Quantera Research", "url": SITE + "/about"},
           "publisher": {"@type": "Organization", "name": "Quantera Research", "logo": {"@type": "ImageObject", "url": SITE + "/icon-512.png"}},
           "mainEntityOfPage": f"{SITE}/{url}", "image": SITE + "/og.png", "about": [{"@type": "Corporation", "tickerSymbol": t} for t in a.get('tickers', [])]}
     b = [f'<main id="main"><p class="crumb"><a href="/research">Research</a> › {E(a["category"])}</p><h1>{E(a["title"])}</h1><p class="dek">{E(a["dek"])}</p>',
-         f'<p class="meta"><b>{E(a["category"])}</b> · Published {nice_date(a["date"])} · {a.get("readMinutes", 5)} min read · By Quantera Research'
+         f'<p class="meta"><b>{E(a["category"])}</b> · Published {nice_date(a["date"])}' + (f' · Updated {nice_date(a["updated"])}' if a.get('updated') else '') + ' · {a.get("readMinutes", 5)} min read · By Quantera Research'
          + (f' · {" ".join(E(t) for t in a["tickers"])}' if a.get('tickers') else '') + '</p>',
+         ''.join(f'<div class="box upd" role="note"><h2>Update, {nice_date(u["date"])}</h2><p>{E(u["text"])}</p>'
+                 + (f'<p class="meta">Source: <a href="{E(u["url"])}" rel="noopener">{E(u["source"])}</a></p>' if u.get('url') else '') + '</div>'
+                 for u in a.get('updates', [])),
          f'<div class="box"><h2>Research question</h2><p>{E(a["question"])}</p></div>',
          '<h2>Summary</h2>' + ''.join(f'<p>{cite(p)}</p>' for p in a['summary']),
          '<div class="box"><h2>Key findings</h2><ul>' + ''.join(f'<li>{cite(f)}</li>' for f in a['findings']) + '</ul></div>']
@@ -133,7 +136,7 @@ def index_html(data):
             '<p><a href="/#/research">Search and filter the library in the app</a> · <a href="/#/insights">Compare how companies reacted to the same news</a></p><div class="lib">'
             + ''.join(f'<a class="card" href="/research/{a["slug"]}"><small>{E(a["category"])} · {nice_date(a["date"])}</small><b>{E(a["title"])}</b><span>{E(a["dek"])}</span></a>' for a in arts)
             + '</div><div class="box"><h2>How we research</h2><ul><li>Primary sources first: company filings with the SEC, official releases and exchange data.</li>'
-            '<li>No source, no number: if we can\'t verify a figure, we say it wasn\'t found.</li><li>Facts and interpretation are labelled separately; a coincidence in time is never presented as a cause.</li>'
+            '<li>No source, no number: if we can\'t verify a figure, we say it wasn\'t found.</li><li>Facts and interpretation are labeled separately; a coincidence in time is never presented as a cause.</li>'
             '<li>Every calculation is re-run independently before publication.</li></ul></div></main>')
     return head('research', 'Research library', 'Original, sourced research from Quantera: company investigations, earnings analysis and how markets react to the news.', 'website', ld) + body + FOOT + '</body></html>\n'
 
@@ -149,7 +152,7 @@ def insights_html():
             '<li><b>Day 0</b> is the first trading session that could react to the news. News published after the 4 p.m. New York close counts from the next session.</li>'
             '<li><b>The market part</b> is the share of the move the whole market explains: the company\'s beta (its usual sensitivity to the S&amp;P 500, estimated from up to 120 trading days before the news) times the S&amp;P 500\'s move that day.</li>'
             '<li><b>The company-specific part</b> (the abnormal return) is the actual move minus the market part.</li>'
-            '<li><b>A normal day</b> is the usual size of the company\'s company-specific moves over the same period. Dividing by it shows how unusual the reaction was for that stock: a 25% move by a stock that often moves 8% a day can be less unusual than a 5% move by one that rarely moves 1%.</li></ol>'
+            '<li><b>A normal day</b> is the usual size of the stock\'s company-specific moves over the same period. Dividing by it shows how unusual the reaction was for that stock: a 25% move by a stock that often moves 8% a day can be less unusual than a 5% move by one that rarely moves 1%.</li></ol>'
             '<h2>What usually explains the gap</h2><div class="box"><ul>'
             '<li><b>The whole market</b> (measured): how much each stock tracks the S&amp;P 500.</li>'
             '<li><b>Normal volatility</b> (measured): some stocks always move more.</li>'

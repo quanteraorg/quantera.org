@@ -36,6 +36,9 @@ final class Listed {
 
     /** Listed when a US equity's name starts with the company's name AND it went public within three years (an IPO filing at
      *  the SEC, or failing that its first trading day). Only a definite answer is cached, so a failed lookup is retried. */
+    /** The cached answer only (no lookups), for lists that show many companies at once; null when not checked yet. */
+    static Map<String, Object> cached(String company) { return Providers.CACHE.peek("listed" + norm(company)); }
+
     static Map<String, Object> of(String company) {
         String key = "listed" + norm(company);
         Map<String, Object> hit = Providers.CACHE.peek(key);

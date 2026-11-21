@@ -22,10 +22,12 @@ final class Statements {
     /** One reported value: the figure, the period end, and the filing it was taken from. */
     record Fact(double v, long end, String accn, String form, long filed) {}
 
-    /** frame (CY2024, CY2024Q3, CY2024Q3I) -> latest-filed value for that period. */
+    /** frame (CY2024, CY2024Q3, CY2024Q3I) -> latest-filed value for that period (restatements win), linked to the filing
+     *  that first reported the period: that year's own 10-K or that quarter's 10-Q. Every later report repeats past years
+     *  as comparatives, so linking the latest filer sent FY2022 to FY2023 all to the newest 10-K. */
     static Map<String, Fact> facts(Map<String, Object> g, String tag, String unit) {
         List<Object> all = list(map(map(map(g.get(tag)).get("units"))).get(unit));
-        Map<String, Object[]> latest = new HashMap<>(); // "start|end" -> {filed, value, accn, form}
+        Map<String, Object[]> latest = new HashMap<>(), first = new HashMap<>(); // "start|end" -> {filed, value, accn, form}
         for (Object o : all) {
             Map<String, Object> x = map(o);
             Double v = num(x.get("val"));
@@ -33,15 +35,17 @@ final class Statements {
             String p = str(x.get("start")) + "|" + str(x.get("end")), filed = Objects.toString(str(x.get("filed")), "");
             Object[] cur = latest.get(p);
             if (cur == null || filed.compareTo((String) cur[0]) > 0) latest.put(p, new Object[]{filed, v, str(x.get("accn")), str(x.get("form"))});
+            Object[] f0 = first.get(p);
+            if (!filed.isEmpty() && (f0 == null || filed.compareTo((String) f0[0]) < 0)) first.put(p, new Object[]{filed, v, str(x.get("accn")), str(x.get("form"))});
         }
         Map<String, Fact> out = new TreeMap<>();
         for (Object o : all) {
             Map<String, Object> x = map(o);
             String fr = str(x.get("frame")), end = str(x.get("end"));
             if (fr == null || end == null || num(x.get("val")) == null) continue;
-            Object[] l = latest.get(str(x.get("start")) + "|" + end);
+            Object[] l = latest.get(str(x.get("start")) + "|" + end), o1 = first.getOrDefault(str(x.get("start")) + "|" + end, l);
             String fd = (String) l[0];
-            out.put(fr, new Fact((Double) l[1], LocalDate.parse(end).toEpochDay(), (String) l[2], (String) l[3], fd.isEmpty() ? Long.MAX_VALUE : LocalDate.parse(fd).toEpochDay()));
+            out.put(fr, new Fact((Double) l[1], LocalDate.parse(end).toEpochDay(), (String) o1[2], (String) o1[3], fd.isEmpty() ? Long.MAX_VALUE : LocalDate.parse(fd).toEpochDay()));
         }
         return out;
     }

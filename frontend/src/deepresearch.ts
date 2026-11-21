@@ -59,7 +59,7 @@ const num = (v: number | null | undefined, dp = 2) => v == null || !isFinite(v) 
 const pc = (v: number | null | undefined) => v == null || !isFinite(v) ? '—' : `${v >= 0 ? '+' : '−'}${fmt(Math.abs(v), 1)}%`;
 const cls = (r: string) => /buy|positive/i.test(r) ? 'buy' : /sell|under|negative/i.test(r) ? 'sell' : 'hold';
 const arrow = (r: string) => cls(r) === 'buy' ? '▲ ' : cls(r) === 'sell' ? '▼ ' : '● ';
-const day = (iso: string) => { const d = new Date(iso.length === 10 ? iso + 'T00:00:00Z' : iso); return isNaN(+d) ? iso : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); };
+const day = (iso: string) => { const d = new Date(iso.length === 10 ? iso + 'T00:00:00Z' : iso); return isNaN(+d) ? iso : d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); };
 const li = (xs: string[]) => xs.length ? `<ul>${xs.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="mu">Not available.</p>';
 const YR: Record<string, string> = { strong_buy: 'Strong buy', buy: 'Buy', hold: 'Hold', underperform: 'Underperform', sell: 'Sell', none: '—' };
 
@@ -116,7 +116,7 @@ function reportBody(r: Report): string {
     ${p.verdict.changeMind ? `<p><b>What would change this view:</b> ${esc(p.verdict.changeMind)}</p>` : ''}
     <h4>Sources</h4>${r.check?.figures ? `<div class="qgr" style="margin-bottom:8px">${checkLine(r.check)}</div>` : ''}<ul>${r.sources.map(s => `<li>${esc(s.what)}: ${esc(s.from)} · ${esc(day(s.asOf))}</li>`).join('')}</ul>
     ${r.notAvailable.length ? `<p class="qdr-note">Not available for this report: ${esc(r.notAvailable.join(', '))}.</p>` : ''}
-    <p class="qdr-note">Written by AI on ${esc(new Date(r.generatedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }))} from the data listed above, and refreshed at most every 12 hours. AI can misread figures; check the sources before relying on anything. This is general information for learning, not a personal recommendation to buy, sell or hold any security. Quantera is not a registered investment adviser, broker or research analyst. Do your own research and consider speaking to a licensed professional.</p></div>`;
+    <p class="qdr-note">Written by AI on ${esc(new Date(r.generatedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }))} from the data listed above, and refreshed at most every 12 hours. AI can misread figures; check the sources before relying on anything. This is general information for learning, not a personal recommendation to buy, sell or hold any security. Quantera is not a registered investment adviser, broker or research analyst. Do your own research and consider speaking to a licensed professional.</p></div>`;
 }
 
 /** Fill `host` with the deep research panel for one company. */

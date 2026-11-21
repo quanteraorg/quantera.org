@@ -506,7 +506,7 @@ final class Yahoo {
         {{"Commodities"}, {"GC=F", "Gold", "USD per troy ounce"}, {"SI=F", "Silver", "USD per troy ounce"}, {"PL=F", "Platinum", "USD per troy ounce"}, {"PA=F", "Palladium", "USD per troy ounce"},
             {"HG=F", "Copper", "USD per pound"}, {"CL=F", "Crude oil (WTI)", "USD per barrel"}, {"BZ=F", "Brent crude oil", "USD per barrel"}, {"NG=F", "Natural gas", "USD per MMBtu"},
             {"RB=F", "Gasoline", "USD per gallon"}, {"HO=F", "Heating oil", "USD per gallon"}, {"ZC=F", "Corn", "US cents per bushel"}, {"ZW=F", "Wheat", "US cents per bushel"},
-            {"ZS=F", "Soybeans", "US cents per bushel"}, {"KC=F", "Coffee", "US cents per pound"}, {"CC=F", "Cocoa", "USD per tonne"}, {"SB=F", "Sugar", "US cents per pound"},
+            {"ZS=F", "Soybeans", "US cents per bushel"}, {"KC=F", "Coffee", "US cents per pound"}, {"CC=F", "Cocoa", "USD per metric ton"}, {"SB=F", "Sugar", "US cents per pound"},
             {"CT=F", "Cotton", "US cents per pound"}, {"LE=F", "Live cattle", "US cents per pound"}},
         {{"Currencies"}, {"DX-Y.NYB", "US dollar index", "vs six major currencies"}, {"EURUSD=X", "EUR / USD", "US dollars per euro"}, {"GBPUSD=X", "GBP / USD", "US dollars per pound"},
             {"USDJPY=X", "USD / JPY", "yen per US dollar"}, {"USDCNY=X", "USD / CNY", "yuan per US dollar"}, {"USDINR=X", "USD / INR", "rupees per US dollar"}, {"AUDUSD=X", "AUD / USD", "US dollars per Australian dollar"},

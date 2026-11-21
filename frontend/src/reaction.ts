@@ -53,7 +53,7 @@ const CSS = `
 const enc = encodeURIComponent;
 const sgn = (x: number | null | undefined, d = 1) => x == null || !isFinite(x) ? '—' : (x > 0 ? '+' : x < 0 ? '−' : '') + fmt(Math.abs(x), d) + '%';
 const cap = (c?: number) => !c ? '—' : c >= 1e12 ? '$' + fmt(c / 1e12, 2) + 'T' : c >= 1e9 ? '$' + fmt(c / 1e9, 1) + 'B' : '$' + fmt(c / 1e6, 0) + 'M';
-const dayLabel = (d: string) => { try { return new Date(d + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); } catch { return d; } };
+const dayLabel = (d: string) => { try { return new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); } catch { return d; } };
 
 // ---------- saved analyses (this device only), for the size-versus-reaction picture ----------
 const HIST = 'q_rxh';
@@ -141,7 +141,7 @@ async function tracker(box: HTMLElement): Promise<void> {
   let t: Trk;
   try { const r = await fetch('/api/reaction/tracker'); if (!r.ok) throw new Error(); t = await r.json(); }
   catch { box.innerHTML = head + '<p class="mu" style="margin:0">The tracker’s data isn’t available right now. Please check back later.</p>'; return; }
-  const day = (d?: string) => d ? new Date(d + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const day = (d?: string) => d ? new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
   if (t.measured < 10) {
     box.innerHTML = head + `<p style="margin:0 0 8px">Quantera now measures, automatically, how every company reacts to news stories that name two or more of them, and stores the results as its own research dataset. ${t.measured ? `So far: <b>${t.measured} companies across ${t.events} stories</b>.` : 'The first stories are being measured now.'} Results by company size appear here once there are at least 10 measurements.</p><p class="qrx-note">${esc(t.method)}</p>`;
     return;

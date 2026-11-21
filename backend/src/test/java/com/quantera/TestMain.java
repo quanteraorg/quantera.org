@@ -660,7 +660,7 @@ public class TestMain {
         String seoHtml = http(p, "/seo/stock/fndx");
         t("seo: stock page is real HTML with title, canonical, numbers and app link", seoHtml.contains("<title>Fund X (FNDX) Stock") && seoHtml.contains("rel=\"canonical\" href=\"https://quanteraorg.vercel.app/stock/FNDX\"") && seoHtml.contains("¥5.00T") && seoHtml.contains("/#/asset/FNDX") && seoHtml.contains("application/ld+json"));
         t("seo: headline numbers state their period", seoHtml.contains("Latest quarter, vs a year ago") && seoHtml.contains("Full-year figures"));
-        t("seo: listed-rounds total only when the table sums to under half the reported total", Seo.listedRaised(100.0, List.of(Json.obj("raised", 30.0), Json.obj("raised", null))) == 30.0 && Seo.listedRaised(100.0, List.of(Json.obj("raised", 50.0))) == null && Seo.listedRaised(100.0, List.of(Json.obj("raised", null))) == null && Seo.listedRaised(null, List.of(Json.obj("raised", 5.0))) == null);
+        t("seo: listed-rounds total only when the table sums to under half the reported total", Seo.listedRaised(100.0, List.of(Json.obj("raised", 30.0), Json.obj("raised", null))) == 30.0 && Seo.listedRaised(100.0, List.of(Json.obj("raised", 50.0))) == null && Math.abs(Seo.listedRaised(178.1, List.of(Json.obj("raised", 178.1), Json.obj("raised", 11.0))) - 189.1) < 1e-9 && Seo.listedRaised(100.0, List.of(Json.obj("raised", null))) == null && Seo.listedRaised(null, List.of(Json.obj("raised", 5.0))) == null);
         t("seo: unknown stock gets a noindex 404", http(p, "/seo/stock/NOFUND").contains("noindex") && !seoHtml.contains("noindex"));
         t("seo: page text is escaped", Seo.h("<script>'\"&").equals("&lt;script&gt;&#39;&quot;&amp;"));
         t("seo: readable private company slug", Seo.slug("Figure AI, Inc.").equals("figure-ai-inc"));
@@ -739,6 +739,13 @@ public class TestMain {
         Map<String, Object> sliab = m(l(sb.get("balance")).stream().filter(o -> "liabilities".equals(m(o).get("key"))).findFirst().orElseThrow());
         t("statements: a 12-month figure found only in a 10-Q (a trailing year) is not shown as a fiscal year", l(sb.get("periods")).size() == 2);
         t("statements: each column links to the filing it came from", "https://www.sec.gov/Archives/edgar/data/1/000000000125000001/0000000001-25-000001-index.htm".equals(m(l(sb.get("periods")).get(1)).get("filing")));
+        Map<String, Object> rg = m(Json.parse("{\"Revenues\":{\"units\":{\"USD\":["
+            + "{\"start\":\"2023-01-01\",\"end\":\"2023-12-31\",\"val\":100,\"frame\":\"CY2023\",\"form\":\"10-K\",\"filed\":\"2024-02-01\",\"accn\":\"0000000001-24-000001\"},"
+            + "{\"start\":\"2023-01-01\",\"end\":\"2023-12-31\",\"val\":105,\"form\":\"10-K\",\"filed\":\"2025-02-01\",\"accn\":\"0000000001-25-000001\"},"
+            + "{\"start\":\"2024-01-01\",\"end\":\"2024-12-31\",\"val\":120,\"frame\":\"CY2024\",\"form\":\"10-K\",\"filed\":\"2025-02-01\",\"accn\":\"0000000001-25-000001\"}]}}}"));
+        Map<String, Object> rb = Statements.build(rg, 1, false, false), rrev = m(l(rb.get("income")).stream().filter(o -> "revenue".equals(m(o).get("key"))).findFirst().orElseThrow());
+        t("statements: each year links to its own annual report, not the newest one that repeats it; a restated figure still wins",
+            String.valueOf(m(l(rb.get("periods")).get(0)).get("filing")).contains("0000000001-24-000001") && String.valueOf(m(l(rb.get("periods")).get(1)).get("filing")).contains("0000000001-25-000001") && d(l(rrev.get("values")).get(0)) == 105);
         t("statements: balances match the period end (within days); missing total liabilities derived from liabilities+equity minus equity, with a note",
             d(l(sliab.get("values")).get(0)) == 30 && d(l(sliab.get("values")).get(1)) == 40 && String.valueOf(sliab.get("note")).contains("minus equity"));
         long d19 = java.time.LocalDate.parse("2019-03-01").toEpochDay(), d22 = java.time.LocalDate.parse("2022-02-02").toEpochDay(), d23 = java.time.LocalDate.parse("2023-02-01").toEpochDay();
