@@ -6,7 +6,7 @@ The pages are plain HTML so they load fast, work without JavaScript and can be r
 """
 import html, os
 
-UPDATED = '13 November 2026'
+UPDATED = 'November 21, 2026'
 SITE = 'https://quanteraorg.vercel.app'
 CONTACT = '<a href="https://instagram.com/quantera.research" rel="noopener">@quantera.research on Instagram</a>'
 OUT = os.path.join(os.path.dirname(__file__), '..', 'public')
@@ -18,7 +18,7 @@ HEAD_JS = ("<script>try{var t=JSON.parse(localStorage.getItem(\"q_theme\"));if(t
            "var ok=v?v==='all':!(navigator.globalPrivacyControl===true||navigator.doNotTrack==='1');"
            "if(ok){window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};var s=document.createElement('script');s.defer=true;s.src='/_vercel/insights/script.js';document.head.appendChild(s)}})()</script>")
 
-FOOT = ('<footer>For education, not investment advice. <a href="/#/about">About Quantera</a> · <a href="/privacy">Privacy</a> · '
+FOOT = ('<footer>For education, not investment advice. <a href="/about">About Quantera</a> · <a href="/privacy">Privacy</a> · '
         '<a href="/cookies">Cookies</a> · <a href="/terms">Terms</a> · <a href="/accessibility">Accessibility</a></footer>')
 
 
@@ -36,7 +36,7 @@ def page(slug, title, desc, body):
             '</head><body><a href="#main" style="position:absolute;left:-999px" onfocus="this.style.left=\'12px\'" onblur="this.style.left=\'-999px\'">Skip to content</a>'
             '<header><a class="logo" href="/"><img src="/logo-mark.png" alt="" width="26" height="26">QUANTERA</a><nav><a href="/research">Research</a><a href="/stocks">Stocks</a>'
             '<a href="/private-companies">Private companies</a><a href="/learn">Learn</a><a class="cta" href="/#/markets">Open the app</a></nav></header>'
-            f'<main id="main"><h1>{t}</h1><p>Last updated {UPDATED}.</p>\n{body}\n</main>{FOOT}</body></html>\n')
+            f'<main id="main"><h1>{t}</h1>' + ('' if slug == 'about' else f'<p>Last updated {UPDATED}.</p>') + f'\n{body}\n</main>{FOOT}</body></html>\n')
 
 
 PRIVACY = f"""
@@ -67,7 +67,7 @@ PRIVACY = f"""
 <li><b>Consent</b>: the waitlist, the leaderboard and background alerts are opt-in, and you can withdraw at any time.</li>
 <li><b>Legitimate interests</b>: anonymous statistics and error reports to improve the site, and server logs to keep it secure. You can object at any time by turning statistics and error reports off in Settings.</li></ul>
 <h2 id="share">Who we share it with</h2>
-<p>We share personal information only with services that run Quantera for us, and only what each needs. We do not sell personal information, share it for cross-context behavioural advertising, or let anyone use it for their own marketing.</p>
+<p>We share personal information only with services that run Quantera for us, and only what each needs. We do not sell personal information, share it for cross-context behavioral advertising, or let anyone use it for their own marketing.</p>
 <table><tr><th>Service</th><th>What it does for us</th></tr>
 <tr><td>Vercel</td><td>Hosts the website; Web Analytics (cookieless page counts)</td></tr>
 <tr><td>Render</td><td>Runs our data server</td></tr>
@@ -90,6 +90,7 @@ PRIVACY = f"""
 <p>Depending on where you live (for example under the GDPR and UK GDPR, California’s CCPA, or India’s Digital Personal Data Protection Act), you can ask to access, correct, download or delete your personal information, object to or restrict how we use it, and withdraw consent. We will not treat you differently for using these rights.</p>
 <ul><li><b>Delete everything</b>: open <a href="/#/settings">Settings</a>, choose Delete account and type DELETE. This removes your login, your synced data and your leaderboard entry.</li>
 <li><b>Turn off statistics and error reports</b>: in <a href="/#/settings">Settings</a>. Global Privacy Control and Do Not Track signals are respected automatically.</li>
+<li><b>Remove your email from the waitlist or research updates</b> (these aren’t linked to an account, so Settings can’t remove them): reply to any email we sent you, or message us at {CONTACT}.</li>
 <li><b>Anything else</b>: message us at {CONTACT}. We reply within 30 days. If you’re not satisfied, you can complain to your local data protection authority.</li></ul>
 <h2 id="children">Children</h2>
 <p>Anyone can read Quantera without an account. You must be at least 13 to create an account, join the leaderboard, the waitlist or alerts. If you are under 18, or under the age of digital consent where you live, please use these features only with a parent’s or guardian’s permission. If you believe a child under 13 has given us personal information, contact us and we’ll delete it.</p>
@@ -154,8 +155,8 @@ COOKIES = f"""
 ACCESS = f"""
 <p>We want everyone to be able to use Quantera, including people who use a keyboard, a screen reader, magnification or voice control. We aim to meet the <a href="https://www.w3.org/TR/WCAG22/" rel="noopener">Web Content Accessibility Guidelines (WCAG) 2.2</a> at level AA.</p>
 <h2>What we do</h2>
-<ul><li>Every change is checked automatically with axe accessibility tests on 27 pages, in light and dark themes, on desktop and phone sizes. A change that fails can’t ship.</li>
-<li>Text and controls are checked for colour contrast in both themes. Price moves use ▲ and ▼ as well as colour.</li>
+<ul><li>Every change is checked automatically before it ships. Automated accessibility tests (axe, against WCAG 2 A and AA) run on 27 app pages at desktop size in the dark theme. The same 27 pages are also loaded in both themes, at desktop and phone sizes, to check for errors and content that spills off the screen. A change that fails any of these checks can’t ship.</li>
+<li>The automated tests include color contrast in the dark theme. Contrast in the light theme is checked by hand, not yet automatically. Price moves use ▲ and ▼ as well as color.</li>
 <li>Everything can be used with a keyboard, with a visible focus outline and a “Skip to content” link.</li>
 <li>Form fields have labels, buttons have names, and images have text alternatives.</li>
 <li>Animations stop when your device asks for reduced motion, and see-through “glass” effects turn off when it asks for reduced transparency.</li>
@@ -163,12 +164,41 @@ ACCESS = f"""
 <h2>Known limitations</h2>
 <ul><li>Charts are drawn as pictures. Each has a text label, and the key figures appear as text beside it, but individual points on a chart can’t yet be read by a screen reader.</li>
 <li>Some older parts of the site still use custom controls that we are replacing with standard ones.</li>
-<li>We have tested with automated tools and keyboards; full testing with screen readers is still to come.</li></ul>
+<li>Automated tests catch only some accessibility problems. Beyond them, we have tested by hand with a keyboard. We have not yet tested with screen readers (such as VoiceOver, NVDA or JAWS), voice control or magnification software, so we can’t yet say the site fully meets WCAG 2.2 AA.</li></ul>
 <h2>Tell us about a problem</h2>
 <p>If something is hard to use, please tell us at {CONTACT}: what page, what you were trying to do and what assistive technology you use. We’ll reply within 5 working days and fix problems as quickly as we can.</p>
 """
 
+ABOUT = f"""
+<p><b>Quantera Research is a student-led financial research, education and technology initiative.</b> We study how companies and markets react to the news, publish what we find with every source shown, and build free tools so anyone can check the work.</p>
+<h2>Why we started</h2>
+<p>Financial news tells you what happened. It rarely explains why the same story moves one company 5% and another 25%, how unusual a move really was, or what the numbers in a company’s filings actually say. The tools that join all of this up are built for professionals and cost thousands a year, and much of what is free is scattered, full of jargon or unsourced.</p>
+<p>We wanted one place where the research comes first, every number shows where it came from, and learning is built in rather than bolted on.</p>
+<h2>Who we are</h2>
+<p>Quantera was founded by twin brothers <b>Aarav Gupta</b> and <b>Aryan Gupta</b>, who are students. They research, write, design and build Quantera together. It is an independent initiative: we are not a bank, broker, investment adviser or research firm, and we have no outside investors or institutional partners.</p>
+<h2>How we research</h2>
+<ul><li><b>Primary sources first.</b> Company filings with the SEC, official releases and exchange data come before news coverage or opinion.</li>
+<li><b>No source, no number.</b> If we can’t verify a figure, we say it wasn’t found rather than estimate it.</li>
+<li><b>Facts apart from interpretation.</b> What happened is labeled separately from what it might mean. Things that happen at the same time are never presented as cause and effect.</li>
+<li><b>Checked before publishing.</b> Every calculation is re-run independently, and every study states its limits.</li>
+<li><b>Dated and corrected.</b> Every study shows when it was published. When newer results or events change the picture, we add a dated update note at the top rather than silently rewriting it.</li></ul>
+<h2>What you’ll find here</h2>
+<ul><li><a href="/research">Research</a>: our published studies of companies, earnings and market events.</li>
+<li><a href="/insights">Insights</a>: how we compare the way different companies react to the same news, measured against the market and each stock’s normal day.</li>
+<li><a href="/stocks">Company research</a>: financial statements from SEC filings, valuation, competitors and earnings history for US stocks.</li>
+<li><a href="/learn">Academy</a>: short lessons and exercises, from reading a chart to valuing a company.</li>
+<li><a href="/#/trade">Practice</a>: paper trading with $100,000 of virtual money, always labeled as practice. Nothing real is ever bought.</li></ul>
+<h2>Our educational mission</h2>
+<p>Learning finance should start from real companies and real events, not abstract definitions. Every lesson links to a company you can open, every ratio explains how it is calculated, and the Academy includes exercises where you interpret what actually happened before seeing the answer.</p>
+<h2>What’s next</h2>
+<p>Our long-term research question is how companies of different sizes react to comparable events: how large the moves are, how long they last and how they recover. We are building that dataset one study at a time, and we hope to open it to other students who want to research with us.</p>
+<h2>Get in touch</h2>
+<p>Follow us or send a message on Instagram at {CONTACT}. If you spot an error in our research, please tell us: we correct it and note the change.</p>
+<p>Everything on Quantera is for education. It is not investment advice or a recommendation to buy or sell any security.</p>
+"""
+
 PAGES = [
+    ('about', 'About Quantera Research', 'Who runs Quantera Research, why it exists, how its research is checked and what you can do on the site.', ABOUT),
     ('privacy', 'Privacy policy', 'What Quantera collects, why, who it is shared with, how long it is kept and how to remove it.', PRIVACY),
     ('terms', 'Terms of use', 'The rules for using Quantera: education not advice, data limits, AI content, prices and refunds.', TERMS),
     ('cookies', 'Cookies and storage', 'Quantera sets no cookies. What it stores in your browser, and why.', COOKIES),

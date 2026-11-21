@@ -18,8 +18,8 @@
   "x": {
    "i": "Investing means putting money into something you expect to grow in value, or to pay you income, over time: part of a company (a stock), a loan to a government or company (a bond), or a fund that holds many of these at once. In exchange for the chance of more growth than a savings account, you accept that the value will go up and down, and can fall.",
    "h": [
-    "<b>Saving vs investing.</b> A savings account is safe and easy to use, but grows slowly, and rising prices (inflation) mean the same dollars buy less each year. Investing aims for more growth over many years, with ups and downs along the way.",
-    "<b>The main building blocks.</b> <b>Stocks</b>: small pieces of companies; the highest long-run growth and the biggest swings. <b>Bonds</b>: loans that pay interest; usually steadier. <b>Cash</b>: safe, low return. <b>Funds</b> (index funds and ETFs) bundle hundreds of stocks or bonds into one investment, often at low cost.",
+    "<b>Saving vs investing.</b> A savings account is low-risk and easy to use (in the US, deposits at an FDIC-insured bank are protected up to $250,000 per depositor, per bank), but it grows slowly, and rising prices (inflation) mean the same dollars buy less each year. Investing aims for more growth over many years, with ups and downs along the way.",
+    "<b>The main building blocks.</b> <b>Stocks</b>: small pieces of companies; the highest long-run growth and the biggest swings. <b>Bonds</b>: loans that pay interest; usually steadier. <b>Cash</b>: low risk, low return. <b>Funds</b> (index funds and ETFs) bundle hundreds of stocks or bonds into one investment, often at low cost.",
     "<b>Risk and return go together.</b> Investments that can grow more can also fall further. Spreading money across many companies (diversification) means one bad company can’t sink you.",
     "<b>Time is your biggest advantage.</b> Returns earn their own returns (compounding), and a long time horizon gives you room to wait out falls in the market.",
     "<b>How markets work.</b> Shares are bought and sold between investors on exchanges such as the NYSE and Nasdaq; the price is wherever buyers and sellers agree. An index like the S&P 500 tracks a group of stocks to show how “the market” is doing.",
@@ -398,7 +398,7 @@
     "Step 3: <b>discount</b> each future amount back to today: value today = cash ÷ (1 + discount rate)<sup>years</sup>.",
     "The discount rate reflects risk and the return investors require."
    ],
-   "e": "A company makes $100M of free cash flow growing 5% a year. With a 9% discount rate and 2.5% long-term growth, the value is roughly $1.6B. Change the discount rate to 10% and it drops to about $1.4B — a 1-point change moves the value ~13%.",
+   "e": "The simplest version assumes cash grows at one steady rate forever. A company makes $100M of free cash flow this year, expected to grow 2.5% a year. Next year’s cash is $100M × 1.025 = $102.5M. With a 9% discount rate, value = $102.5M ÷ (9% − 2.5%) = $102.5M ÷ 0.065 ≈ <b>$1.58B</b>. At a 10% discount rate it is $102.5M ÷ 0.075 ≈ <b>$1.37B</b>, about 13% less, from a 1-point change. A full DCF forecasts the first few years one by one (Steps 1 to 3) and uses this formula only for the terminal value. Every input is an assumption, so treat the result as a range, not a single true value.",
    "m": [
     "Treating the output as precise — it is only as good as the assumptions.",
     "Using a long-term growth rate above the economy's growth (it would eventually be bigger than the world).",
@@ -1310,7 +1310,7 @@
    ],
    2
   ],
-  "world": "With a 4% safe rate, an 8% market premium and a beta of 1.5, the required return is 16%.",
+  "world": "With a 4% risk-free rate, an 8% market premium and a beta of 1.5, the required return is 16%.",
   "x": {
    "i": "Beta measures how much a stock tends to move with the overall market. The Capital Asset Pricing Model (CAPM) uses beta to estimate the return investors should expect for taking that risk.",
    "h": [
@@ -1900,7 +1900,7 @@
    "k": [
     "It measures momentum from two averages.",
     "Watch the direction of the histogram.",
-    "It lags, like the averages it is built from."
+    "It lags, like the averages it is built from: it describes past prices and does not reliably predict future ones."
    ],
    "q": [
     [
@@ -2014,7 +2014,7 @@
    "k": [
     "Bands measure volatility.",
     "A touch is not a signal by itself.",
-    "A squeeze says a bigger move may come, not its direction."
+    "A squeeze says a bigger move may come, not its direction. Like every indicator, the bands describe past prices; they do not reliably predict future ones."
    ],
    "q": [
     [

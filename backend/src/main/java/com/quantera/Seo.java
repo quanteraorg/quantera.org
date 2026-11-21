@@ -40,7 +40,7 @@ final class Seo {
                 + (index ? "" : "<meta name=\"robots\" content=\"noindex\">") + "<link rel=\"canonical\" href=\"" + h(url) + "\"><link rel=\"icon\" href=\"/favicon-64.png\"><link rel=\"stylesheet\" href=\"/fonts/fonts.css\"><link rel=\"stylesheet\" href=\"/seo.css\"><meta name=\"theme-color\" content=\"#06080c\"><script>try{var t=JSON.parse(localStorage.getItem(\"q_theme\"));if(t==\"system\")t=matchMedia(\"(prefers-color-scheme: light)\").matches?\"light\":\"dark\";if(t==\"light\"){document.documentElement.dataset.theme=\"light\";document.querySelector(\"meta[name=theme-color]\").content=\"#f4f5f7\"}}catch(e){}</script>"
                 + "<meta property=\"og:type\" content=\"website\"><meta property=\"og:site_name\" content=\"Quantera\"><meta property=\"og:title\" content=\"" + h(title) + "\"><meta property=\"og:description\" content=\"" + h(desc) + "\"><meta property=\"og:url\" content=\"" + h(url) + "\"><meta property=\"og:image\" content=\"" + h(base()) + "/og.png\"><meta name=\"twitter:card\" content=\"summary_large_image\">"
                 + (jsonLd == null ? "" : "<script type=\"application/ld+json\">" + jsonLd.replace("<", "\\u003c") + "</script>") + "<script>(function(){var v=null;try{v=JSON.parse(localStorage.getItem('q_priv')||'null')}catch(e){}var ok=v?v==='all':!(navigator.globalPrivacyControl===true||navigator.doNotTrack==='1');if(ok){window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};var s=document.createElement('script');s.defer=true;s.src='/_vercel/insights/script.js';document.head.appendChild(s)}})()</script></head><body><header><a class=\"logo\" href=\"/\"><img src=\"/logo-mark.png\" alt=\"\" width=\"26\" height=\"26\">QUANTERA</a><nav><a href=\"/research\">Research</a><a href=\"/stocks\">Stocks</a><a href=\"/private-companies\">Private companies</a><a href=\"/learn\">Learn</a><a class=\"cta\" href=\"/#/markets\">Open the app</a></nav></header><main>"
-                + main + "</main><footer>Market data is delayed and may contain errors. Quantera is for education and research and is not investment advice. <a href=\"/#/about\">About Quantera</a> · <a href=\"/privacy\">Privacy</a> · <a href=\"/cookies\">Cookies</a> · <a href=\"/terms\">Terms</a> · <a href=\"/accessibility\">Accessibility</a></footer></body></html>";
+                + main + "</main><footer>Market data is delayed and may contain errors. Quantera is for education and research and is not investment advice. <a href=\"/about\">About Quantera</a> · <a href=\"/privacy\">Privacy</a> · <a href=\"/cookies\">Cookies</a> · <a href=\"/terms\">Terms</a> · <a href=\"/accessibility\">Accessibility</a></footer></body></html>";
     }
 
     private static String crumbs(String name, String listPath, String listName, String path) {
@@ -189,11 +189,13 @@ final class Seo {
         return null;
     }
 
-    /** Sum of the rounds shown when it is under half the reported total (the listing is then clearly incomplete or the total unreliable), otherwise null. */
+    /** Sum of the rounds shown when it is under half the reported total (the listing is then clearly incomplete or the total
+     *  unreliable), or when it is above the reported total (the total predates the newest round: OpenAI's $178.1B left out
+     *  its Nov 2026 $11B Series D, while its rounds add up to $189.1B); otherwise null. */
     static Double listedRaised(Double reported, List<Object> shownRounds) {
         double sum = 0;
         for (Object o : shownRounds) { Double v = d(map(o), "raised"); if (v != null) sum += v; }
-        return reported != null && sum > 0 && sum < reported / 2 ? sum : null;
+        return reported != null && sum > 0 && (sum < reported / 2 || sum > reported * 1.01) ? sum : null;
     }
 
     static final String PVT_METHOD = "How these estimates are made: the estimated valuation is Forge Global's latest price per share multiplied by its estimate of the company's shares. "
@@ -264,7 +266,10 @@ final class Seo {
         StringBuilder m = new StringBuilder("<p class=\"crumb\"><a href=\"/private-companies\">Private companies</a> › " + h(name) + "</p><h1>" + h(name) + " valuation</h1><p class=\"px\">" + h(money(val, "USD")) + " <small>estimated</small></p><p class=\"basis\">" + h(pvtBasis(val, rounds)) + "</p>" + listedNote(name) + "<div class=\"kn\">");
         m.append(tile("Past year", d(co, "change52w") == null ? "—" : signed(d(co, "change52w") / 100), "Change in estimated price"));
         if (d(co, "price") != null) m.append(tile("Price per share", money(d(co, "price"), "USD"), "Estimated"));
-        if (fund != null) m.append(listed != null ? tile("Total raised (listed rounds)", money(fund, "USD"), "Sum of the rounds below") : tile("Total raised", money(fund, "USD"), "Reported total"));
+        Double reported = d(co, "funding");
+        if (fund != null) m.append(listed == null ? tile("Total raised", money(fund, "USD"), "Reported total")
+                : listed > reported ? tile("Total raised", money(fund, "USD"), "Sum of the rounds below. The reported total (" + money(reported, "USD") + ") does not yet include the latest round")
+                : tile("Total raised (listed rounds)", money(fund, "USD"), "Sum of the rounds below"));
         if (str(co.get("lastRound")) != null) m.append(tile("Latest round", str(co.get("lastRound")), h(str(co.get("lastRoundDate")))));
         m.append("</div><p class=\"go\"><a class=\"cta\" href=\"/#/pvt/").append(h(sym)).append("\">See the chart and full profile</a></p><h2>What is ").append(h(name)).append("?</h2><p>").append(h(f.get("description"))).append("</p>");
         m.append("<h2>Can you buy ").append(h(name)).append(" stock?</h2><p>").append(h(name)).append(" is a private company, so its shares aren’t sold on a stock exchange or through a normal brokerage. Its value is estimated from funding rounds and secondary-market trades, and it updates only when new deals happen.</p>");
@@ -286,8 +291,25 @@ final class Seo {
     }
 
     static Page privates() {
-        StringBuilder m = new StringBuilder("<h1>Private company valuations</h1><p>What OpenAI, Anthropic, Stripe and other private companies are estimated to be worth, how much they have raised, and their latest funding rounds.</p><div class=\"tw\"><table><tr><th>Company</th><th>Sector</th><th>Estimated valuation</th><th>Latest round</th><th>Total raised</th><th>Past year</th></tr>");
-        for (Object o : list(Yahoo.privates().get("companies"))) { Map<String, Object> c = map(o); m.append("<tr><td><a href=\"/private-company/").append(h(slug(str(c.get("name"))))).append("\">").append(h(c.get("name"))).append("</a></td><td>").append(h(c.get("sector"))).append("</td><td>").append(h(money(d(c, "valuation"), "USD"))).append("</td><td>").append(str(c.get("lastRound")) == null ? "—" : h(str(c.get("lastRound"))) + (str(c.get("lastRoundDate")) == null ? "" : "<br><small>" + h(str(c.get("lastRoundDate"))) + "</small>")).append("</td><td>").append(h(money(d(c, "funding"), "USD"))).append("</td><td>").append(d(c, "change52w") == null ? "—" : h(signed(d(c, "change52w") / 100))).append("</td></tr>"); }
+        StringBuilder m = new StringBuilder("<h1>Private company valuations</h1><p>What OpenAI, Stripe and other private companies are estimated to be worth, how much they have raised, and their latest funding rounds.</p><div class=\"tw\"><table><tr><th>Company</th><th>Sector</th><th>Estimated valuation</th><th>Latest round</th><th>Total raised</th><th>Price change, past year</th></tr>");
+        final String na = "<span class=\"na\" title=\"Our data source has no figure for this company\">Not available</span>";
+        int row = 0;
+        for (Object o : list(Yahoo.privates().get("companies"))) {
+            Map<String, Object> c = map(o);
+            String name = str(c.get("name"));
+            // The biggest companies are the likeliest to list, so they are checked now; the rest use any answer already cached.
+            Map<String, Object> pub = null;
+            if (name != null) try { pub = row++ < 10 ? Listed.of(name) : Listed.cached(name); } catch (RuntimeException ignored) {}
+            boolean nowPublic = pub != null && Boolean.TRUE.equals(pub.get("listed"));
+            m.append("<tr><td><a href=\"/private-company/").append(h(slug(name))).append("\">").append(h(name)).append("</a>")
+             .append(nowPublic ? "<br><small>Now public: <a href=\"/stock/" + h(str(pub.get("symbol"))) + "\">" + h(str(pub.get("symbol"))) + "</a></small>" : "").append("</td><td>")
+             .append(str(c.get("sector")) == null ? na : h(str(c.get("sector")))).append("</td><td>")
+             .append(d(c, "valuation") == null ? na : h(money(d(c, "valuation"), "USD"))).append("</td><td>")
+             .append(str(c.get("lastRound")) == null ? na : h(str(c.get("lastRound"))) + (str(c.get("lastRoundDate")) == null ? "" : "<br><small>" + h(str(c.get("lastRoundDate"))) + "</small>")).append("</td><td>")
+             .append(d(c, "funding") == null ? na : h(money(d(c, "funding"), "USD"))).append("</td><td>")
+             .append(d(c, "change52w") == null ? na : h(signed(d(c, "change52w") / 100))).append("</td></tr>");
+        }
+        m.append("</table></div><p class=\"src\"><b>Price change, past year</b> is the change in the estimated price per share over the last 12 months, not the change in total valuation (new shares issued in funding rounds can make the two differ). <b>Not available</b> means our data source has no figure for that company, usually because the company has not disclosed it.</p>");
         m.append("</table></div><p class=\"src\">Source: Yahoo Finance, with valuations and funding data from Forge Global. ").append(h(PVT_METHOD)).append(" Each company's page compares its estimate with its last funding round. ").append(h(fetchedLine(str(Yahoo.privates().get("updated"))))).append(" Not investment advice.</p>");
         return new Page(200, "text/html; charset=utf-8", page("Private Company Valuations: OpenAI, Anthropic, Stripe and More | Quantera", "Estimated valuations, funding totals and latest rounds for the biggest private companies, including OpenAI, Anthropic and Stripe.", "/private-companies", m.toString(), null, true));
     }

@@ -39,7 +39,7 @@ async function events(): Promise<Ev[]> {
     for (const a of (ok && b?.articles) || []) {
       const syms = [...new Set(((a.symbols || []) as any[]).map(s => String(typeof s === 'string' ? s : s?.symbol || '').toUpperCase()).filter(s => /^[A-Z]{1,5}$/.test(s)))] as string[];
       const t = Date.parse(a.publishedAt || '');
-      if (syms.length >= 2 && t && t < yday && out.length < 4) out.push({ key: (a.id || a.url || a.title || '').slice(0, 80), title: a.title, context: `${a.source || 'A news provider'} published this story on ${new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}. It tags ${syms.slice(0, 5).join(', ')}.`, ask: { symbols: syms.slice(0, 5), at: a.publishedAt, headline: a.title } });
+      if (syms.length >= 2 && t && t < yday && out.length < 4) out.push({ key: (a.id || a.url || a.title || '').slice(0, 80), title: a.title, context: `${a.source || 'A news provider'} published this story on ${new Date(t).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}. It tags ${syms.slice(0, 5).join(', ')}.`, ask: { symbols: syms.slice(0, 5), at: a.publishedAt, headline: a.title } });
     }
   } catch { /* the documented event is enough */ }
   return out;
@@ -60,7 +60,7 @@ async function play(m: HTMLElement, ev: Ev): Promise<void> {
   const first = cos.find(c => c.symbol === ev.ask.symbols[0]) || cos[0], share = Math.abs(first.move) > 0.05 ? Math.min(100, Math.abs(first.market / first.move) * 100) : 0;
   const shareBand = share < 25 ? 'Less than a quarter' : share < 50 ? 'A quarter to a half' : share < 75 ? 'Half to three quarters' : 'More than three quarters';
   const Q = [
-    { h: `1. On the first trading day after the news (${new Date(r.day0 + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}), which stock moved the most, up or down?`, opts: syms, right: most.symbol,
+    { h: `1. On the first trading day after the news (${new Date(r.day0 + 'T12:00:00Z').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}), which stock moved the most, up or down?`, opts: syms, right: most.symbol,
       why: `${most.symbol} moved ${sgn(most.move)}. ${cos.filter(c => c !== most).map(c => `${c.symbol} ${sgn(c.move)}`).join(', ')}.` },
     { h: '2. Measured against each stock’s normal day, which reaction was the most unusual?', opts: syms, right: unusual.symbol,
       why: `${unusual.symbol}’s company-specific move was ${fmt(Math.abs(unusual.sigmas), 1)}× its normal day (±${fmt(unusual.typicalDay, 1)}%). ${unusual.symbol === most.symbol ? 'Here the biggest move was also the most unusual one.' : `The biggest move isn’t always the most unusual: ${most.symbol} normally moves more, so its ${sgn(most.move)} was ${fmt(Math.abs(most.sigmas), 1)}× its normal day.`}` },
