@@ -110,4 +110,7 @@ export function initLessonsExtra(): void {
     lx[n.les[0]] = n.x; wd[n.les[0]] = n.w;
     const p = paths.find(x => x[0] === n.path); if (p && !p[1].includes(n.les[0])) p[1].push(n.les[0]);
   }
+  // Learning journeys by goal, alongside the existing paths: understand a company's numbers, then analyze its value.
+  const J: [string, string[]][] = [['Understand companies', ['mcap', 'income', 'cashflow', 'earnings', 'ratios']], ['Analyze companies', ['pe', 'peg', 'dcf', 'wacc', 'research']]];
+  for (const [name, ids] of J) if (!paths.some(p => p[0] === name)) paths.push([name, ids.filter(id => les.some(l => l[0] === id))]);
 }
