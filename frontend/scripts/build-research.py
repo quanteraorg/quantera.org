@@ -142,6 +142,14 @@ def data_sources_html(a):
             '</ul><p class="src">Numbers in the text link to the reference they came from. Facts are kept apart from interpretation, which is labeled “Not fact”.</p>')
 
 
+# Guard: a Python expression left outside an f-string is shown to visitors as code. It happened twice (the reading
+# time, then the library cards), so every page this script writes is checked, and the build stops if one leaks.
+LEAK = re.compile(r'\{(a\.get|a\[|a\.|E\(|nice_date|cite\(|x\[|s\[)')
+def guard(name, page):
+    m = LEAK.search(page)
+    if m: raise SystemExit(f"{name}: unformatted template code in the page: {page[m.start():m.start() + 60]}")
+    return page
+
 def article_html(a, allarts):
     url = f'research/{a["slug"]}'
     ld = {"@context": "https://schema.org", "@type": "Article", "headline": a['title'], "description": a['dek'], "datePublished": a['date'], "dateModified": a.get('updated', a['date']),
@@ -189,7 +197,7 @@ def index_html(data):
     body = ('<main id="main"><h1>Research</h1><p class="dek">Original, sourced studies of companies, earnings and how markets react to the news. '
             'Every figure links to its source, facts are kept apart from interpretation, and every study states its limits.</p>'
             '<p><a href="/#/research">Search and filter the library in the app</a> · <a href="/#/insights">Compare how companies reacted to the same news</a></p><div class="lib">'
-            + ''.join(f'<a class="card" href="/research/{a["slug"]}"><small>{E(a.get("classification", "Research"))} · {E(a["category"])} · {nice_date(a["date"])}' + (f' · updated {nice_date(a["updated"])}' if a.get('updated') else '') + '</small><b>{E(a["title"])}</b><span>{E(a["dek"])}</span></a>' for a in arts)
+            + ''.join(f'<a class="card" href="/research/{a["slug"]}"><small>{E(a.get("classification", "Research"))} · {E(a["category"])} · {nice_date(a["date"])}' + (f' · updated {nice_date(a["updated"])}' if a.get('updated') else '') + f'</small><b>{E(a.get("title") or "Untitled study")}</b><span>{E(a.get("dek") or "")}</span></a>' for a in arts)
             + '</div><div class="box"><h2>How we research</h2><ul><li>Primary sources first: company filings with the SEC, official releases and exchange data.</li>'
             '<li>No source, no number: if we can\'t verify a figure, we say it wasn\'t found.</li><li>Facts and interpretation are labeled separately; a coincidence in time is never presented as a cause.</li>'
             '<li>Every calculation is re-run independently before publication.</li></ul></div></main>')
@@ -234,14 +242,13 @@ def main():
     for a in arts:
         page = article_html(a, arts)
         # Guard: a Python expression left outside an f-string would be shown to visitors as code (it happened once).
-        leak = re.search(r'\{(a\.get|a\[|E\(|nice_date|cite\()', page)
-        if leak: raise SystemExit(f"{a['slug']}: unformatted template code in the page: {page[leak.start():leak.start() + 60]}")
+        guard(a['slug'], page)
         open(os.path.join(d, a['slug'] + '.html'), 'w', encoding='utf-8').write(page)
         json.dump(a, open(os.path.join(d, a['slug'] + '.json'), 'w', encoding='utf-8'), ensure_ascii=False)
-    open(os.path.join(d, 'index.html'), 'w', encoding='utf-8').write(index_html({**data, 'articles': arts}))
+    open(os.path.join(d, 'index.html'), 'w', encoding='utf-8').write(guard('research/index', index_html({**data, 'articles': arts})))
     json.dump({'categories': data['categories'], 'articles': [{**{k: a[k] for k in ('slug', 'title', 'dek', 'date', 'updated', 'category', 'classification', 'industry', 'tickers', 'readMinutes', 'findings') if k in a}, 'sources': len(a.get('sources', [])), 'primarySources': sum(1 for x in a.get('sources', []) if x.get('kind') == 'Primary')} for a in arts]},
               open(os.path.join(d, 'index.json'), 'w', encoding='utf-8'), ensure_ascii=False)
-    open(os.path.join(OUT, 'insights.html'), 'w', encoding='utf-8').write(insights_html())
+    open(os.path.join(OUT, 'insights.html'), 'w', encoding='utf-8').write(guard('insights', insights_html()))
     urls = [f'{SITE}/research', f'{SITE}/insights'] + [f'{SITE}/research/{a["slug"]}' for a in arts]
     open(os.path.join(OUT, 'sitemap-research.xml'), 'w').write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + ''.join(f'<url><loc>{u}</loc>' + (f'<lastmod>{a["date"]}</lastmod>' if (a := next((x for x in arts if u.endswith(x["slug"])), None)) else '') + '</url>\n' for u in urls) + '</urlset>\n')
