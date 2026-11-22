@@ -27,6 +27,11 @@ const CSS = `
 
 // Explanations for each lesson card's own question (the first quiz question), which app.js stores without one.
 const CARD_WHY: Record<string, string> = {
+ "mcap": "Market capitalization = share price × number of shares outstanding. It measures the company’s total value on the stock market, which the share price alone doesn’t show.",
+ "markets": "After the IPO, investors trade shares with each other. Each trade happens at a price a buyer and a seller agree on, and those trades move the quoted price.",
+ "earnings": "“Beating estimates” means the reported figure, usually EPS or revenue, came in above analysts’ average forecast (the consensus). It says nothing on its own about how the shares will react.",
+ "portopt": "Diversification works when assets don’t move in step. The lower (or more negative) the correlation, the more a mix cuts volatility below the weighted average of the two.",
+
  "intro": "Investing puts money into things whose value can rise or fall. You accept some risk of loss in exchange for the chance of more growth than a savings account offers. Nothing about it is guaranteed.",
  "compound": "Compounding means returns earn their own returns, so growth speeds up the longer money stays invested. Time does the heavy lifting; fees work against it.",
  "rates": "When rates rise, new bonds pay more, so older bonds with lower payments are only worth buying at a lower price.",
