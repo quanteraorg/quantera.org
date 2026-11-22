@@ -25,7 +25,7 @@ HEAD_JS = ("<script>try{var t=JSON.parse(localStorage.getItem(\"q_theme\"));if(t
            "if(ok){window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};var s=document.createElement('script');s.defer=true;s.src='/_vercel/insights/script.js';document.head.appendChild(s)}})()</script>")
 FOOT = ('<footer>Quantera Research is a student-led research and education initiative. Research is for education, not investment advice. '
         '<a href="/about">About</a> · <a href="/research">Research</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/accessibility">Accessibility</a></footer>')
-STYLE = ('<style>main table{border-collapse:collapse;width:100%;font-size:14.5px;margin:10px 0 18px;font-variant-numeric:tabular-nums}'
+STYLE = ('<style>''.cls{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:2px 7px;margin-right:6px;background:rgba(122,166,232,.16);color:#9cbcf0;vertical-align:1px}''.depthbar{display:inline-flex;flex-wrap:wrap;border:1px solid rgba(127,127,127,.35);border-radius:99px;overflow:hidden;margin:0 0 18px}''.depthbar button{font:inherit;font-size:13.5px;background:none;border:0;color:inherit;opacity:.75;padding:8px 14px;cursor:pointer}.depthbar button.on{opacity:1;background:rgba(232,199,122,.16)}''.depth-overview .dz[data-depth=detail],.depth-overview .dz[data-depth=method],.depth-overview .toc{display:none}''.depth-method .dz[data-depth=overview],.depth-method .dz[data-depth=detail],.depth-method .toc{display:none}''.toc{border-left:2px solid rgba(232,199,122,.5);padding:4px 0 4px 14px;margin:18px 0}.toc ol{margin:6px 0 0;padding-left:18px;font-size:14px;line-height:1.75}''.terms dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:6px 0}.terms dt{font-weight:600}.terms dd{margin:0}@media(max-width:560px){.terms dl{grid-template-columns:1fr}.terms dd{margin-bottom:6px}}''.box.terms .src{font-size:12.5px;opacity:.75}''main table{border-collapse:collapse;width:100%;font-size:14.5px;margin:10px 0 18px;font-variant-numeric:tabular-nums}'
          'main th,main td{border-bottom:1px solid rgba(127,127,127,.25);padding:8px 10px;text-align:left;vertical-align:top}main th{font-weight:600;font-size:13px;color:var(--mu)}'
          '.dek{font-size:19px;line-height:1.5;color:var(--mu);margin:4px 0 14px}.meta{font-size:13.5px;color:var(--mu);margin:0 0 22px}.meta b{color:var(--ac)}'
          '.box{border:1px solid var(--ln);border-radius:14px;padding:14px 18px;margin:16px 0;background:var(--s1)}.box h2{margin-top:0;font-size:20px}'
@@ -91,6 +91,57 @@ def cite(s):
     return re.sub(r'\[(\d+)\]', lambda m: f'<a href="#src{m.group(1)}">[{m.group(1)}]</a>', E(s))
 
 
+# ---- research depth: one study, three views (Overview · Detailed analysis · Methodology and data) ----
+# The page is built once; the depth control only hides parts of it, so every figure exists in one place.
+METHOD_HEADS = ('method', 'methodology', 'data', 'how we measured')
+def is_method(s): return s.get('h', '').strip().lower().startswith(METHOD_HEADS)
+
+DEPTH_BAR = ('<div class="depthbar" role="group" aria-label="How much detail to show">'
+             '<button type="button" data-d="overview">Overview</button><button type="button" data-d="detail" aria-pressed="true" class="on">Detailed analysis</button>'
+             '<button type="button" data-d="method">Methodology and data</button></div>')
+DEPTH_JS = ("<script>(function(){var m=document.getElementById('main'),b=document.querySelector('.depthbar');if(!m||!b)return;"
+            "function set(d){m.className=d=='detail'?'':'depth-'+d;b.querySelectorAll('button').forEach(function(x){var on=x.dataset.d==d;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)})}"
+            "b.addEventListener('click',function(e){var t=e.target.closest('button');if(t)set(t.dataset.d)});"
+            "var q=new URLSearchParams(location.search).get('depth');if(q=='overview'||q=='method')set(q)})()</script>")
+
+# Plain-English definitions for terms a study uses. Shown with the Overview so a new reader can follow it.
+TERMS = [
+    ('revenue', 'Revenue', 'The money a company takes in from sales before any costs are taken off.'),
+    ('gross margin', 'Gross margin', 'Revenue minus the direct cost of what was sold, as a share of revenue.'),
+    ('operating profit', 'Operating profit', 'Profit from the main business after running costs, before interest and taxes.'),
+    ('net loss', 'Net loss', 'What is left when total costs, including one-off and accounting items, exceed revenue.'),
+    ('guidance', 'Guidance', 'The company’s own forecast for a coming period.'),
+    ('valuation', 'Valuation', 'What a company is worth, or what investors priced it at in a deal.'),
+    ('ipo', 'IPO', 'An initial public offering: when a company first sells shares on a stock exchange.'),
+    ('s-1', 'S-1', 'The registration statement a US company files with the SEC before an IPO.'),
+    ('8-k', '8-K', 'An SEC filing for important news, such as quarterly results.'),
+    ('n-port', 'N-PORT', 'A monthly SEC filing in which a fund lists what it holds and what each holding is worth.'),
+    ('s&p 500', 'S&P 500', 'An index of about 500 large US companies, used as a measure of the whole market.'),
+    ('beta', 'Beta', 'How much a stock tends to move when the whole market moves 1%.'),
+    ('abnormal return', 'Abnormal return', 'The part of a stock’s move not explained by the market’s move.'),
+    ('market-adjusted', 'Market-adjusted return', 'A stock’s return minus the market’s return over the same period.'),
+    ('data center', 'Data center', 'Nvidia’s segment that sells chips and systems to the companies running large computing facilities.'),
+    ('fiscal year', 'Fiscal year', 'A company’s 12-month accounting year, which may not match the calendar year.'),
+]
+def terms_html(a):
+    text = json.dumps(a, ensure_ascii=False).lower()
+    hits = [(t, d) for k, t, d in TERMS if k in text][:8]
+    if not hits: return ''
+    return ('<div class="box terms"><h2>Key terms</h2><dl>' + ''.join(f'<dt>{E(t)}</dt><dd>{E(d)}</dd>' for t, d in hits) +
+            '</dl><p class="src">Plain-English definitions. <a href="/learn">Learn more in the Academy</a>.</p></div>')
+
+def contents_html(a):
+    items = [('summary', 'Executive summary'), ('question', 'Research question')] + [(f's{n + 1}', s['h']) for n, s in enumerate(a['sections'])] + [('limitations', 'Limitations'), ('references', 'References')]
+    return '<div class="toc" role="navigation" aria-label="In this report"><b>In this report</b><ol>' + ''.join(f'<li><a href="#{i}">{E(t)}</a></li>' for i, t in items) + '</ol></div>'
+
+KIND = {'Primary': 'Primary sources (company filings and official releases)', 'Data': 'Data providers', 'Secondary': 'News and secondary reporting', 'Other': 'Other sources'}
+def data_sources_html(a):
+    c = {}
+    for s_ in a['sources']: c[s_.get('kind', 'Other')] = c.get(s_.get('kind', 'Other'), 0) + 1
+    return ('<h2 id="data">Data sources</h2><ul>' + ''.join(f'<li>{E(KIND.get(k, k))}: {n}</li>' for k, n in sorted(c.items(), key=lambda kv: list(KIND).index(kv[0]) if kv[0] in KIND else 9)) +
+            '</ul><p class="src">Numbers in the text link to the reference they came from. Facts are kept apart from interpretation, which is labeled “Not fact”.</p>')
+
+
 def article_html(a, allarts):
     url = f'research/{a["slug"]}'
     ld = {"@context": "https://schema.org", "@type": "Article", "headline": a['title'], "description": a['dek'], "datePublished": a['date'], "dateModified": a.get('updated', a['date']),
@@ -98,33 +149,37 @@ def article_html(a, allarts):
           "publisher": {"@type": "Organization", "name": "Quantera Research", "logo": {"@type": "ImageObject", "url": SITE + "/icon-512.png"}},
           "mainEntityOfPage": f"{SITE}/{url}", "image": SITE + "/og.png", "about": [{"@type": "Corporation", "tickerSymbol": t} for t in a.get('tickers', [])]}
     b = [f'<main id="main"><p class="crumb"><a href="/research">Research</a> › {E(a["category"])}</p><h1>{E(a["title"])}</h1><p class="dek">{E(a["dek"])}</p>',
-         f'<p class="meta"><b>{E(a["category"])}</b> · Published {nice_date(a["date"])}' + (f' · Updated {nice_date(a["updated"])}' if a.get('updated') else '') + f' · {a.get("readMinutes", 5)} min read · By Quantera Research'
+         f'<p class="meta"><span class="cls">{E(a.get("classification", "Research"))}</span> <b>{E(a["category"])}</b> · Published {nice_date(a["date"])}' + (f' · Updated {nice_date(a["updated"])}' if a.get('updated') else '') + f' · {a.get("readMinutes", 5)} min read · By Quantera Research'
          + (f' · {" ".join(E(t) for t in a["tickers"])}' if a.get('tickers') else '') + '</p>',
+         DEPTH_BAR,
          ''.join(f'<div class="box upd" role="note"><h2>Update, {nice_date(u["date"])}</h2><p>{E(u["text"])}</p>'
                  + (f'<p class="meta">Source: <a href="{E(u["url"])}" rel="noopener">{E(u["source"])}</a></p>' if u.get('url') else '') + '</div>'
                  for u in a.get('updates', [])),
-         f'<div class="box"><h2>Research question</h2><p>{E(a["question"])}</p></div>',
-         '<h2>Summary</h2>' + ''.join(f'<p>{cite(p)}</p>' for p in a['summary']),
-         '<div class="box"><h2>Key findings</h2><ul>' + ''.join(f'<li>{cite(f)}</li>' for f in a['findings']) + '</ul></div>']
-    for s in a['sections']:
-        b.append(f'<h2>{E(s["h"])}' + (f'<span class="lbl">{E(s["label"])}</span>' if s.get('label') else '') + '</h2>')
+         '<div class="dz" data-depth="overview">', f'<div class="box"><h2 id="question">Research question</h2><p>{E(a["question"])}</p></div>',
+         '<h2 id="summary">Executive summary</h2>' + ''.join(f'<p>{cite(p)}</p>' for p in a['summary']),
+         '<div class="box"><h2>Key findings</h2><ul>' + ''.join(f'<li>{cite(f)}</li>' for f in a['findings']) + '</ul></div>',
+         terms_html(a), '</div>', contents_html(a)]
+    for n, s in enumerate(a['sections']):
+        dz = 'method' if is_method(s) else 'detail'
+        b.append(f'<div class="dz" data-depth="{dz}"><h2 id="s{n + 1}">{E(s["h"])}' + (f'<span class="lbl">{E(s["label"])}</span>' if s.get('label') else '') + '</h2>')
         b += [f'<p>{cite(p)}</p>' for p in s.get('p', [])]
         if s.get('list'): b.append('<ol>' + ''.join(f'<li>{cite(x)}</li>' for x in s['list']) + '</ol>')
         if s.get('table'):
             t = s['table']
             b.append('<table><tr>' + ''.join(f'<th>{E(h)}</th>' for h in t['head']) + '</tr>' + ''.join('<tr>' + ''.join(f'<td>{E(c)}</td>' for c in r) + '</tr>' for r in t['rows']) + '</table>')
         if s.get('chart'): b.append(chart_svg(s['chart']))
-    b.append('<h2>Limitations</h2><ul>' + ''.join(f'<li>{cite(x)}</li>' for x in a['limitations']) + '</ul>')
-    b.append('<h2>Sources</h2><ol class="srcs">' + ''.join(
+        b.append('</div>')
+    b.append('<div class="dz" data-depth="method">' + data_sources_html(a) + '<h2 id="limitations">Limitations</h2><ul>' + ''.join(f'<li>{cite(x)}</li>' for x in a['limitations']) + '</ul>')
+    b.append('<h2 id="references">References</h2><ol class="srcs">' + ''.join(
         f'<li id="src{i+1}">' + (f'<a href="{E(s["url"])}" rel="noopener">{E(s["label"])}</a>' if s.get('url') else E(s['label'])) + f' <small>{E(s.get("kind",""))}</small></li>'
-        for i, s in enumerate(a['sources'])) + '</ol>')
+        for i, s in enumerate(a['sources'])) + '</ol></div>')
     if a.get('explore'): b.append('<h2>Explore further</h2><ul>' + ''.join(f'<li><a href="{E(x["href"])}">{E(x["label"])}</a></li>' for x in a['explore']) + '</ul>')
     rel = [x for x in allarts if x['slug'] != a['slug'] and (x['category'] == a['category'] or set(x.get('tickers', [])) & set(a.get('tickers', [])))][:3]
     if rel: b.append('<h2>Related research</h2><div class="lib">' + ''.join(f'<a class="card" href="/research/{x["slug"]}"><small>{E(x["category"])} · {nice_date(x["date"])}</small><b>{E(x["title"])}</b></a>' for x in rel) + '</div>')
     b.append('<div class="box"><p style="margin:0"><b>Education, not investment advice.</b> This study describes what happened and is not a recommendation to buy, sell or hold any security. '
              'Quantera Research is a student-led initiative, not a registered investment adviser, broker or research analyst. Figures were correct to the sources listed on the publication date. '
              'Spotted an error? Tell us on Instagram at <a href="https://instagram.com/quantera.research" rel="noopener">@quantera.research</a>.</p></div></main>')
-    return head(url, a['title'], a['dek'], 'article', ld) + ''.join(b) + FOOT + '</body></html>\n'
+    return head(url, a['title'], a['dek'], 'article', ld) + ''.join(b) + FOOT + DEPTH_JS + '</body></html>\n'
 
 
 def index_html(data):
@@ -134,7 +189,7 @@ def index_html(data):
     body = ('<main id="main"><h1>Research</h1><p class="dek">Original, sourced studies of companies, earnings and how markets react to the news. '
             'Every figure links to its source, facts are kept apart from interpretation, and every study states its limits.</p>'
             '<p><a href="/#/research">Search and filter the library in the app</a> · <a href="/#/insights">Compare how companies reacted to the same news</a></p><div class="lib">'
-            + ''.join(f'<a class="card" href="/research/{a["slug"]}"><small>{E(a["category"])} · {nice_date(a["date"])}</small><b>{E(a["title"])}</b><span>{E(a["dek"])}</span></a>' for a in arts)
+            + ''.join(f'<a class="card" href="/research/{a["slug"]}"><small>{E(a.get("classification", "Research"))} · {E(a["category"])} · {nice_date(a["date"])}' + (f' · updated {nice_date(a["updated"])}' if a.get('updated') else '') + '</small><b>{E(a["title"])}</b><span>{E(a["dek"])}</span></a>' for a in arts)
             + '</div><div class="box"><h2>How we research</h2><ul><li>Primary sources first: company filings with the SEC, official releases and exchange data.</li>'
             '<li>No source, no number: if we can\'t verify a figure, we say it wasn\'t found.</li><li>Facts and interpretation are labeled separately; a coincidence in time is never presented as a cause.</li>'
             '<li>Every calculation is re-run independently before publication.</li></ul></div></main>')
@@ -183,7 +238,7 @@ def main():
         open(os.path.join(d, a['slug'] + '.html'), 'w', encoding='utf-8').write(page)
         json.dump(a, open(os.path.join(d, a['slug'] + '.json'), 'w', encoding='utf-8'), ensure_ascii=False)
     open(os.path.join(d, 'index.html'), 'w', encoding='utf-8').write(index_html({**data, 'articles': arts}))
-    json.dump({'categories': data['categories'], 'articles': [{k: a[k] for k in ('slug', 'title', 'dek', 'date', 'category', 'tickers', 'readMinutes', 'findings') if k in a} for a in arts]},
+    json.dump({'categories': data['categories'], 'articles': [{**{k: a[k] for k in ('slug', 'title', 'dek', 'date', 'updated', 'category', 'classification', 'industry', 'tickers', 'readMinutes', 'findings') if k in a}, 'sources': len(a.get('sources', [])), 'primarySources': sum(1 for x in a.get('sources', []) if x.get('kind') == 'Primary')} for a in arts]},
               open(os.path.join(d, 'index.json'), 'w', encoding='utf-8'), ensure_ascii=False)
     open(os.path.join(OUT, 'insights.html'), 'w', encoding='utf-8').write(insights_html())
     urls = [f'{SITE}/research', f'{SITE}/insights'] + [f'{SITE}/research/{a["slug"]}' for a in arts]
