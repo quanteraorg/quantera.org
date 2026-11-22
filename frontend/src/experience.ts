@@ -70,6 +70,7 @@ html[data-theme=light] .qx-ov{background:rgba(240,242,246,.8)}
 .qx-ls a:hover{border-color:rgba(var(--acc),.5)}.qx-ls b{display:block;font-size:14.5px}.qx-ls small{color:var(--mu);font-size:12.5px}
 .qx-lv{flex:none;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:3px 6px;background:rgba(var(--acc),.14);color:var(--ac,#c8a96a)}
 .qx-lv.Intermediate{background:rgba(122,166,232,.14);color:#7aa6e8}.qx-lv.Advanced{background:rgba(212,110,160,.14);color:#d46ea0}
+html[data-theme=light] .qx-lv{color:#6b4e12;background:rgba(200,169,106,.22)}html[data-theme=light] .qx-lv.Intermediate{color:#1f4f93;background:rgba(122,166,232,.2)}html[data-theme=light] .qx-lv.Advanced{color:#8a2459;background:rgba(212,110,160,.2)}
 .qx-stats{display:flex;gap:10px;flex-wrap:wrap}.qx-stats div{flex:1;min-width:84px;border-radius:12px;background:rgba(var(--fgc),.05);padding:10px 12px}
 .qx-stats b{display:block;font-size:20px;font-variant-numeric:tabular-nums}.qx-stats small{color:var(--mu);font-size:12px}
 .qx-meter{height:8px;border-radius:99px;background:rgba(var(--fgc),.08);overflow:hidden;margin:10px 0 6px}.qx-meter i{display:block;height:100%;background:var(--ac,#c8a96a);border-radius:99px}

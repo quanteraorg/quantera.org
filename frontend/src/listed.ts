@@ -66,7 +66,7 @@ function banner(): void {
 }
 
 export function initListed(): void {
-  document.head.insertAdjacentHTML('beforeend', `<style id="qls-css">.qls-ban{margin:0 0 14px;border-color:rgba(79,209,165,.5)!important;line-height:1.55;font-size:14.5px}.qls-go{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.qls-go .btn{margin:0}.qls-old{text-decoration:underline;cursor:pointer}.qls-pub{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;letter-spacing:.04em;border-radius:6px;padding:2px 6px;background:rgba(122,166,232,.16);color:#9cbcf0;text-decoration:none;vertical-align:1px}</style>`);
+  document.head.insertAdjacentHTML('beforeend', `<style id="qls-css">.qls-ban{margin:0 0 14px;border-color:rgba(79,209,165,.5)!important;line-height:1.55;font-size:14.5px}.qls-go{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.qls-go .btn{margin:0}.qls-old{text-decoration:underline;cursor:pointer}.qls-pub{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;letter-spacing:.04em;border-radius:6px;padding:2px 6px;background:rgba(122,166,232,.16);color:#9cbcf0;text-decoration:none;vertical-align:1px}html[data-theme=light] .qls-pub{color:#1f4f93;background:rgba(122,166,232,.2)}</style>`);
   search();
   table();
   banner();

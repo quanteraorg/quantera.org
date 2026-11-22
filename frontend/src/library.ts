@@ -34,7 +34,8 @@ const CSS = `
 .qra.depth-overview .dz[data-depth=detail],.qra.depth-overview .dz[data-depth=method],.qra.depth-overview .toc{display:none}.qra.depth-method .dz[data-depth=overview],.qra.depth-method .dz[data-depth=detail],.qra.depth-method .toc{display:none}
 .qra .toc{border-left:2px solid rgba(var(--acc),.5);padding:4px 0 4px 14px;margin:18px 0}.qra .toc ol{margin:6px 0 0;padding-left:18px;font-size:14px;line-height:1.75}
 .qra .terms dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:6px 0}.qra .terms dt{font-weight:600}.qra .terms dd{margin:0}@media(max-width:560px){.qra .terms dl{grid-template-columns:1fr}}
-.qra-dn{font-size:13.5px;color:var(--mu);margin:0 0 14px}`;
+.qra-dn{font-size:13.5px;color:var(--mu);margin:0 0 14px}
+html[data-theme=light] .qrl-k,html[data-theme=light] .qra .cls{color:#1f4f93;background:rgba(122,166,232,.2)}`;
 
 const nice = (d: string) => { try { return new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }); } catch { return d; } };
 let LIB: Lib | null = null;
