@@ -366,7 +366,7 @@ function professional(m: HTMLElement): void {
    <div class="qx-g">
     <section class="qx-c w8" aria-labelledby="qx-rs"><h3 id="qx-rs">Research and updates</h3><div id="qx-rsb">${skel()}</div></section>
     <section class="qx-c" aria-labelledby="qx-in"><h3 id="qx-in">Insights</h3><p>Measure how differently companies reacted to the same news: each move split into the market’s part and the company-specific part, compared with the stock’s normal day.</p>
-     <p class="mu" style="font-size:13.5px">Daily closing prices; market model with beta estimated over the prior year. It shows association, not cause.</p><a class="btn p" href="#/insights">Open Insights</a> <a class="lnk" href="/insights">Methodology →</a></section>
+     <p class="mu" style="font-size:13.5px">Daily closing prices; beta against the S&P 500 from the 120 trading days before the news; one event per company, no significance test. It shows association, not cause.</p><a class="btn p" href="#/insights">Open Insights</a> <a class="lnk" href="/insights">Methodology →</a></section>
     <section class="qx-c w6" aria-labelledby="qx-mi"><h3 id="qx-mi">Market intelligence</h3><div id="qx-mib">${skel(4)}</div></section>
     <section class="qx-c w6" aria-labelledby="qx-wl"><h3 id="qx-wl">Watchlist</h3><div id="qx-wlb">${wl.length ? skel(4) : '<p class="mu">Add companies to your watchlist from any stock page.</p>'}</div></section>
     <section class="qx-c w6" aria-labelledby="qx-mc"><h3 id="qx-mc">Economic indicators</h3><div id="qx-mcb">${skel(4)}</div></section>
