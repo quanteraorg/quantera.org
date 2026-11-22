@@ -13,6 +13,7 @@
 //   - Homepage: a short "Two ways to use Quantera" section with a path into each.
 import { library } from './library';
 import { quizScores } from './learning';
+import { prefs } from './prefs';
 
 declare function MODE(): string | null;
 declare function setMode_(m: string): void;
@@ -89,80 +90,80 @@ html[data-theme=light] .qx-ov{background:rgba(240,242,246,.8)}
 .qx-skel{height:14px;border-radius:6px;background:rgba(var(--fgc),.07);margin:8px 0;animation:qxp 1.2s ease-in-out infinite}
 @keyframes qxp{50%{opacity:.45}}
 .qx-err{color:var(--mu);font-size:14px}
-.qx-paths{margin:8px 0}.qx-paths>h2{margin:0}.qx-paths>.sub{margin:4px 0 16px;color:var(--mu)}
+.qx-paths{margin:8px 0}.qx-start{margin:14px 0 0;font-size:14.5px;line-height:1.8;color:var(--mu)}.qx-start a{color:var(--tx)}.qx-paths>h2{margin:0}.qx-paths>.sub{margin:4px 0 16px;color:var(--mu)}
 @media (prefers-reduced-motion:reduce){.qx-ov,.qx-box,.qx-skel{animation:none}}
 `;
 
 // ---------- concept challenges: hypothetical scenarios with an explanation for every answer ----------
 interface Opt { t: string; ok?: boolean; why: string }
-interface Cx { id: string; type: string; q: string; opts: Opt[]; concept: string; learn: string[]; explore?: [string, string] }
+interface Cx { id: string; type: string; level?: 'Beginner' | 'Intermediate' | 'Advanced'; q: string; opts: Opt[]; concept: string; learn: string[]; explore?: [string, string] }
 const CX: Cx[] = [
-  { id: 'growth-fall', type: 'Earnings interpretation', q: 'A software company reports revenue 25% higher than a year earlier, but its shares fall 8% the next day. Which explanation fits best with how markets usually work?',
+  { id: 'growth-fall', level: 'Intermediate', type: 'Earnings interpretation', q: 'A software company reports revenue 25% higher than a year earlier, but its shares fall 8% the next day. Which explanation fits best with how markets usually work?',
     opts: [{ t: 'Investors had expected even more, or the company lowered its forecast for the coming quarters', ok: true, why: 'Share prices already reflect what investors expect. A result can be good and still disappoint if expectations, or the outlook the company gives, were higher.' },
       { t: 'Revenue growth always makes a share price fall', why: 'There is no such rule. Prices react to how results compare with expectations, not to growth on its own.' },
       { t: 'Markets only look at revenue, so the fall must be a mistake', why: 'Investors also weigh profit, margins, cash flow and guidance. A fall is not automatically a mistake, and one day’s move rarely has a single cause.' }],
     concept: 'Prices move on results compared with expectations, and on the outlook, not on the headline number alone.', learn: ['research', 'pe'], explore: ['#/insights', 'See how stocks reacted to the same results'] },
-  { id: 'pe-compare', type: 'Valuation', q: 'Company A trades at a P/E of 40. Company B, in the same industry, trades at 12. What can you conclude from this alone?',
+  { id: 'pe-compare', level: 'Intermediate', type: 'Valuation', q: 'Company A trades at a P/E of 40. Company B, in the same industry, trades at 12. What can you conclude from this alone?',
     opts: [{ t: 'Investors pay more for each dollar of A’s current profit, usually because they expect it to grow faster', ok: true, why: 'P/E is price ÷ earnings per share. A higher P/E means a higher price per dollar of today’s profit, which usually reflects higher growth expectations.' },
       { t: 'A is overvalued and B is a bargain', why: 'P/E alone can’t tell you that. A may deserve its premium if it grows much faster; B may be cheap because its profits are shrinking.' },
       { t: 'B’s share price will rise', why: 'A low P/E is not a prediction. Stocks can stay cheap for years.' }],
     concept: 'P/E measures expectations, not value on its own. Compare it with growth (the PEG ratio) and with peers.', learn: ['pe', 'peg'], explore: ['#/compare', 'Compare two companies side by side'] },
-  { id: 'profit-cash', type: 'Financial statements', q: 'A company’s net income rose 15% last year, but its free cash flow fell sharply. Which is a likely explanation?',
+  { id: 'profit-cash', level: 'Intermediate', type: 'Financial statements', q: 'A company’s net income rose 15% last year, but its free cash flow fell sharply. Which is a likely explanation?',
     opts: [{ t: 'Cash was tied up in unsold inventory or unpaid customer bills, or spent on new equipment', ok: true, why: 'Profit counts sales when they are made and spreads investment over years. Cash flow counts money when it actually moves, so the two can diverge.' },
       { t: 'The accounts must be wrong, because profit and cash are always equal', why: 'They are rarely equal. Depreciation, timing of payments and investment spending all separate them.' },
       { t: 'Free cash flow doesn’t matter if profit is rising', why: 'Analysts watch both. Rising profit with falling cash can be a warning sign worth investigating in the cash flow statement.' }],
     concept: 'Profit and cash are different. The cash flow statement shows where the money actually went.', learn: ['cashflow', 'income'], explore: ['#/asset/AAPL', 'Open a company’s cash flow statement'] },
-  { id: 'mcap', type: 'Company comparison', q: 'Company X: $10 a share, 2 billion shares. Company Y: $500 a share, 10 million shares. Which company is worth more on the stock market?',
+  { id: 'mcap', level: 'Beginner', type: 'Company comparison', q: 'Company X: $10 a share, 2 billion shares. Company Y: $500 a share, 10 million shares. Which company is worth more on the stock market?',
     opts: [{ t: 'X: its market value is about $20 billion, against $5 billion for Y', ok: true, why: 'Market capitalization = share price × number of shares. $10 × 2 billion = $20 billion; $500 × 10 million = $5 billion.' },
       { t: 'Y, because its shares cost more', why: 'A high share price says nothing about size on its own. What matters is price × shares.' },
       { t: 'They are the same size', why: 'Work it out: $20 billion against $5 billion.' }],
     concept: 'Market capitalization (price × shares) measures size. The share price alone does not.', learn: ['stock'], explore: ['#/stocks', 'Browse companies by market value'] },
-  { id: 'yield-jump', type: 'Risk assessment', q: 'A stock’s dividend yield rises from 3% to 9% in a month, but the company hasn’t changed its dividend. What happened?',
+  { id: 'yield-jump', level: 'Intermediate', type: 'Risk assessment', q: 'A stock’s dividend yield rises from 3% to 9% in a month, but the company hasn’t changed its dividend. What happened?',
     opts: [{ t: 'The share price fell by about two-thirds', ok: true, why: 'Yield = yearly dividend ÷ share price. With the same dividend, yield triples when the price falls to a third. A very high yield can be a sign investors expect the dividend to be cut.' },
       { t: 'The company became three times more generous', why: 'The dividend didn’t change. Only the price moved.' },
       { t: 'It’s now a safer investment', why: 'Usually the opposite: a sudden jump in yield often reflects higher risk.' }],
     concept: 'Dividend yield moves with the share price. An unusually high yield deserves a closer look, not automatic trust.', learn: ['dividend'] },
-  { id: 'divers', type: 'Risk assessment', q: 'Portfolio 1 holds 10 technology stocks. Portfolio 2 holds 10 stocks across different industries. Which is likely to swing less?',
+  { id: 'divers', level: 'Beginner', type: 'Risk assessment', q: 'Portfolio 1 holds 10 technology stocks. Portfolio 2 holds 10 stocks across different industries. Which is likely to swing less?',
     opts: [{ t: 'Portfolio 2, because stocks in different industries tend to move less together', ok: true, why: 'Diversification works when holdings are not highly correlated. Ten stocks in one industry often fall together on the same news.' },
       { t: 'They swing the same, because both hold 10 stocks', why: 'The number of holdings matters less than how closely they move together.' },
       { t: 'Portfolio 1, because technology companies are bigger', why: 'Size doesn’t remove the shared risk of one industry.' }],
     concept: 'Diversification depends on correlation, not just the number of holdings.', learn: ['divers'], explore: ['#/portfolio', 'Check your paper portfolio’s spread'] },
-  { id: 'rates-bonds', type: 'Market event interpretation', q: 'The central bank unexpectedly raises interest rates. What usually happens to the prices of existing bonds?',
+  { id: 'rates-bonds', level: 'Intermediate', type: 'Market event interpretation', q: 'The central bank unexpectedly raises interest rates. What usually happens to the prices of existing bonds?',
     opts: [{ t: 'They fall, because new bonds now pay more, so older, lower-paying bonds are worth less', ok: true, why: 'Bond prices and yields move in opposite directions. Buyers will only accept an old bond’s lower payments at a lower price.' },
       { t: 'They rise, because bonds are safe', why: 'Bonds carry interest-rate risk. Unexpected rate rises usually push existing bond prices down.' },
       { t: 'Nothing, because bond payments are fixed', why: 'The payments are fixed, but the price investors will pay for them changes with interest rates.' }],
     concept: 'When rates rise, existing bond prices fall. Longer bonds fall more.', learn: ['rates', 'bond'], explore: ['#/macro', 'See today’s interest rates'] },
-  { id: 'margins', type: 'Company comparison', q: 'Two companies each have $1 billion in revenue. A earns $200 million in net income, B earns $50 million. What does this tell you?',
+  { id: 'margins', level: 'Beginner', type: 'Company comparison', q: 'Two companies each have $1 billion in revenue. A earns $200 million in net income, B earns $50 million. What does this tell you?',
     opts: [{ t: 'A keeps 20 cents of each sales dollar as profit; B keeps 5 cents', ok: true, why: 'Net margin = net income ÷ revenue: $200M ÷ $1B = 20%, $50M ÷ $1B = 5%. Margins show how efficiently sales turn into profit.' },
       { t: 'They are equally profitable, because revenue is the same', why: 'Same sales, very different profit. Margins capture the difference.' },
       { t: 'B must be a worse investment', why: 'Not necessarily: margins differ a lot by industry, and B may be investing for growth. Compare with peers first.' }],
     concept: 'Profit margins show how much of each sales dollar becomes profit. Compare them within an industry.', learn: ['ratios', 'income'] },
-  { id: 'leverage', type: 'Risk assessment', q: 'You invest using 2× leverage (half your own money, half borrowed), and the stock falls 30%. Roughly how much of your own money have you lost?',
+  { id: 'leverage', level: 'Intermediate', type: 'Risk assessment', q: 'You invest using 2× leverage (half your own money, half borrowed), and the stock falls 30%. Roughly how much of your own money have you lost?',
     opts: [{ t: 'About 60%, before interest and fees', ok: true, why: 'Leverage multiplies the move: a 30% fall on twice your money is a loss equal to 60% of what you put in.' },
       { t: '30%, the same as the stock', why: 'Without leverage, yes. Borrowing doubles your exposure, so it doubles the loss.' },
       { t: '15%, because half the money was borrowed', why: 'Borrowed money still has to be repaid in full. The loss falls on your share.' }],
     concept: 'Leverage magnifies gains and losses in equal measure.', learn: ['leverage', 'sizing'] },
-  { id: 'drawdown', type: 'Risk assessment', q: 'An investment falls 50%. What gain does it need to get back to where it started?',
+  { id: 'drawdown', level: 'Beginner', type: 'Risk assessment', q: 'An investment falls 50%. What gain does it need to get back to where it started?',
     opts: [{ t: '100%', ok: true, why: 'From $100 to $50 is −50%. Getting from $50 back to $100 means doubling: +100%.' },
       { t: '50%', why: '$50 plus 50% is only $75.' },
       { t: '25%', why: 'Far short: $50 plus 25% is $62.50.' }],
     concept: 'Losses need bigger gains to recover. That is why limiting large losses matters.', learn: ['drawdown', 'riskreward'] },
-  { id: 'inflation', type: 'Financial reasoning', q: 'Your savings earn 2% a year while inflation is 4%. What happens to what your money can buy?',
+  { id: 'inflation', level: 'Beginner', type: 'Financial reasoning', q: 'Your savings earn 2% a year while inflation is 4%. What happens to what your money can buy?',
     opts: [{ t: 'It falls by about 2% a year', ok: true, why: 'The real return is roughly the interest rate minus inflation: 2% − 4% ≈ −2%. You have more dollars, but each buys less.' },
       { t: 'It grows 2% a year', why: 'That is the nominal return. Prices rising 4% more than offset it.' },
       { t: 'It stays the same, because savings are protected', why: 'Deposit insurance protects against a bank failing, not against inflation.' }],
     concept: 'The real return is the return after inflation.', learn: ['inflation', 'compound'] },
-  { id: 'guidance', type: 'Earnings interpretation', q: 'A company beats analysts’ earnings forecasts for the quarter, but its shares fall after it cuts its forecast for next quarter. What does this show?',
+  { id: 'guidance', level: 'Intermediate', type: 'Earnings interpretation', q: 'A company beats analysts’ earnings forecasts for the quarter, but its shares fall after it cuts its forecast for next quarter. What does this show?',
     opts: [{ t: 'Investors care about expected future profit, so a weaker outlook can outweigh a strong past quarter', ok: true, why: 'A share price reflects expectations about the future. Guidance changes those expectations directly.' },
       { t: 'Beating forecasts is bad for a stock', why: 'Not in general. Here the outlook mattered more than the past quarter.' },
       { t: 'The market reacted to the wrong news', why: 'Markets can overreact, but weighing the future more than the past is normal, not a mistake.' }],
     concept: 'Guidance (the company’s own forecast) often moves a stock more than the quarter just reported.', learn: ['research'], explore: ['#/insights', 'Compare reactions to earnings news'] },
-  { id: 'perpetuity', type: 'Valuation exercise', q: 'A business produces $1 billion of free cash flow a year and is not expected to grow. If you require a 10% yearly return, roughly what is it worth today?',
+  { id: 'perpetuity', level: 'Advanced', type: 'Valuation exercise', q: 'A business produces $1 billion of free cash flow a year and is not expected to grow. If you require a 10% yearly return, roughly what is it worth today?',
     opts: [{ t: 'About $10 billion', ok: true, why: 'For a steady cash flow that lasts indefinitely, value ≈ cash flow ÷ required return: $1B ÷ 0.10 = $10B.' },
       { t: 'About $1 billion', why: 'That is one year of cash. The business keeps producing it year after year.' },
       { t: 'About $100 billion', why: 'That would mean accepting a 1% return, not 10%.' }],
     concept: 'Valuation turns future cash into today’s value using the return investors require. A DCF builds on the same idea.', learn: ['dcf', 'wacc'], explore: ['#/valuation/AAPL', 'Try a valuation model'] },
-  { id: 'volume', type: 'Market event interpretation', q: 'Stock A rises 6% on four times its usual trading volume. Stock B rises 6% on very low volume. What is the most reasonable difference?',
+  { id: 'volume', level: 'Beginner', type: 'Market event interpretation', q: 'Stock A rises 6% on four times its usual trading volume. Stock B rises 6% on very low volume. What is the most reasonable difference?',
     opts: [{ t: 'A’s move involved many more buyers and sellers, so it reflects broader participation', ok: true, why: 'Volume shows how much trading sits behind a move. It describes participation, not where the price goes next.' },
       { t: 'A will keep rising and B will fall back', why: 'Volume isn’t a forecast. It helps you judge a move, not predict the next one.' },
       { t: 'There is no difference, because both rose 6%', why: 'The price change is the same, but the amount of trading behind it is very different.' }],
@@ -171,7 +172,8 @@ const CX: Cx[] = [
 
 const dayKey = () => { const x = new Date(); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
 const dayIndex = () => Math.floor(Date.now() / 864e5 - new Date().getTimezoneOffset() / 1440);
-const todaysCx = (): Cx => CX[((dayIndex() % CX.length) + CX.length) % CX.length];
+// One challenge a day. With a preferred level (Personalize), it comes from that level; Advanced also includes Intermediate.
+const todaysCx = (): Cx => { const lv = prefs().level, pool = lv ? CX.filter(c => c.level === lv || (lv === 'Advanced' && c.level === 'Intermediate')) : CX, L = pool.length ? pool : CX; return L[((dayIndex() % L.length) + L.length) % L.length]; };
 interface CxLog { [day: string]: { id: string; ok: boolean; i?: number } }
 const CXKEY = 'q_cx';
 
@@ -179,7 +181,7 @@ const lessonTitle = (id: string): string => { const l = (typeof LES !== 'undefin
 
 function cxHtml(c: Cx, el: HTMLElement): void {
   const log = LS<CxLog>(CXKEY, {}), done = log[dayKey()] && log[dayKey()].id === c.id ? log[dayKey()] : null;
-  el.innerHTML = `<div class="qx-q"><span class="tag">${esc(c.type)} · hypothetical scenario</span><p class="q">${esc(c.q)}</p>
+  el.innerHTML = `<div class="qx-q"><span class="tag">${esc(c.type)}${c.level ? ' · ' + esc(c.level) : ''} · hypothetical scenario</span><p class="q">${esc(c.q)}</p>
     ${c.opts.map((o, i) => `<button type="button" class="op" data-i="${i}">${esc(o.t)}</button>`).join('')}<div class="res" hidden></div>
     <p class="src">For learning: this is a made-up example, not a prediction or advice about any real stock.</p></div>`;
   const show = (pick: number) => {
@@ -257,7 +259,10 @@ function student(m: HTMLElement): void {
   const S = (() => { try { return STATS(); } catch { return null; } })();
   const done = typeof DONE !== 'undefined' ? DONE : new Set<string>();
   const lessons = lessonsInOrder(), total = lessons.length, nDone = lessons.filter(l => done.has(l.id)).length;
-  const next = lessons.filter(l => !done.has(l.id)).slice(0, 3);
+  // recommendations follow the Personalize choices: the chosen level first, favorite topics first within it
+  const pf = prefs(), order = ['Beginner', 'Intermediate', 'Advanced'], start = pf.level ? order.indexOf(pf.level) : 0, topics = new Set(pf.topics || []);
+  const next = lessons.filter(l => !done.has(l.id)).map(l => ({ l, s: (order.indexOf(l.level) >= start ? 0 : 10) + Math.abs(order.indexOf(l.level) - start) * 2 + (topics.size && !topics.has(l.cat) ? 1 : 0) }))
+    .sort((a, b) => a.s - b.s).slice(0, 3).map(x => x.l);
   const daily = LS<{ day?: string; done?: boolean; total?: number; days?: number }>('q_daily', {});
   const cxLog = LS<CxLog>(CXKEY, {}), cxN = Object.keys(cxLog).length, cxOk = Object.values(cxLog).filter(x => x.ok).length;
   const qs = quizScores(), qk = Object.keys(qs), qAvg = qk.length ? Math.round(qk.reduce((t, k) => t + qs[k].best / Math.max(1, qs[k].n), 0) / qk.length * 100) : null;
@@ -445,7 +450,8 @@ function homePaths(): void {
   const mine = saved();
   desk.insertAdjacentHTML('beforebegin', `<section class="qx-paths" aria-labelledby="qx-ph"><h2 id="qx-ph">Two ways to use Quantera</h2><p class="sub">One platform and the same data, presented for how you want to work. Switch at any time.</p>
     <div class="qx-two"><div class="qx-card st"><small>Quantera Student</small><b>Learn, explore and practice.</b><p>Lessons from your first stock to valuation, a daily challenge, plain-English explanations and paper trading.</p><div class="act"><a class="btn${mine === 'student' ? ' p' : ''}" href="#/dashboard/student">${mine === 'student' ? 'Your dashboard' : 'Explore Student'}</a></div></div>
-    <div class="qx-card pr"><small>Quantera Professional</small><b>Research, analyze and investigate.</b><p>Original research with methods and sources, SEC financial statements, market and economic data, and analytical tools.</p><div class="act"><a class="btn${mine === 'professional' ? ' p' : ''}" href="#/dashboard/professional">${mine === 'professional' ? 'Your research desk' : 'Explore Professional'}</a></div></div></div></section>`);
+    <div class="qx-card pr"><small>Quantera Professional</small><b>Research, analyze and investigate.</b><p>Original research with methods and sources, SEC financial statements, market and economic data, and analytical tools.</p><div class="act"><a class="btn${mine === 'professional' ? ' p' : ''}" href="#/dashboard/professional">${mine === 'professional' ? 'Your research desk' : 'Explore Professional'}</a></div></div></div>
+    <p class="qx-start">Start in one click: <a href="#/lesson/intro">Introduction to investing (10 minutes)</a> · <a href="#/asset/${FEATURED[((dayIndex() % FEATURED.length) + FEATURED.length) % FEATURED.length]}">Investigate today’s featured company</a> · <a href="#/research">Read the latest research</a> · <a href="#/insights">Compare reactions to the news</a>. No account needed.</p></section>`);
 }
 
 export function initExperience(): void {
