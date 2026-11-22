@@ -6,7 +6,7 @@ The pages are plain HTML so they load fast, work without JavaScript and can be r
 """
 import html, os
 
-UPDATED = 'November 21, 2026'
+UPDATED = 'November 22, 2026'
 SITE = 'https://quanteraorg.vercel.app'
 CONTACT = '<a href="https://instagram.com/quantera.research" rel="noopener">@quantera.research on Instagram</a>'
 OUT = os.path.join(os.path.dirname(__file__), '..', 'public')
@@ -50,7 +50,7 @@ PRIVACY = f"""
 <li>You can delete your account and everything stored with it yourself, in Settings.</li></ul>
 <h2 id="collect">What we collect</h2>
 <table><tr><th>What</th><th>When</th><th>Details</th></tr>
-<tr><td>Your data in this browser</td><td>Always (needed for the site to work)</td><td>Watchlists, paper portfolio and trades, trade journal, notes, research folders and thesis notes, lesson progress and streaks, recent reports, saved and read research studies, your reaction comparisons and settings (theme, layout, privacy choice). Stored in your browser’s local storage, not sent to us unless you create an account. See <a href="/cookies">Cookies and storage</a>.</td></tr>
+<tr><td>Your data in this browser</td><td>Always (needed for the site to work)</td><td>Watchlists, paper portfolio and trades, trade journal, notes, research folders and thesis notes, lesson progress, quiz scores, challenge answers and streaks, recent reports, saved and read research studies, recently viewed companies and lessons, your reaction comparisons, your experience (Student or Professional), your preferences (lesson level, favorite topics, preferred industries, default research view) and settings (theme, layout, privacy choice). Stored in your browser’s local storage, not sent to us unless you create an account. See <a href="/cookies">Cookies and storage</a>.</td></tr>
 <tr><td>Account</td><td>Only if you create one</td><td>Your email address and a synced copy of the data above, so it follows you between devices. Sign-in is handled by our database provider, Supabase; we never see your password. If you sign in with Google, Google shares your email address and basic profile with us through Supabase.</td></tr>
 <tr><td>Leaderboard</td><td>Only if you join</td><td>The nickname you choose, your paper returns and number of trades, shown publicly. Please don’t use your real name. You can leave at any time.</td></tr>
 <tr><td>Waitlist and research updates</td><td>Only if you sign up</td><td>Your email address, what you signed up for (a plan, or an email when we publish new research) and which page you signed up from. We use it only for that, and you can ask us to remove it at any time.</td></tr>
@@ -138,8 +138,9 @@ COOKIES = f"""
 <table><tr><th>What</th><th>Why</th><th>Needed?</th></tr>
 <tr><td>Watchlists, paper portfolio, trades and trade journal</td><td>So your practice investing is still there next time</td><td>Yes, for those features</td></tr>
 <tr><td>Notes, research folders, thesis notes, recent reports</td><td>So your research is saved</td><td>Yes, for those features</td></tr>
-<tr><td>Lesson progress, daily-challenge streak, badges</td><td>To track your learning</td><td>Yes, for those features</td></tr>
+<tr><td>Lesson progress, quiz scores, daily and concept challenge answers, streak, badges</td><td>To track your learning</td><td>Yes, for those features</td></tr>
 <tr><td>Settings: theme, Student or Professional experience, layouts, chart settings, dismissed tips</td><td>To remember how you like the site</td><td>Yes</td></tr>
+<tr><td>Preferences: lesson level, favorite topics, preferred industries, default research view; recently viewed companies and lessons</td><td>To recommend lessons and pick up where you left off</td><td>Yes</td></tr>
 <tr><td>Your privacy choice</td><td>To remember whether statistics and error reports are on</td><td>Yes</td></tr>
 <tr><td>Sign-in session (only if you have an account)</td><td>To keep you signed in; issued by Supabase</td><td>Yes, for accounts</td></tr>
 <tr><td>Short-lived page memory (session storage)</td><td>Scroll positions and one-time notices during a visit; cleared when you close the tab</td><td>Yes</td></tr></table>

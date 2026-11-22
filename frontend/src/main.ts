@@ -33,6 +33,7 @@ import { initIntro } from './intro';
 import { initListed } from './listed';
 import { initExperience } from './experience';
 import { initLearning } from './learning';
+import { initEngage } from './engage';
 
 initStates();
 initMotion();
@@ -67,3 +68,4 @@ initListed();
 initUi();
 initExperience();
 initLearning();
+initEngage();

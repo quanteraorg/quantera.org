@@ -5,6 +5,7 @@
 
 interface Item { slug: string; title: string; dek: string; date: string; updated?: string; category: string; classification?: string; industry?: string; tickers?: string[]; readMinutes?: number; findings?: string[]; sources?: number; primarySources?: number }
 declare function isSimple(): boolean;
+import { prefs } from './prefs';
 interface Lib { categories: string[]; articles: Item[] }
 
 const CSS = `
@@ -91,8 +92,9 @@ function depth(m: HTMLElement): void {
     bar.querySelectorAll<HTMLButtonElement>('button').forEach(b => { const on = b.dataset.d === d; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); };
   bar.addEventListener('click', e => { const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-d]'); if (b) { set(b.dataset.d!); track('research_depth_' + b.dataset.d); } });
   const student = typeof isSimple === 'function' && isSimple();
-  set(student ? 'overview' : 'detail');
-  if (student) bar.insertAdjacentHTML('afterend', '<p class="qra-dn">Student view starts with the overview: the question, the summary, the key findings and the terms you need. Choose <b>Detailed analysis</b> for the full study.</p>');
+  const pd = prefs().depth;
+  set(pd || (student ? 'overview' : 'detail'));
+  if (student && !pd) bar.insertAdjacentHTML('afterend', '<p class="qra-dn">Student view starts with the overview: the question, the summary, the key findings and the terms you need. Choose <b>Detailed analysis</b> for the full study.</p>');
 }
 
 async function reader(slug: string): Promise<void> {
