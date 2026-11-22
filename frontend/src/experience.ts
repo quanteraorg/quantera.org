@@ -443,6 +443,17 @@ function dashboard(arg?: string): void {
   }
 }
 
+// ---------- Insights in Student mode: the method in plain English first (Professional keeps the full method panel) ----------
+function insightsIntro(): void {
+  if (saved() !== 'student' || !/^#\/insights/.test(location.hash)) return;
+  const m = document.getElementById('m'); if (!m || m.querySelector('.qx-ins')) return;
+  const host = m.querySelector('h1, h2'); if (!host) return;
+  host.insertAdjacentHTML('afterend', `<div class="qx-c qx-ins" role="note" style="margin:10px 0 18px;max-width:860px"><h3>In plain English</h3>
+    <p>When news comes out, a stock moves for two reasons: the whole market moved that day, and something about the company itself. Insights splits each move into those two parts.</p>
+    <ul style="margin:0 0 8px;padding-left:20px;line-height:1.7;font-size:14.5px"><li><b>Market part:</b> how much the stock usually moves when the market moves (its <a href="#/lesson/capm">beta</a>), times the market’s move that day.</li><li><b>Company-specific part:</b> the rest of the move.</li><li><b>“Times its normal day”:</b> how big that company-specific move was compared with a typical day for that stock.</li></ul>
+    <p class="src">It shows what happened alongside the news, not proof that the news caused it. The full method and limits are further down.</p></div>`);
+}
+
 // ---------- homepage: two ways in ----------
 function homePaths(): void {
   const m = document.getElementById('m'); if (!m || m.querySelector('.qx-paths')) return;
@@ -451,7 +462,9 @@ function homePaths(): void {
   desk.insertAdjacentHTML('beforebegin', `<section class="qx-paths" aria-labelledby="qx-ph"><h2 id="qx-ph">Two ways to use Quantera</h2><p class="sub">One platform and the same data, presented for how you want to work. Switch at any time.</p>
     <div class="qx-two"><div class="qx-card st"><small>Quantera Student</small><b>Learn, explore and practice.</b><p>Lessons from your first stock to valuation, a daily challenge, plain-English explanations and paper trading.</p><div class="act"><a class="btn${mine === 'student' ? ' p' : ''}" href="#/dashboard/student">${mine === 'student' ? 'Your dashboard' : 'Explore Student'}</a></div></div>
     <div class="qx-card pr"><small>Quantera Professional</small><b>Research, analyze and investigate.</b><p>Original research with methods and sources, SEC financial statements, market and economic data, and analytical tools.</p><div class="act"><a class="btn${mine === 'professional' ? ' p' : ''}" href="#/dashboard/professional">${mine === 'professional' ? 'Your research desk' : 'Explore Professional'}</a></div></div></div>
-    <p class="qx-start">Start in one click: <a href="#/lesson/intro">Introduction to investing (10 minutes)</a> · <a href="#/asset/${FEATURED[((dayIndex() % FEATURED.length) + FEATURED.length) % FEATURED.length]}">Investigate today’s featured company</a> · <a href="#/research">Read the latest research</a> · <a href="#/insights">Compare reactions to the news</a>. No account needed.</p></section>`);
+    <p class="qx-start">Start in one click: <a href="#/lesson/intro">Introduction to investing (10 minutes)</a> · <a href="#/asset/${FEATURED[((dayIndex() % FEATURED.length) + FEATURED.length) % FEATURED.length]}">Investigate today’s featured company</a> · <a href="#/research">Read the latest research</a> · <a href="#/insights">Compare reactions to the news</a>. No account needed.</p>
+    <div class="qx-c qx-try" style="margin-top:16px"><h3>Try it now: today’s one-minute challenge</h3><div id="qx-hcx"></div></div></section>`);
+  const hc = m.querySelector<HTMLElement>('#qx-hcx'); if (hc) cxHtml(todaysCx(), hc);
 }
 
 export function initExperience(): void {
@@ -469,6 +482,7 @@ export function initExperience(): void {
     const r = location.hash.split('/')[1] || '';
     if (r === 'dashboard') document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', (a as HTMLElement).dataset.r === 'dashboard'));
     if (r === '') { homePaths(); setTimeout(homePaths, 600); }
+    if (r === 'insights') [300, 1200, 3000].forEach(t => setTimeout(insightsIntro, t));
   };
   addEventListener('hashchange', () => setTimeout(after, 30)); setTimeout(after, 300);
   // First visit: the chooser, once, unless the visitor (or a test) has already dismissed the mode prompt.

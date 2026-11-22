@@ -26,6 +26,7 @@ const CSS = `
 .qx-pf .chips{display:flex;flex-wrap:wrap;gap:6px}.qx-pf .chips button{font:inherit;font-size:12.5px;border:1px solid var(--ln);border-radius:99px;background:none;color:var(--mu);padding:5px 10px;cursor:pointer}
 .qx-pf .chips button[aria-pressed=true]{color:var(--tx);border-color:var(--ac);background:rgba(var(--acc),.12)}
 .qx-cl .qx-ls a{padding:8px 12px}
+@media(max-width:1000px) and (min-width:681px){.qx-g>section:last-child:nth-child(odd){grid-column:span 12}}
 .qcr{border:1px solid var(--ln);border-radius:16px;padding:16px 20px;background:var(--s1);margin:18px 0}
 .qcr h3{margin:0 0 8px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)}.qcr ul{margin:0;padding-left:20px;line-height:1.8;font-size:14.5px}`;
 
@@ -164,6 +165,15 @@ function personalize(el: HTMLElement, pro: boolean): void {
 }
 const note = () => (typeof QAUTH !== 'undefined' && QAUTH && QAUTH.user ? 'Saved to your account.' : 'Saved in this browser only. With a free account it syncs to your other devices. Nothing else is collected.');
 
+// Row by row, so every row fills the 12-column grid (sections were sized before these extra ones were added).
+function layout(g: HTMLElement, pro: boolean): void {
+  const sec = (id: string) => g.querySelector<HTMLElement>(`#${id}`)?.closest<HTMLElement>('section') || null;
+  const order = pro
+    ? [['qe-cl', 4], ['qx-rs', 8], ['qx-in', 4], ['qe-wb', 8], ['qe-sv', 4], ['qx-mi', 8], ['qx-wl', 6], ['qx-mc', 6], ['qx-nw', 8], ['qx-pp', 4], ['qx-tl', 8], ['qe-pf', 4]]
+    : [['qe-cl', 4], ['qx-next', 8], ['qx-prog', 4], ['qx-cx', 8], ['qx-dn', 4], ['qe-wb', 8], ['qe-sv', 4], ['qx-mk', 8], ['qx-fc', 8], ['qx-pf', 4], ['qx-rr', 4], ['qx-ns', 4], ['qe-pf', 4]];
+  for (const [id, span] of order as [string, number][]) { const el = sec(id); if (!el) continue; el.classList.remove('w6', 'w8', 'w12'); if (span !== 4) el.classList.add('w' + span); g.appendChild(el); }
+}
+
 function addToDashboard(): void {
   const m = document.getElementById('m'), g = m?.querySelector('.qx-dash .qx-g'); if (!m || !g || g.querySelector('#qe-cl')) return;
   const pro = !!m.querySelector('.qx-seg a.on[href$="professional"]');
@@ -172,6 +182,7 @@ function addToDashboard(): void {
   const [cl, wb, sv, pf] = [...tmp.children] as HTMLElement[];
   if (anchor) anchor.before(wb, sv); else g.append(wb, sv);
   g.prepend(cl); g.append(pf);
+  layout(g as HTMLElement, pro);
   cont(m.querySelector('#qe-clb')!); brief(m.querySelector('#qe-wbb')!, pro); saved(m.querySelector('#qe-svb')!); personalize(m.querySelector('#qe-pfb')!, pro);
 }
 

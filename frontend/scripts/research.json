@@ -5,10 +5,10 @@
     {
       "slug": "openai-vs-anthropic-ai-race-2026",
       "title": "OpenAI vs Anthropic: how the AI race flipped, in their own numbers",
-      "dek": "In March 2025, Anthropic was valued at about a fifth of OpenAI. By May 2026 it was valued higher. Now Anthropic is heading to the stock market. What the filings show, and why \"who makes more money\" depends on how you count.",
+      "dek": "In March 2025, Anthropic was valued at about a fifth of OpenAI. By May 2026 it was valued higher. Then Anthropic went to the stock market (this study was written just before it priced its IPO; see the update). What the filings show, and why \"who makes more money\" depends on how you count.",
       "date": "2026-11-16",
       "updated": "2026-11-21",
-      "updates": [{"date": "2026-11-21", "text": "Since this study was published on November 16, 2026, Anthropic has priced its IPO at $83 a share, above the range discussed below, and its shares began trading on Nasdaq under the ticker ANT on November 19, closing their first day at $97.17. Parts of this study that describe the IPO as not yet priced reflect the situation on the publication date.", "source": "Anthropic final prospectus (Form 424B4), SEC EDGAR", "url": "https://www.sec.gov/Archives/edgar/data/2130357/000162828026074944/anthropicpbc-424b4.htm"}],
+      "updates": [{"date": "2026-11-21", "text": "Since this study was published on November 16, 2026, Anthropic has priced its IPO at $83 a share, above the range discussed below, and its shares began trading on Nasdaq under the ticker ANT on November 19, closing their first day at $97.17. The analysis below is the original study, unchanged: where it describes the IPO as not yet priced, or uses the $70–$78 range, it reflects the situation on November 16. Those parts are labeled.", "source": "Anthropic final prospectus (Form 424B4), SEC EDGAR", "url": "https://www.sec.gov/Archives/edgar/data/2130357/000162828026074944/anthropicpbc-424b4.htm"}],
       "category": "Comparative analysis",
       "classification": "Original research",
       "industry": "Artificial intelligence",
@@ -18,7 +18,7 @@
       "summary": [
         "Anthropic's private valuation rose from $61.5 billion in March 2025 to $965 billion in May 2026, briefly above OpenAI's latest round of $852 billion, before OpenAI moved back ahead at about $1.25 trillion in November 2026 [10][3][7].",
         "Anthropic's IPO filing shows revenue of $33.2 billion in the first nine months of 2026, up from $2.5 billion a year earlier, and its first quarterly operating profit, in Q2 2026 [1]. OpenAI is still private: its figures come from what it tells investors, as reported by the press, and are not audited [4][5][6].",
-        "The two companies count revenue differently, so a simple comparison misleads. A Fidelity fund valued Anthropic's shares 32% above its last round in August; Anthropic's IPO price range, set on November 10, values it close to that last round instead [2][1]."
+        "The two companies count revenue differently, so a simple comparison misleads. A Fidelity fund valued Anthropic's shares 32% above its last round in August; at publication, Anthropic's IPO price range, set on November 10, valued it close to that last round instead [2][1]."
       ],
       "findings": [
         "The valuation gap closed in 14 months: Anthropic went from about one fifth of OpenAI's valuation ($61.5B vs $300B, March 2025) to above it ($965B in May 2026 vs OpenAI's $852B) [10][3][7].",
@@ -293,7 +293,7 @@
           }
         },
         {
-          "h": "The IPO",
+          "h": "The IPO, as of November 16 (before pricing)",
           "list": [
             "Listing: Nasdaq Global Select Market, ticker ANT; price range $70–$78 per Class A share [1].",
             "Shares offered: 825,000,000 (801,351,354 new; 23,648,646 sold by existing holders), plus a private placement at the IPO price of about $10B each from Google and NVIDIA at the midpoint, and AMD [1].",
@@ -354,7 +354,7 @@
         "Private valuations come from Forge Global's record of funding rounds; reports differ on whether OpenAI's $1.25T is before or after new money (under 2% apart).",
         "Fund marks are one manager's Level 3 estimate on one date; the implied company value assumes the May round's share count.",
         "Annualized revenue multiplies one period by four or twelve; it is a projection, not a reported annual figure.",
-        "Anthropic's IPO had not been priced on the publication date; the range and share counts can change before pricing.",
+        "Anthropic's IPO had not been priced on the publication date, so this study uses the November 10 range and share counts. It has since priced at $83 a share, above that range (see the update at the top); the final share count can differ from the one used here.",
         "Data as of November 16, 2026."
       ],
       "sources": [

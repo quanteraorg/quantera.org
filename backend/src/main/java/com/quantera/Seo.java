@@ -294,6 +294,7 @@ final class Seo {
         StringBuilder m = new StringBuilder("<h1>Private company valuations</h1><p>What OpenAI, Stripe and other private companies are estimated to be worth, how much they have raised, and their latest funding rounds.</p><div class=\"tw\"><table><tr><th>Company</th><th>Sector</th><th>Estimated valuation</th><th>Latest round</th><th>Total raised</th><th>Price change, past year</th></tr>");
         final String na = "<span class=\"na\" title=\"Our data source has no figure for this company\">Not available</span>";
         int row = 0;
+        StringBuilder listedRows = new StringBuilder();
         for (Object o : list(Yahoo.privates().get("companies"))) {
             Map<String, Object> c = map(o);
             String name = str(c.get("name"));
@@ -301,15 +302,21 @@ final class Seo {
             Map<String, Object> pub = null;
             if (name != null) try { pub = row++ < 10 ? Listed.of(name) : Listed.cached(name); } catch (RuntimeException ignored) {}
             boolean nowPublic = pub != null && Boolean.TRUE.equals(pub.get("listed"));
-            m.append("<tr><td><a href=\"/private-company/").append(h(slug(name))).append("\">").append(h(name)).append("</a>")
-             .append(nowPublic ? "<br><small>Now public: <a href=\"/stock/" + h(str(pub.get("symbol"))) + "\">" + h(str(pub.get("symbol"))) + "</a></small>" : "").append("</td><td>")
+            if (nowPublic) { // listed companies move to their own section below; their private history stays one click away
+                listedRows.append("<tr><td><a href=\"/stock/").append(h(str(pub.get("symbol")))).append("\">").append(h(name)).append("</a></td><td>").append(h(str(pub.get("symbol"))))
+                    .append("</td><td>").append(str(pub.get("firstTrade")) == null ? na : h(str(pub.get("firstTrade")))).append("</td><td>").append(d(c, "valuation") == null ? na : h(money(d(c, "valuation"), "USD")) + "<br><small>estimate before listing</small>")
+                    .append("</td><td><a href=\"/private-company/").append(h(slug(name))).append("\">Funding rounds and pre-IPO history</a></td></tr>");
+                continue;
+            }
+            m.append("<tr><td><a href=\"/private-company/").append(h(slug(name))).append("\">").append(h(name)).append("</a>").append("</td><td>")
              .append(str(c.get("sector")) == null ? na : h(str(c.get("sector")))).append("</td><td>")
              .append(d(c, "valuation") == null ? na : h(money(d(c, "valuation"), "USD"))).append("</td><td>")
              .append(str(c.get("lastRound")) == null ? na : h(str(c.get("lastRound"))) + (str(c.get("lastRoundDate")) == null ? "" : "<br><small>" + h(str(c.get("lastRoundDate"))) + "</small>")).append("</td><td>")
              .append(d(c, "funding") == null ? na : h(money(d(c, "funding"), "USD"))).append("</td><td>")
              .append(d(c, "change52w") == null ? na : h(signed(d(c, "change52w") / 100))).append("</td></tr>");
         }
-        m.append("</table></div><p class=\"src\"><b>Price change, past year</b> is the change in the estimated price per share over the last 12 months, not the change in total valuation (new shares issued in funding rounds can make the two differ). <b>Not available</b> means our data source has no figure for that company, usually because the company has not disclosed it.</p>");
+        m.append("</table></div><p class=\"src\"><b>Price change, past year</b> is the change in Forge Global’s estimated price per share over the last 12 months. That estimate comes from funding rounds and secondary-market trades between investors, so it moves in steps when deals happen; it is not a continuously traded market price, and it is not the change in total valuation (new shares issued in funding rounds can make the two differ). <b>Not available</b> means our data source has no figure for that company, usually because the company has not disclosed it.</p>");
+        if (listedRows.length() > 0) m.append("<h2>Now public</h2><p>These companies have listed on a stock exchange. Their value is now their public market capitalization, on their stock page. The figure here is the last private estimate before listing, kept for history.</p><div class=\"tw\"><table><tr><th>Company</th><th>Ticker</th><th>First trading day</th><th>Last private valuation</th><th>History</th></tr>").append(listedRows).append("</table></div>");
         m.append("</table></div><p class=\"src\">Source: Yahoo Finance, with valuations and funding data from Forge Global. ").append(h(PVT_METHOD)).append(" Each company's page compares its estimate with its last funding round. ").append(h(fetchedLine(str(Yahoo.privates().get("updated"))))).append(" Not investment advice.</p>");
         return new Page(200, "text/html; charset=utf-8", page("Private Company Valuations: OpenAI, Anthropic, Stripe and More | Quantera", "Estimated valuations, funding totals and latest rounds for the biggest private companies, including OpenAI, Anthropic and Stripe.", "/private-companies", m.toString(), null, true));
     }
