@@ -12,6 +12,7 @@
 //   - Concept challenges: a short daily scenario with an explanation for every answer (education, not prediction).
 //   - Homepage: a short "Two ways to use Quantera" section with a path into each.
 import { library } from './library';
+import { quizScores } from './learning';
 
 declare function MODE(): string | null;
 declare function setMode_(m: string): void;
@@ -259,6 +260,8 @@ function student(m: HTMLElement): void {
   const next = lessons.filter(l => !done.has(l.id)).slice(0, 3);
   const daily = LS<{ day?: string; done?: boolean; total?: number; days?: number }>('q_daily', {});
   const cxLog = LS<CxLog>(CXKEY, {}), cxN = Object.keys(cxLog).length, cxOk = Object.values(cxLog).filter(x => x.ok).length;
+  const qs = quizScores(), qk = Object.keys(qs), qAvg = qk.length ? Math.round(qk.reduce((t, k) => t + qs[k].best / Math.max(1, qs[k].n), 0) / qk.length * 100) : null;
+  const retry = qk.filter(k => qs[k].best < qs[k].n).sort((a, b) => qs[a].best / qs[a].n - qs[b].best / qs[b].n).slice(0, 3);
   const name = (() => { try { const n = DNAME(); return n && !/^(guest|you)$/i.test(n) ? n.split(' ')[0] : ''; } catch { return ''; } })();
   const quizLesson = lessons.find(l => !done.has(l.id) && LX && LX[l.id] && LX[l.id].q && LX[l.id].q!.length) || lessons.find(l => LX && LX[l.id] && LX[l.id].q);
   const steps: [string, string][] = [];
@@ -274,11 +277,11 @@ function student(m: HTMLElement): void {
      <a class="lnk" href="#/learn">See all ${total} lessons by level →</a></section>
     <section class="qx-c" aria-labelledby="qx-prog"><h3 id="qx-prog">Your progress</h3><div class="qx-meter" role="img" aria-label="${nDone} of ${total} lessons completed"><i style="width:${total ? Math.round(nDone / total * 100) : 0}%"></i></div>
      <p><b>${nDone} of ${total}</b> lessons completed</p>
-     <div class="qx-stats"><div><b>${S ? S.streak : 0}</b><small>day streak</small></div><div><b>${daily.total || 0}</b><small>challenge XP</small></div><div><b>${cxN ? cxOk + '/' + cxN : '0'}</b><small>concept challenges right</small></div></div>
+     <div class="qx-stats"><div><b>${S ? S.streak : 0}</b><small>day streak</small></div><div><b>${daily.total || 0}</b><small>challenge XP</small></div><div><b>${cxN ? cxOk + '/' + cxN : '0'}</b><small>concept challenges right</small></div><div><b>${qAvg == null ? '—' : qAvg + '%'}</b><small>quiz average${qk.length ? ` (${qk.length} quiz${qk.length === 1 ? '' : 'zes'})` : ''}</small></div></div>
      <p class="src">${typeof QAUTH !== 'undefined' && QAUTH && QAUTH.user ? 'Saved to your account.' : 'Saved on this device. <a href="#/settings">Create a free account</a> to keep it everywhere.'}</p></section>
     <section class="qx-c w8" aria-labelledby="qx-cx"><h3 id="qx-cx">Today’s concept challenge</h3><div id="qx-cxb"></div></section>
     <section class="qx-c" aria-labelledby="qx-dn"><h3 id="qx-dn">Daily news challenge</h3><p>${daily.day === dayKey() && daily.done ? 'Done for today. Come back tomorrow for a new story.' : 'Read one real news story, decide how it might affect the company, then see what the stock actually did.'}</p><a class="btn p" href="#/learn">${daily.day === dayKey() && daily.done ? 'Review it' : 'Start the news challenge'}</a>
-     <h3 style="margin-top:18px">Quick quiz</h3><div id="qx-qz"></div></section>
+     <h3 style="margin-top:18px">Quick quiz</h3><div id="qx-qz"></div>${retry.length ? `<h3 style="margin-top:18px">Quizzes to retry</h3><ul class="qx-ls">${retry.map(k => `<li><a href="#/lesson/${esc(k)}"><span><b>${esc(lessonTitle(k))}</b><small>Best score ${qs[k].best} of ${qs[k].n}</small></span></a></li>`).join('')}</ul>` : ''}</section>
     <section class="qx-c w6" aria-labelledby="qx-mk"><h3 id="qx-mk">Markets in plain English</h3><div id="qx-mkb">${skel()}</div></section>
     <section class="qx-c w6" aria-labelledby="qx-fc"><h3 id="qx-fc">Featured company</h3><div id="qx-fcb">${skel()}</div></section>
     <section class="qx-c" aria-labelledby="qx-pf"><h3 id="qx-pf">Your paper portfolio</h3><div id="qx-pfb"></div></section>
