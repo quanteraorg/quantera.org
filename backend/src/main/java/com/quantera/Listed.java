@@ -36,6 +36,24 @@ final class Listed {
 
     /** Listed when a US equity's name starts with the company's name AND it went public within three years (an IPO filing at
      *  the SEC, or failing that its first trading day). Only a definite answer is cached, so a failed lookup is retried. */
+    /** Checks every private company in turn, one every 90 seconds, so a company that lists moves to the directory's
+     *  "Now public" section without waiting for someone to look it up. Skips answers less than 6 hours old. */
+    static void startSweep() {
+        java.util.concurrent.atomic.AtomicInteger i = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().factory()).scheduleWithFixedDelay(() -> {
+            try {
+                List<Object> cos = Support.list(Yahoo.privates().get("companies")); if (cos.isEmpty()) return;
+                for (int n = 0; n < cos.size(); n++) {
+                    String name = Support.str(Support.map(cos.get(Math.floorMod(i.getAndIncrement(), cos.size()))).get("name"));
+                    if (name == null) continue;
+                    String key = "listed" + norm(name);
+                    if (Providers.CACHE.peek(key) != null && Providers.CACHE.age(key) < 6 * 3600_000L) continue;
+                    of(name); return;
+                }
+            } catch (RuntimeException ignored) { /* try the next one on the next tick */ }
+        }, 120, 90, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
     /** The cached answer only (no lookups), for lists that show many companies at once; null when not checked yet. */
     static Map<String, Object> cached(String company) { return Providers.CACHE.peek("listed" + norm(company)); }
 

@@ -66,7 +66,7 @@ try {
         const sw = await page.evaluate(() => document.documentElement.scrollWidth);
         if (sw > w + 1) failures.push(`${where}: page is ${sw}px wide on a ${w}px screen`);
         for (const e of errors) failures.push(`${where}: page error: ${e}`);
-        if (theme === 'dark' && size === 'desktop') {
+        if (size === 'desktop') { // both themes: light-theme contrast is checked too
           await page.addScriptTag({ content: AXE });
           const v = await page.evaluate(async () => (await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] }, resultTypes: ['violations'] }))
             .violations.map(x => `${x.id} (${x.impact}, ${x.nodes.length}): ${x.nodes[0].html.slice(0, 120)}`));
@@ -132,4 +132,4 @@ if (failures.length) {
   console.error(`${failures.length} problem(s):\n` + failures.map(f => '  - ' + f).join('\n'));
   process.exit(1);
 }
-console.log(`OK: ${ROUTES.length} routes x 2 themes x 2 sizes, no page errors, no overflow, no accessibility violations, navigation steady under the pointer; big screens scale to fit.`);
+console.log(`OK: ${ROUTES.length} routes x 2 themes x 2 sizes, no page errors, no overflow, no accessibility violations (desktop, both themes), navigation steady under the pointer; big screens scale to fit.`);

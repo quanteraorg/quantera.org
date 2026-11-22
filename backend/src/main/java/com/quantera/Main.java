@@ -377,6 +377,7 @@ public final class Main {
         System.out.println("Quantera API listening on :" + port + " (market=" + Providers.marketOn() + ", news=" + Providers.newsOn() + ", ai=" + Providers.aiOn() + ", storage=" + Store.on() + ")");
         startRefresh();
         Providers.startWarmer(); Providers.startPageWarmer();
+        if (Yahoo.on()) Listed.startSweep();
         Push.start();
         Tracker.start();
     }
