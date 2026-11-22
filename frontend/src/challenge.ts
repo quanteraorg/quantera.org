@@ -24,7 +24,7 @@ const CSS = `
 // a documented event (see the research library) plus real multi-company stories from the news feed
 const FIXED: Ev[] = [{
   key: 'nvda-2026-08-26', title: 'Nvidia reports record results',
-  context: 'After the market closed on 26 August 2026, Nvidia reported quarterly revenue of $96.2 billion, up 106% on a year earlier, and guided to about $108 billion for the next quarter. Chip stocks AMD, Super Micro Computer (SMCI) and Broadcom (AVGO) are all tied to the same AI spending.',
+  context: 'After the market closed on August 26, 2026, Nvidia reported quarterly revenue of $96.2 billion, up 106% on a year earlier, and guided to about $108 billion for the next quarter. Chip stocks AMD, Super Micro Computer (SMCI) and Broadcom (AVGO) are all tied to the same AI spending.',
   ask: { symbols: ['NVDA', 'AMD', 'SMCI', 'AVGO'], at: '2026-08-26T21:00:00Z', headline: 'Nvidia reports Q2 FY2027 results' },
 }];
 

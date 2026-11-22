@@ -353,7 +353,7 @@
         "Fund marks are one manager's Level 3 estimate on one date; the implied company value assumes the May round's share count.",
         "Annualized revenue multiplies one period by four or twelve; it is a projection, not a reported annual figure.",
         "Anthropic's IPO had not been priced on the publication date; the range and share counts can change before pricing.",
-        "Data as of 16 November 2026."
+        "Data as of November 16, 2026."
       ],
       "sources": [
         {
@@ -442,7 +442,7 @@
       "readMinutes": 6,
       "question": "What did Nvidia report for its Q2 FY2027 quarter (its most recently reported quarter when this study was published), and how did its shares move on the first trading day after the release and over the following four sessions, compared with the S&P 500?",
       "summary": [
-        "Nvidia's revenue for the quarter ended 26 July 2026 was $96.2 billion, up 106% from a year earlier and 18% from the previous quarter. Data Center revenue was $89.0 billion (+117% year on year).",
+        "Nvidia's revenue for the quarter ended July 26, 2026, was $96.2 billion, up 106% from a year earlier and 18% from the previous quarter. Data Center revenue was $89.0 billion (+117% year on year).",
         "The results came after the market closed on 26 August, so the first trading reaction was on 27 August. Nvidia's shares closed up 8.74% that day while the S&P 500 rose 0.72%: an abnormal move of about +8.0 percentage points.",
         "The next day the shares fell 4.57%, giving back about half of the first day's gain. Over the five sessions from 27 August to 2 September they rose 7.04% against −0.12% for the S&P 500."
       ],
@@ -457,7 +457,7 @@
       "sections": [
         {
           "h": "What Nvidia reported",
-          "p": ["The figures below come from Nvidia's own earnings release, filed with the US Securities and Exchange Commission (SEC) as an exhibit to its Form 8-K on 26 August 2026 [1]."],
+          "p": ["The figures below come from Nvidia's own earnings release, filed with the US Securities and Exchange Commission (SEC) as an exhibit to its Form 8-K on August 26, 2026 [1]."],
           "table": {
             "head": ["Item", "Value"],
             "rows": [
@@ -512,7 +512,7 @@
         {
           "h": "Method",
           "list": [
-            "The latest reported quarter was identified from Nvidia's SEC filings. Results for the following quarter were scheduled for 17 November 2026 [2].",
+            "The latest reported quarter was identified from Nvidia's SEC filings. Results for the following quarter were scheduled for November 17, 2026 [2].",
             "Day 0 is the first session after the release (after-close news counts from the next session).",
             "Daily return = close ÷ previous close − 1. The five-session return = close on 2 Sep ÷ close on 26 Aug − 1.",
             "Abnormal return = Nvidia's return − the S&P 500's return (a simple market-adjusted model with no beta adjustment).",
