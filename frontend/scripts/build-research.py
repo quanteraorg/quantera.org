@@ -217,6 +217,7 @@ def insights_html():
             '<li><b>Valuation and the run-up before the news</b> (typical patterns): expensive or recently strong stocks can react more to news that changes expectations.</li></ul></div>'
             '<h2>Limits</h2><ul><li>Daily closing prices only, so news during the trading day is measured over the whole day.</li>'
             '<li>Other news, earnings or market events on the same day can also move a stock, so these measurements never prove why a price moved.</li>'
+            '<li>Each comparison is one event per company: a sample of one, which can\'t show a lasting pattern. No statistical significance test is run; "times its normal day" compares the move with the stock\'s typical daily size and is not a formal test.</li>'
             '<li>Size and valuation are today\'s figures, not the figures on the day of the news.</li><li>Education, not investment advice.</li></ul>'
             '<h2>Read a full study</h2><p>See the method applied in <a href="/research/nvidia-q2-fy2027-earnings-reaction">Nvidia\'s Q2 FY2027 results: an 8.7% jump, then half of it given back</a>, '
             'or try the <a href="/#/challenge">market reaction challenge</a> in the Academy.</p></main>')
