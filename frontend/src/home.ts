@@ -44,7 +44,7 @@ function hero(open: HTMLElement): void {
     <a class="qh-alt" href="#/trade">Or practice investing with $100,000 of virtual money →</a>
     <div class="fine" style="margin-top:12px">Free. No sign-up needed. For education, not investment advice.</div>${facts}`;
   const f = inner.querySelector('.hm-facts');
-  if (f) f.innerHTML = `<span><b>SEC financials</b> for every US stock</span><span><b>44 countries</b> of market prices</span><span><b>39</b> free lessons</span><a href="#/private"><b>100+</b> private company valuations →</a>`;
+  if (f) f.innerHTML = `<span><b>SEC financials</b> for every US stock</span><span><b>44 countries</b> of market prices</span><span><b>43</b> free lessons</span><a href="#/private"><b>100+</b> private company valuations →</a>`;
 }
 
 async function desk(hm: HTMLElement): Promise<void> {
@@ -112,7 +112,7 @@ function about(): void {
     <ul><li><a href="#/research">Research</a>: our published studies of companies, earnings and market events.</li>
       <li><a href="#/insights">Insights</a>: compare how different companies reacted to the same news, measured against the market and each stock’s normal day.</li>
       <li><a href="#/stocks">Company research</a>: financial statements from SEC filings, valuation, competitors and earnings history for any US stock.</li>
-      <li><a href="#/learn">Academy</a>: 39 short lessons and exercises, from reading a chart to valuing a company.</li>
+      <li><a href="#/learn">Academy</a>: 43 short lessons and exercises, from reading a chart to valuing a company.</li>
       <li><a href="#/trade">Practice</a>: paper trading with $100,000 of virtual money, always labeled as practice.</li></ul>
     <h2>Our educational mission</h2>
     <p>Learning finance should start from real companies and real events, not abstract definitions. Every lesson links to a company you can open, every ratio explains how it is calculated, and the Academy includes exercises where you interpret what actually happened before seeing the answer.</p>
