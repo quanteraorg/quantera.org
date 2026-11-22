@@ -78,6 +78,16 @@ try {
       await page.close();
     }
   }
+  // Generated pages (research, lessons, legal, insights) must never show template code to visitors. This shipped twice.
+  {
+    const { readdirSync, statSync } = await import('node:fs'), { join } = await import('node:path');
+    const root = new URL('../public/', import.meta.url).pathname, leak = /\{(E\(|a\.get|a\[|nice_date|cite\()|\$\{[a-zA-Z_]/;
+    const walk = d => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? (f === 'assets' || f === 'node_modules' ? [] : walk(p)) : f.endsWith('.html') ? [p] : []; });
+    for (const f of walk(root)) { const t = readFileSync(f, 'utf8').replace(/<script[\s\S]*?<\/script>/g, ''); const m = leak.exec(t); if (m) failures.push(`${f.slice(root.length)}: template code shown to visitors: ${t.slice(m.index, m.index + 50)}`); }
+    // every research card links to a report that exists
+    const idx = readFileSync(join(root, 'research/index.html'), 'utf8');
+    for (const m of idx.matchAll(/href="\/research\/([a-z0-9-]+)"/g)) { try { statSync(join(root, 'research', m[1] + '.html')); } catch { failures.push(`research index links to a missing report: ${m[1]}`); } }
+  }
   // First visit: the Student / Professional chooser opens as an accessible dialog, takes focus, closes with Escape and stays closed.
   {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
