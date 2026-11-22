@@ -31,6 +31,7 @@ import { initContact } from './contact';
 import { initRatios } from './ratios';
 import { initIntro } from './intro';
 import { initListed } from './listed';
+import { initExperience } from './experience';
 
 initStates();
 initMotion();
@@ -63,3 +64,4 @@ initRatios();
 initIntro();
 initListed();
 initUi();
+initExperience();

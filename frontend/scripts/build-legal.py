@@ -139,7 +139,7 @@ COOKIES = f"""
 <tr><td>Watchlists, paper portfolio, trades and trade journal</td><td>So your practice investing is still there next time</td><td>Yes, for those features</td></tr>
 <tr><td>Notes, research folders, thesis notes, recent reports</td><td>So your research is saved</td><td>Yes, for those features</td></tr>
 <tr><td>Lesson progress, daily-challenge streak, badges</td><td>To track your learning</td><td>Yes, for those features</td></tr>
-<tr><td>Settings: theme, Simple or Pro view, layouts, chart settings, dismissed tips</td><td>To remember how you like the site</td><td>Yes</td></tr>
+<tr><td>Settings: theme, Student or Professional experience, layouts, chart settings, dismissed tips</td><td>To remember how you like the site</td><td>Yes</td></tr>
 <tr><td>Your privacy choice</td><td>To remember whether statistics and error reports are on</td><td>Yes</td></tr>
 <tr><td>Sign-in session (only if you have an account)</td><td>To keep you signed in; issued by Supabase</td><td>Yes, for accounts</td></tr>
 <tr><td>Short-lived page memory (session storage)</td><td>Scroll positions and one-time notices during a visit; cleared when you close the tab</td><td>Yes</td></tr></table>
@@ -155,7 +155,7 @@ COOKIES = f"""
 ACCESS = f"""
 <p>We want everyone to be able to use Quantera, including people who use a keyboard, a screen reader, magnification or voice control. We aim to meet the <a href="https://www.w3.org/TR/WCAG22/" rel="noopener">Web Content Accessibility Guidelines (WCAG) 2.2</a> at level AA.</p>
 <h2>What we do</h2>
-<ul><li>Every change is checked automatically before it ships. Automated accessibility tests (axe, against WCAG 2 A and AA) run on 27 app pages at desktop size in the dark theme. The same 27 pages are also loaded in both themes, at desktop and phone sizes, to check for errors and content that spills off the screen. A change that fails any of these checks can’t ship.</li>
+<ul><li>Every change is checked automatically before it ships. Automated accessibility tests (axe, against WCAG 2 A and AA) run on 29 app pages at desktop size in the dark theme. The same 29 pages are also loaded in both themes, at desktop and phone sizes, to check for errors and content that spills off the screen. A change that fails any of these checks can’t ship.</li>
 <li>The automated tests include color contrast in the dark theme. Contrast in the light theme is checked by hand, not yet automatically. Price moves use ▲ and ▼ as well as color.</li>
 <li>Everything can be used with a keyboard, with a visible focus outline and a “Skip to content” link.</li>
 <li>Form fields have labels, buttons have names, and images have text alternatives.</li>

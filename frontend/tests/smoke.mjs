@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 const AXE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const BASE = process.env.BASE || 'http://localhost:8124';
 const ROUTES = ['', 'markets', 'world', 'news', 'stocks', 'screener', 'compare', 'ipos', 'asset/AAPL', 'trade', 'plan',
-  'portfolio', 'planner', 'learn', 'glossary', 'ai', 'macro', 'calendar', 'about', 'pricing', 'settings', 'options', 'valuation/AAPL', 'asset/AAPL/research', 'lesson/pe', 'report', 'report/AAPL'];
+  'portfolio', 'planner', 'learn', 'glossary', 'ai', 'macro', 'calendar', 'about', 'pricing', 'settings', 'options', 'valuation/AAPL', 'asset/AAPL/research', 'lesson/pe', 'report', 'report/AAPL', 'dashboard/student', 'dashboard/professional'];
 const SIZES = [[1440, 900, 'desktop'], [390, 844, 'phone']];
 const failures = [];
 
@@ -78,9 +78,25 @@ try {
       await page.close();
     }
   }
+  // First visit: the Student / Professional chooser opens as an accessible dialog, takes focus, closes with Escape and stays closed.
+  {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const errors = []; page.on('pageerror', e => errors.push(e.message));
+    await page.goto(BASE + '/'); await page.waitForTimeout(2500);
+    const dlg = await page.evaluate(() => { const d = document.querySelector('.qx-ov [role=dialog]'); return d ? { modal: d.getAttribute('aria-modal'), label: !!document.getElementById(d.getAttribute('aria-labelledby') || ''), focus: !!d.contains(document.activeElement) } : null; });
+    if (!dlg) failures.push('first visit: the Student / Professional chooser did not open');
+    else if (dlg.modal !== 'true' || !dlg.label || !dlg.focus) failures.push(`first visit: chooser dialog is not accessible (${JSON.stringify(dlg)})`);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    if (await page.locator('.qx-ov').count()) failures.push('first visit: Escape did not close the chooser');
+    await page.reload(); await page.waitForTimeout(2500);
+    if (await page.locator('.qx-ov').count()) failures.push('first visit: the chooser came back after "Decide later"');
+    for (const e of errors) failures.push(`first visit: page error: ${e}`);
+    await page.close();
+  }
   // Big screens: the interface scales up to fill the display (public/fit.js), and pointer positions must still line up.
   {
     const page = await browser.newPage({ viewport: { width: 2560, height: 1440 } });
+    await page.addInitScript(() => { try { localStorage.setItem('q_mnd', '1'); } catch (e) {} }); // not a first visit: no chooser
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await page.goto(BASE + '/#/markets'); await page.waitForTimeout(1500);
