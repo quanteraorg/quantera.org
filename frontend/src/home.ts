@@ -52,7 +52,7 @@ async function desk(hm: HTMLElement): Promise<void> {
   const sec = document.createElement('section'); sec.className = 'qh-desk qin'; // qin: shown straight away (the homepage's scroll-reveal hides sections until revealed)
   sec.innerHTML = `<h2>From the research desk</h2><p class="sub">Original studies and the questions behind them. <a href="#/research">All research →</a></p>
     <div class="qh-grid"><a class="qh-card" id="qhst" href="#/research"><small>Latest study</small><b>Loading…</b></a>
-    <a class="qh-card" href="#/insights/NVDA,AMD,SMCI,AVGO@2026-08-26T21:00:00Z"><small>Insights</small><b>Same results, different reactions</b><p>Nvidia's results on 26 August moved chip stocks by very different amounts. See how much of each move was the whole market, how unusual it was for each stock, and what usually explains the gap.</p><span class="go">Compare the reactions →</span></a>
+    <a class="qh-card" href="#/insights/NVDA,AMD,SMCI,AVGO@2026-08-26T21:00:00Z"><small>Insights</small><b>Same results, different reactions</b><p>Nvidia's results on August 26 moved chip stocks by very different amounts. See how much of each move was the whole market, how unusual it was for each stock, and what usually explains the gap.</p><span class="go">Compare the reactions →</span></a>
     <a class="qh-card" href="#/about"><small>How we work</small><b>No source, no number</b><ul><li>Primary sources first: SEC filings and official releases</li><li>Facts and interpretation labeled separately</li><li>Every calculation re-run before publication</li></ul><span class="go">About Quantera Research →</span></a></div>`;
   open.after(sec);
   try {
