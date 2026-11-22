@@ -98,7 +98,7 @@ def article_html(a, allarts):
           "publisher": {"@type": "Organization", "name": "Quantera Research", "logo": {"@type": "ImageObject", "url": SITE + "/icon-512.png"}},
           "mainEntityOfPage": f"{SITE}/{url}", "image": SITE + "/og.png", "about": [{"@type": "Corporation", "tickerSymbol": t} for t in a.get('tickers', [])]}
     b = [f'<main id="main"><p class="crumb"><a href="/research">Research</a> › {E(a["category"])}</p><h1>{E(a["title"])}</h1><p class="dek">{E(a["dek"])}</p>',
-         f'<p class="meta"><b>{E(a["category"])}</b> · Published {nice_date(a["date"])}' + (f' · Updated {nice_date(a["updated"])}' if a.get('updated') else '') + ' · {a.get("readMinutes", 5)} min read · By Quantera Research'
+         f'<p class="meta"><b>{E(a["category"])}</b> · Published {nice_date(a["date"])}' + (f' · Updated {nice_date(a["updated"])}' if a.get('updated') else '') + f' · {a.get("readMinutes", 5)} min read · By Quantera Research'
          + (f' · {" ".join(E(t) for t in a["tickers"])}' if a.get('tickers') else '') + '</p>',
          ''.join(f'<div class="box upd" role="note"><h2>Update, {nice_date(u["date"])}</h2><p>{E(u["text"])}</p>'
                  + (f'<p class="meta">Source: <a href="{E(u["url"])}" rel="noopener">{E(u["source"])}</a></p>' if u.get('url') else '') + '</div>'
@@ -176,7 +176,11 @@ def main():
         assert all(int(n) <= len(a['sources']) for n in re.findall(r'\[(\d+)\]', json.dumps(a))), 'citation without a source in ' + a['slug']
     d = os.path.join(OUT, 'research'); os.makedirs(d, exist_ok=True)
     for a in arts:
-        open(os.path.join(d, a['slug'] + '.html'), 'w', encoding='utf-8').write(article_html(a, arts))
+        page = article_html(a, arts)
+        # Guard: a Python expression left outside an f-string would be shown to visitors as code (it happened once).
+        leak = re.search(r'\{(a\.get|a\[|E\(|nice_date|cite\()', page)
+        if leak: raise SystemExit(f"{a['slug']}: unformatted template code in the page: {page[leak.start():leak.start() + 60]}")
+        open(os.path.join(d, a['slug'] + '.html'), 'w', encoding='utf-8').write(page)
         json.dump(a, open(os.path.join(d, a['slug'] + '.json'), 'w', encoding='utf-8'), ensure_ascii=False)
     open(os.path.join(d, 'index.html'), 'w', encoding='utf-8').write(index_html({**data, 'articles': arts}))
     json.dump({'categories': data['categories'], 'articles': [{k: a[k] for k in ('slug', 'title', 'dek', 'date', 'category', 'tickers', 'readMinutes', 'findings') if k in a} for a in arts]},
