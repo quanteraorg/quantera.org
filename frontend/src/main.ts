@@ -32,6 +32,7 @@ import { initRatios } from './ratios';
 import { initIntro } from './intro';
 import { initListed } from './listed';
 import { initExperience } from './experience';
+import { initLearning } from './learning';
 
 initStates();
 initMotion();
@@ -65,3 +66,4 @@ initIntro();
 initListed();
 initUi();
 initExperience();
+initLearning();

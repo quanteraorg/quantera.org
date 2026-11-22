@@ -12,6 +12,7 @@
 //   - Concept challenges: a short daily scenario with an explanation for every answer (education, not prediction).
 //   - Homepage: a short "Two ways to use Quantera" section with a path into each.
 import { library } from './library';
+import { quizScores } from './learning';
 
 declare function MODE(): string | null;
 declare function setMode_(m: string): void;
@@ -259,6 +260,8 @@ function student(m: HTMLElement): void {
   const next = lessons.filter(l => !done.has(l.id)).slice(0, 3);
   const daily = LS<{ day?: string; done?: boolean; total?: number; days?: number }>('q_daily', {});
   const cxLog = LS<CxLog>(CXKEY, {}), cxN = Object.keys(cxLog).length, cxOk = Object.values(cxLog).filter(x => x.ok).length;
+  const qs = quizScores(), qk = Object.keys(qs), qAvg = qk.length ? Math.round(qk.reduce((t, k) => t + qs[k].best / Math.max(1, qs[k].n), 0) / qk.length * 100) : null;
+  const retry = qk.filter(k => qs[k].best < qs[k].n).sort((a, b) => qs[a].best / qs[a].n - qs[b].best / qs[b].n).slice(0, 3);
   const name = (() => { try { const n = DNAME(); return n && !/^(guest|you)$/i.test(n) ? n.split(' ')[0] : ''; } catch { return ''; } })();
   const quizLesson = lessons.find(l => !done.has(l.id) && LX && LX[l.id] && LX[l.id].q && LX[l.id].q!.length) || lessons.find(l => LX && LX[l.id] && LX[l.id].q);
   const steps: [string, string][] = [];
@@ -274,11 +277,11 @@ function student(m: HTMLElement): void {
      <a class="lnk" href="#/learn">See all ${total} lessons by level →</a></section>
     <section class="qx-c" aria-labelledby="qx-prog"><h3 id="qx-prog">Your progress</h3><div class="qx-meter" role="img" aria-label="${nDone} of ${total} lessons completed"><i style="width:${total ? Math.round(nDone / total * 100) : 0}%"></i></div>
      <p><b>${nDone} of ${total}</b> lessons completed</p>
-     <div class="qx-stats"><div><b>${S ? S.streak : 0}</b><small>day streak</small></div><div><b>${daily.total || 0}</b><small>challenge XP</small></div><div><b>${cxN ? cxOk + '/' + cxN : '0'}</b><small>concept challenges right</small></div></div>
+     <div class="qx-stats"><div><b>${S ? S.streak : 0}</b><small>day streak</small></div><div><b>${daily.total || 0}</b><small>challenge XP</small></div><div><b>${cxN ? cxOk + '/' + cxN : '0'}</b><small>concept challenges right</small></div><div><b>${qAvg == null ? '—' : qAvg + '%'}</b><small>quiz average${qk.length ? ` (${qk.length} quiz${qk.length === 1 ? '' : 'zes'})` : ''}</small></div></div>
      <p class="src">${typeof QAUTH !== 'undefined' && QAUTH && QAUTH.user ? 'Saved to your account.' : 'Saved on this device. <a href="#/settings">Create a free account</a> to keep it everywhere.'}</p></section>
     <section class="qx-c w8" aria-labelledby="qx-cx"><h3 id="qx-cx">Today’s concept challenge</h3><div id="qx-cxb"></div></section>
     <section class="qx-c" aria-labelledby="qx-dn"><h3 id="qx-dn">Daily news challenge</h3><p>${daily.day === dayKey() && daily.done ? 'Done for today. Come back tomorrow for a new story.' : 'Read one real news story, decide how it might affect the company, then see what the stock actually did.'}</p><a class="btn p" href="#/learn">${daily.day === dayKey() && daily.done ? 'Review it' : 'Start the news challenge'}</a>
-     <h3 style="margin-top:18px">Quick quiz</h3><div id="qx-qz"></div></section>
+     <h3 style="margin-top:18px">Quick quiz</h3><div id="qx-qz"></div>${retry.length ? `<h3 style="margin-top:18px">Quizzes to retry</h3><ul class="qx-ls">${retry.map(k => `<li><a href="#/lesson/${esc(k)}"><span><b>${esc(lessonTitle(k))}</b><small>Best score ${qs[k].best} of ${qs[k].n}</small></span></a></li>`).join('')}</ul>` : ''}</section>
     <section class="qx-c w6" aria-labelledby="qx-mk"><h3 id="qx-mk">Markets in plain English</h3><div id="qx-mkb">${skel()}</div></section>
     <section class="qx-c w6" aria-labelledby="qx-fc"><h3 id="qx-fc">Featured company</h3><div id="qx-fcb">${skel()}</div></section>
     <section class="qx-c" aria-labelledby="qx-pf"><h3 id="qx-pf">Your paper portfolio</h3><div id="qx-pfb"></div></section>
@@ -363,7 +366,7 @@ function professional(m: HTMLElement): void {
    <div class="qx-g">
     <section class="qx-c w8" aria-labelledby="qx-rs"><h3 id="qx-rs">Research and updates</h3><div id="qx-rsb">${skel()}</div></section>
     <section class="qx-c" aria-labelledby="qx-in"><h3 id="qx-in">Insights</h3><p>Measure how differently companies reacted to the same news: each move split into the market’s part and the company-specific part, compared with the stock’s normal day.</p>
-     <p class="mu" style="font-size:13.5px">Daily closing prices; market model with beta estimated over the prior year. It shows association, not cause.</p><a class="btn p" href="#/insights">Open Insights</a> <a class="lnk" href="/insights">Methodology →</a></section>
+     <p class="mu" style="font-size:13.5px">Daily closing prices; beta against the S&P 500 from the 120 trading days before the news; one event per company, no significance test. It shows association, not cause.</p><a class="btn p" href="#/insights">Open Insights</a> <a class="lnk" href="/insights">Methodology →</a></section>
     <section class="qx-c w6" aria-labelledby="qx-mi"><h3 id="qx-mi">Market intelligence</h3><div id="qx-mib">${skel(4)}</div></section>
     <section class="qx-c w6" aria-labelledby="qx-wl"><h3 id="qx-wl">Watchlist</h3><div id="qx-wlb">${wl.length ? skel(4) : '<p class="mu">Add companies to your watchlist from any stock page.</p>'}</div></section>
     <section class="qx-c w6" aria-labelledby="qx-mc"><h3 id="qx-mc">Economic indicators</h3><div id="qx-mcb">${skel(4)}</div></section>
