@@ -360,6 +360,27 @@ async function sectorRules(browser) {
   await ctx.close();
 }
 
+// ---------- 7. calculator maths ----------
+// The lesson calculators live inside app.js, so they are checked through the page against hand-checked answers.
+async function calculators(browser) {
+  const { ctx, page, errors } = await newPage(browser, 'desktop');
+  await page.goto(BASE + '/'); await page.waitForTimeout(1200);
+  const set = async (vals) => page.evaluate(v => {
+    for (const [k, x] of Object.entries(v)) { const el = document.querySelector(`#m input[type=range][data-k="${k}"]`); if (!el) return 'missing slider ' + k; el.value = String(x); el.dispatchEvent(new Event('input', { bubbles: true })); }
+    return (document.getElementById('wo') || {}).innerText || '';
+  }, vals);
+  // Black-Scholes: S=100, K=100, 1 year, 20% volatility, 5% rate -> call 10.45, put 5.57
+  await go(page, 'lesson/bs');
+  let out = await set({ S: 100, K: 100, d: 365, v: 20, r: 5 });
+  if (!/Call \$10\.45\b/.test(out) || !/Put \$5\.57\b/.test(out)) fail('desktop #/lesson/bs', `Black-Scholes shows "${out.split('\n')[0]}", expected Call $10.45 · Put $5.57`);
+  // Kelly: 60% win chance, even payoff -> bet 20% of capital
+  await go(page, 'lesson/kelly');
+  out = await set({ p: 60, b: 1 });
+  if (!/Kelly fraction\s*20\.0% of capital/.test(out)) fail('desktop #/lesson/kelly', `Kelly shows "${(out.match(/Kelly fraction[^\n]*\n?[^\n]*/) || [''])[0].replace(/\s+/g, ' ')}", expected 20.0% of capital`);
+  for (const e of errors.splice(0)) fail('calculators', `page error: ${e}`);
+  await ctx.close();
+}
+
 const browser = await chromium.launch();
 const t0 = Date.now();
 let clicks = 0;
@@ -368,6 +389,7 @@ try {
   if (!ONLY || ONLY === 'flows') for (const size of ['desktop', 'phone']) { try { await flows(browser, size); } catch (e) { fail(`${size} flows`, 'stopped: ' + String(e.message || e).split('\n')[0]); } }
   if (!ONLY || ONLY === 'api') for (const m of ['slow', 'fail']) { try { await apiStates(browser, m); } catch (e) { fail(`${m} API`, 'stopped: ' + String(e.message || e).split('\n')[0]); } }
   if (!ONLY || ONLY === 'phone') try { await phoneTaps(browser); } catch (e) { fail('phone taps', 'stopped: ' + String(e.message || e).split('\n')[0]); }
+  if (!ONLY || ONLY === 'maths') try { await calculators(browser); } catch (e) { fail('calculators', 'stopped: ' + String(e.message || e).split('\n')[0]); }
   if (!ONLY || ONLY === 'sector') try { await sectorRules(browser); } catch (e) { fail('sector rules', 'stopped: ' + String(e.message || e).split('\n')[0]); }
 } finally { await browser.close(); }
 const uniq = [...new Set(failures)];

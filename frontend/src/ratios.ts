@@ -22,7 +22,7 @@ const F: [string, string, string][] = [
 ];
 type R = { name: string; f: string; v: (x: Record<string, number | null>) => number | null; unit: 'pct' | 'x' | 'usd'; why: string };
 const q = (a: number | null, b: number | null) => a == null || b == null || b === 0 ? null : a / b;
-const RATIOS: [string, R[]][] = [
+export const RATIOS: [string, R[]][] = [
   ['Profitability', [
     { name: 'Gross margin', f: 'Gross profit ÷ revenue', v: x => q(x.grossProfit, x.revenue), unit: 'pct', why: 'How much of each dollar of sales is left after the direct cost of the product. High margins usually mean pricing power.' },
     { name: 'Operating margin', f: 'Operating income ÷ revenue', v: x => q(x.operatingIncome, x.revenue), unit: 'pct', why: 'What is left after running the business (staff, research, marketing), before interest and tax.' },

@@ -7,6 +7,7 @@
     "smoke": "node smoke.mjs",
     "interact": "node interact.mjs",
     "offline": "node offline.mjs",
+    "unit": "node --test unit.mjs",
     "live": "node live-api.mjs",
     "syntax": "node -e \"new Function(require('fs').readFileSync('../public/app.js','utf8'))\""
   },
