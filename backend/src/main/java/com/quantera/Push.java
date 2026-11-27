@@ -170,11 +170,36 @@ final class Push {
         Thread.startVirtualThread(() -> { try { HTTP.send(HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(8)).GET().build(), HttpResponse.BodyHandlers.discarding()); } catch (Exception ignored) {} });
     }
 
+    static final int PAGE = 1000;
+    /** How many active alerts the last check looked at (shown on /api/health/detail). */
+    static volatile int LAST_CHECKED = -1;
+
+    /**
+     * A price as people read it: US dollars as $1,234.56; London prices quoted in pence (GBp / GBX) as pounds, £12.35
+     * (alerts are set and compared in the quote's own unit, only the wording changes); anything else as 1,234.56 EUR.
+     */
+    static String money(double v, String cur) {
+        if (cur == null || cur.isBlank() || cur.equals("USD")) return "$" + String.format(Locale.US, "%,.2f", v);
+        if (cur.equals("GBp") || cur.equalsIgnoreCase("GBX")) return "£" + String.format(Locale.US, "%,.2f", v / 100);
+        if (cur.equals("GBP")) return "£" + String.format(Locale.US, "%,.2f", v);
+        return String.format(Locale.US, "%,.2f", v) + " " + cur;
+    }
+
     static void check() {
         if (!on()) return;
-        List<Object> rows;
-        try { rows = list(Store.rest("GET", "push_alerts?select=id,endpoint,p256dh,auth,symbol,op,price&fired_at=is.null&limit=2000", null)); }
-        catch (RuntimeException e) { LAST_ERR = "alerts: storage " + e.getMessage(); return; }
+        List<Object> rows = new ArrayList<>();
+        try { // every active alert, a page at a time (ordered by id, so none is skipped or read twice)
+            long after = 0;
+            while (true) {
+                List<Object> page = list(Store.rest("GET", "push_alerts?select=id,endpoint,p256dh,auth,symbol,op,price&fired_at=is.null&order=id.asc&limit=" + PAGE + "&id=gt." + after, null));
+                rows.addAll(page);
+                if (page.size() < PAGE) break;
+                Double last = num(map(page.get(page.size() - 1)).get("id"));
+                if (last == null || last.longValue() <= after) break;
+                after = last.longValue();
+            }
+        } catch (RuntimeException e) { LAST_ERR = "alerts: storage " + e.getMessage(); return; }
+        LAST_CHECKED = rows.size();
         Map<String, Map<String, Object>> px = new HashMap<>();
         for (Object o : rows) {
             Map<String, Object> a = map(o);
@@ -184,9 +209,9 @@ final class Push {
             if (p == null || lim == null || Boolean.TRUE.equals(q.get("stale"))) continue; // never alert on an old cached price
             boolean hit = ">".equals(a.get("op")) ? p >= lim : p <= lim;
             if (!hit) continue;
-            String cur = str(q.get("currency")), money = (cur == null || cur.equals("USD") ? "$" : "") + String.format(Locale.US, "%,.2f", p) + (cur == null || cur.equals("USD") ? "" : " " + cur);
-            int code = send(str(a.get("endpoint")), str(a.get("p256dh")), str(a.get("auth")), Json.obj("title", sym + " is " + (">".equals(a.get("op")) ? "above " : "below ") + String.format(Locale.US, "%,.2f", lim),
-                    "body", "Now " + money + ". Tap to open the chart. Your Quantera price alert.", "url", "/#/trade/" + enc(sym), "tag", "alert-" + a.get("id")));
+            String cur = str(q.get("currency"));
+            int code = send(str(a.get("endpoint")), str(a.get("p256dh")), str(a.get("auth")), Json.obj("title", sym + " is " + (">".equals(a.get("op")) ? "above " : "below ") + money(lim, cur),
+                    "body", "Now " + money(p, cur) + ". Tap to open the chart. Your Quantera price alert.", "url", "/#/trade/" + enc(sym), "tag", "alert-" + a.get("id")));
             try {
                 if (code == 404 || code == 410) Store.rest("DELETE", "push_alerts?endpoint=eq." + enc(str(a.get("endpoint"))), null);
                 else if (code / 100 == 2) Store.rest("PATCH", "push_alerts?id=eq." + num(a.get("id")).longValue(), Json.obj("fired_at", Instant.now().toString(), "fired_price", p));

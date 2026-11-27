@@ -42,6 +42,9 @@ jobs:
       - name: JavaScript syntax check
         working-directory: frontend/tests
         run: npm run syntax
+      - name: Unit tests for the money maths (DCF, reverse DCF, ratios)
+        working-directory: frontend/tests
+        run: npm run unit
       - name: Install Chromium
         working-directory: frontend/tests
         run: npx playwright install --with-deps chromium

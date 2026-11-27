@@ -119,6 +119,6 @@ Every outside service the site reads from or sends data to, with where it's show
 
 ## Uptime monitoring
 - `/api/health` is lenient on purpose: Render uses it to decide whether the server is alive, so it stays 200 while the server runs. It shows on/off flags only.
-- `/api/health/detail` adds which providers are in use, the last provider, Yahoo and push errors and today's AI usage. It needs the header `X-Admin-Token` equal to `ADMIN_TOKEN`; without it (or with ADMIN_TOKEN unset) it answers 404. Example: `curl -H "X-Admin-Token: $ADMIN_TOKEN" https://YOUR-HOST/api/health/detail`.
+- `/api/health/detail` adds which providers are in use, the last provider, Yahoo and push errors, today's AI usage, and when the price-alert checker last ran and how many active alerts it checked (it pages through all of them, 1,000 at a time). It needs the header `X-Admin-Token` equal to `ADMIN_TOKEN`; without it (or with ADMIN_TOKEN unset) it answers 404. Example: `curl -H "X-Admin-Token: $ADMIN_TOKEN" https://YOUR-HOST/api/health/detail`.
 - `/api/status` is strict, for uptime monitors (e.g. Better Stack): 200 when everything configured works, 503 naming what's broken (malformed storage key, Supabase project paused or unreachable, AI key rejected or out of credits, price alerts not running). It never includes keys.
 - Set `ALERTS_HEARTBEAT_URL` to a heartbeat URL and the price-alert checker pings it after every successful run (about once a minute), so a stopped checker raises an alert.

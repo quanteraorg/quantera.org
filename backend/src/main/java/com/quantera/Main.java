@@ -35,7 +35,8 @@ public final class Main {
 
     /** Everything /api/health used to show, including which providers are in use and their last errors: /api/health/detail, admin only. */
     static Map<String, Object> healthDetail() {
-        return Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn() || Yahoo.on(), "marketOpen", Providers.usMarketOpen(), "global", Yahoo.on(), "pushAlerts", Push.on(), "economyKey", cfg("FRED_API_KEY", null) != null, "lastPushError", Push.LAST_ERR, "lastProviderError", Providers.LAST_ERR, "lastGlobalError", Yahoo.LAST_ERR, "aiUsedToday", AiBudget.usedToday(), "aiDailyLimit", AiBudget.limit());
+        return Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn() || Yahoo.on(), "marketOpen", Providers.usMarketOpen(), "global", Yahoo.on(), "pushAlerts", Push.on(), "economyKey", cfg("FRED_API_KEY", null) != null, "lastPushError", Push.LAST_ERR, "lastProviderError", Providers.LAST_ERR, "lastGlobalError", Yahoo.LAST_ERR, "aiUsedToday", AiBudget.usedToday(), "aiDailyLimit", AiBudget.limit(),
+                "alertsLastRun", Push.LAST_OK > 0 ? java.time.Instant.ofEpochMilli(Push.LAST_OK).toString() : null, "alertsChecked", Push.LAST_CHECKED < 0 ? null : Push.LAST_CHECKED);
     }
 
     /** True when the request carries X-Admin-Token equal to ADMIN_TOKEN (constant-time compare). No ADMIN_TOKEN set means nobody. */

@@ -153,12 +153,14 @@ public class TestMain {
         java.util.concurrent.atomic.AtomicInteger pushIds = new java.util.concurrent.atomic.AtomicInteger();
         fake.createContext("/sb/rest/v1/push_alerts", ex -> { String q = ex.getRequestURI().getRawQuery() == null ? "" : java.net.URLDecoder.decode(ex.getRequestURI().getRawQuery(), StandardCharsets.UTF_8), body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8), mth = ex.getRequestMethod();
             java.util.function.Predicate<Map<String, Object>> match = row -> { for (String part : q.split("&")) { String[] kv = part.split("=", 2); if (kv.length < 2 || kv[0].equals("select") || kv[0].equals("order") || kv[0].equals("limit")) continue;
+                if (kv[1].startsWith("gt.")) { if (!(Double.parseDouble(String.valueOf(row.get(kv[0]))) > Double.parseDouble(kv[1].substring(3)))) return false; continue; }
                 if (kv[1].equals("is.null") ? row.get(kv[0]) != null : kv[1].startsWith("eq.") && !String.valueOf(row.get(kv[0])).replaceAll("\\.0$", "").equals(kv[1].substring(3))) return false; } return true; };
+            int lim = q.matches(".*(^|&)limit=\\d+.*") ? Integer.parseInt(q.replaceAll(".*(?:^|&)limit=(\\d+).*", "$1")) : Integer.MAX_VALUE;
             synchronized (pushRows) {
                 if (mth.equals("POST")) { List<Object> out = new ArrayList<>(); for (Object o : l(Json.parse(body))) { Map<String, Object> r = new LinkedHashMap<>(m(o)); r.put("id", (double) pushIds.incrementAndGet()); r.put("fired_at", null); pushRows.add(r); out.add(r); } reply(ex, 201, "application/json", Json.write(out)); return; }
                 if (mth.equals("PATCH")) { for (Map<String, Object> r : pushRows) if (match.test(r)) r.putAll(m(Json.parse(body))); reply(ex, 200, "application/json", "[]"); return; }
                 if (mth.equals("DELETE")) { upstreamCalls.add("supabase-delete push_alerts?" + ex.getRequestURI().getRawQuery()); pushRows.removeIf(match); reply(ex, 200, "application/json", "[]"); return; }
-                List<Object> out = new ArrayList<>(); for (Map<String, Object> r : pushRows) if (match.test(r)) out.add(r); reply(ex, 200, "application/json", Json.write(out)); }
+                List<Object> out = new ArrayList<>(); for (Map<String, Object> r : pushRows) if (match.test(r) && out.size() < lim) out.add(r); reply(ex, 200, "application/json", Json.write(out)); }
         });
         fake.createContext("/push/", ex -> { pushed.add(new String[]{ex.getRequestHeaders().getFirst("Authorization"), ex.getRequestHeaders().getFirst("Content-Encoding"), Base64.getEncoder().encodeToString(ex.getRequestBody().readAllBytes())}); reply(ex, 201, "text/plain", ""); });
         java.util.concurrent.atomic.AtomicInteger heartbeats = new java.util.concurrent.atomic.AtomicInteger();
@@ -535,7 +537,7 @@ public class TestMain {
             System.clearProperty("ADMIN_TOKEN");
             R unset = adminGet(p, "/api/health/detail", "adm-test");
             t("health detail: 404 without the admin token, with a wrong one, or when ADMIN_TOKEN isn't set", noTok.code == 404 && badTok.code == 404 && unset.code == 404 && !noTok.raw.contains("aiProvider"));
-            t("health detail: the right token shows providers and last errors, never cached", ok.code == 200 && m(ok.body).containsKey("aiProvider") && m(ok.body).containsKey("lastPushError") && m(ok.body).containsKey("aiUsedToday"));
+            t("health detail: the right token shows providers and last errors, never cached", ok.code == 200 && m(ok.body).containsKey("aiProvider") && m(ok.body).containsKey("lastPushError") && m(ok.body).containsKey("aiUsedToday") && m(ok.body).containsKey("alertsChecked") && m(ok.body).containsKey("alertsLastRun"));
         }
         {
             // a client calling the API directly can fake X-Forwarded-For, but not the connecting address Render's edge reports
@@ -894,7 +896,30 @@ public class TestMain {
         t("push: fired alert marked and not sent twice", pushRows.get(0).get("fired_at") != null && pushed.size() == 1);
         r = call(p, "POST", "/api/push/delete", "{\"subscription\":" + subJ + ",\"id\":1}", ip());
         t("push: owner can delete the alert", r.code == 200 && pushRows.isEmpty());
+        {
+            Map<String, Object> sub0 = m(Json.parse(subJ));
+            for (int i = 0; i < 2500; i++) {
+                Map<String, Object> row = new LinkedHashMap<>(); row.put("id", (double) pushIds.incrementAndGet()); row.put("endpoint", sub0.get("endpoint")); row.put("p256dh", "x"); row.put("auth", "x");
+                row.put("symbol", "AAPL"); row.put("op", ">"); row.put("price", 1e9); row.put("fired_at", null); pushRows.add(row);
+            }
+            int sentBefore = pushed.size();
+            Push.check();
+            t("push: the checker looks at every active alert, past 2,000 (pages of 1,000)", Push.LAST_CHECKED == 2500 && pushed.size() == sentBefore);
+            pushRows.clear();
+        }
+        t("push: prices read naturally: $ for US, pence (GBp/GBX) shown as pounds, other currencies by code",
+                Push.money(1234.5, "USD").equals("$1,234.50") && Push.money(1234.56, "GBp").equals("£12.35") && Push.money(99, "GBX").equals("£0.99")
+                && Push.money(12.5, "GBP").equals("£12.50") && Push.money(1234.5, "EUR").equals("1,234.50 EUR") && Push.money(3, null).equals("$3.00"));
         System.clearProperty("VAPID_PUBLIC_KEY"); System.clearProperty("VAPID_PRIVATE_KEY");
+        {
+            List<Object> bars = new ArrayList<>();
+            double[] cl = {100, 120, 90, 130};
+            for (int i = 0; i < cl.length; i++) bars.add(Json.obj("t", "2026-11-0" + (i + 2), "o", cl[i], "h", cl[i] + 1, "l", cl[i] - 1, "c", cl[i], "v", 1000));
+            Providers.CACHE.put("hSTATX1", Json.obj("symbol", "STATX", "bars", bars));
+            Map<String, Object> pst = m(Anthropic.runTool("get_price_stats", Json.obj("symbol", "STATX", "days", 10), new LinkedHashSet<>()));
+            t("AI price stats: return, high, low and worst drop are right on a known series (100, 120, 90, 130)", d(pst.get("returnPct")) == 30.0 && d(pst.get("high")) == 131
+                    && d(pst.get("low")) == 89 && d(pst.get("worstDropPct")) == -25.0 && d(pst.get("days")) == 4);
+        }
         System.out.println("\n" + pass + " passed, " + fail + " failed");
         app.stop(0); fake.stop(0);
         System.exit(fail == 0 ? 0 : 1);
