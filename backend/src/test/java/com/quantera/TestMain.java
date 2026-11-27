@@ -29,6 +29,13 @@ public class TestMain {
     }
     static String ip() { return "10." + new Random().nextInt(250) + "." + new Random().nextInt(250) + ".1"; }
     static R get(int port, String path) throws Exception { return call(port, "GET", path, null, ip()); }
+    static R adminGet(int port, String path, String token) throws Exception {
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).header("X-Forwarded-For", ip()).GET();
+        if (token != null) b.header("X-Admin-Token", token);
+        HttpResponse<String> r = C.send(b.build(), HttpResponse.BodyHandlers.ofString());
+        Object j = null; try { j = Json.parse(r.body()); } catch (Exception ignored) {}
+        return new R(r.statusCode(), j, r.body());
+    }
     @SuppressWarnings("unchecked") static Map<String, Object> m(Object o) { return (Map<String, Object>) o; }
     @SuppressWarnings("unchecked") static List<Object> l(Object o) { return (List<Object>) o; }
     static double d(Object o) { return ((Number) o).doubleValue(); }
@@ -328,8 +335,9 @@ public class TestMain {
         boolean bad = false; try { Research.parse("{\"verdict\":{\"rating\":\"Moon\"}}"); } catch (RuntimeException e) { bad = true; }
         t("research: a reply without a valid Positive/Neutral/Negative outlook is rejected, not shown", bad);
         System.setProperty("GEMINI_API_KEY", "gm-test");
-        r = get(p, "/api/health");
-        t("health: Gemini chosen when its key is set", "gemini".equals(m(r.body).get("aiProvider")));
+        System.setProperty("ADMIN_TOKEN", "adm-test");
+        r = adminGet(p, "/api/health/detail", "adm-test");
+        t("health detail: Gemini chosen when its key is set", "gemini".equals(m(r.body).get("aiProvider")));
         r = call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"user\",\"content\":\"Tell me about Apple\"}]}", ip());
         t("Gemini chat runs the quote tool and answers, key server-side", r.code == 200 && String.valueOf(m(r.body).get("text")).contains("Apple is $226") && l(m(r.body).get("used")).contains("Quote AAPL") && !r.raw.contains("gm-test")
                 && upstreamCalls.stream().anyMatch(u -> u.startsWith("gemini /gm/v1beta/models/gemini-flash-latest:generateContent key=gm-test schema-ok")));
@@ -352,7 +360,7 @@ public class TestMain {
         t("Gemini permission denied -> says how to fix it and shows on /api/status", r.code == 503 && r.raw.contains("aistudio.google.com") && Anthropic.AI_PROBLEM != null && Anthropic.AI_PROBLEM.contains("permission denied"));
         Anthropic.AI_PROBLEM = null;
         System.setProperty("AI_PROVIDER", "anthropic");
-        t("AI_PROVIDER=anthropic switches back to Claude", "anthropic".equals(m(get(p, "/api/health").body).get("aiProvider")));
+        t("AI_PROVIDER=anthropic switches back to Claude", "anthropic".equals(m(adminGet(p, "/api/health/detail", "adm-test").body).get("aiProvider")));
         System.clearProperty("AI_PROVIDER"); System.clearProperty("GEMINI_API_KEY");
         t("explain: unknown lens -> 400", call(p, "POST", "/api/explain", "{\"lens\":\"hack\",\"title\":\"x\"}", ip()).code == 400);
         System.clearProperty("FINNHUB_API_KEY"); Providers.CACHE.clear();
@@ -477,6 +485,36 @@ public class TestMain {
             System.setProperty("AI_DAILY_LIMIT", "0"); AiBudget.reset(); code = 0; try { AiBudget.take(); } catch (Support.UpstreamException e) { code = e.code; }
             t("AI daily cap: 0 turns AI off", code == 429);
             System.clearProperty("AI_DAILY_LIMIT"); AiBudget.reset();
+        }
+        {
+            System.setProperty("AI_GLOBAL_PER_MIN", "2"); AiBudget.reset();
+            AiBudget.take(); AiBudget.take();
+            String msg = ""; int code = 0; try { AiBudget.take(); } catch (Support.UpstreamException e) { code = e.code; msg = e.getMessage(); }
+            t("AI per-minute cap: a third request in the same minute gets 429 'try again in a minute', whoever sends it", code == 429 && msg.contains("minute") && AiBudget.usedToday() == 2);
+            System.clearProperty("AI_GLOBAL_PER_MIN"); AiBudget.reset();
+            System.setProperty("AI_DAILY_LIMIT", "1"); Providers.CACHE.clear();
+            String ex1 = "{\"lens\":\"tldr\",\"title\":\"Cap check one\",\"summary\":\"Shares rose.\"}";
+            R a1 = call(p, "POST", "/api/explain", ex1, ip()), a2 = call(p, "POST", "/api/explain", ex1, ip());
+            R a3 = call(p, "POST", "/api/explain", "{\"lens\":\"tldr\",\"title\":\"Cap check two\",\"summary\":\"Shares rose.\"}", ip());
+            t("AI daily cap: a cached explanation doesn't use the allowance; a new one over the cap is 429", a1.code == 200 && a2.code == 200 && AiBudget.usedToday() == 1 && a3.code == 429 && a3.raw.contains("daily limit"));
+            System.clearProperty("AI_DAILY_LIMIT"); AiBudget.reset();
+        }
+        {
+            Support.RateLimiter rl = new Support.RateLimiter();
+            for (int i = 0; i < 4; i++) rl.limited("203.0.113.50", "/api/ai", 3);
+            for (int i = 0; i < Support.RateLimiter.MAX_KEYS + 1000; i++) rl.limited("198.51." + (i / 250) + "." + (i % 250), "/api/ai", 3);
+            t("rate limit: a flood of new addresses doesn't reset a client that's already over its limit", rl.limited("203.0.113.50", "/api/ai", 3) && rl.size() <= Support.RateLimiter.MAX_KEYS + 1);
+        }
+        {
+            Map<String, Object> h = m(get(p, "/api/health").body);
+            t("health: public status is on/off flags only (no provider names or error text)", h.values().stream().allMatch(v -> v instanceof Boolean)
+                    && h.keySet().equals(Set.of("ok", "market", "news", "ai", "storage", "intraday", "marketOpen", "global", "pushAlerts", "economyKey")));
+            System.setProperty("ADMIN_TOKEN", "adm-test");
+            R noTok = adminGet(p, "/api/health/detail", null), badTok = adminGet(p, "/api/health/detail", "adm-tesx"), ok = adminGet(p, "/api/health/detail", "adm-test");
+            System.clearProperty("ADMIN_TOKEN");
+            R unset = adminGet(p, "/api/health/detail", "adm-test");
+            t("health detail: 404 without the admin token, with a wrong one, or when ADMIN_TOKEN isn't set", noTok.code == 404 && badTok.code == 404 && unset.code == 404 && !noTok.raw.contains("aiProvider"));
+            t("health detail: the right token shows providers and last errors, never cached", ok.code == 200 && m(ok.body).containsKey("aiProvider") && m(ok.body).containsKey("lastPushError") && m(ok.body).containsKey("aiUsedToday"));
         }
         {
             // a client calling the API directly can fake X-Forwarded-For, but not the connecting address Render's edge reports
@@ -798,6 +836,17 @@ public class TestMain {
         t("push: public key served", get(p, "/api/push/key").code == 200);
         r = call(p, "POST", "/api/push/alerts", "{\"subscription\":" + subJ + ",\"symbol\":\"aapl\",\"op\":\">\",\"price\":1}", ip());
         t("push: alert saved for this device", r.code == 200 && pushRows.size() == 1 && "AAPL".equals(pushRows.get(0).get("symbol")));
+        {
+            String keysJ = Json.write(m(Json.parse(subJ)).get("keys"));
+            boolean allBad = true;
+            for (String ep : List.of("https://10.0.0.1/xxxxxxxxxx", "https://evil.example.com/xxxxxxxxxx", "https://fcm.googleapis.com.evil.com/xxxxxxxxxx", "https://127.0.0.1:8443/xxxxxxxxxx"))
+                for (String path : List.of("/api/push/alerts", "/api/push/test"))
+                    allBad &= call(p, "POST", path, "{\"subscription\":{\"endpoint\":\"" + ep + "\",\"keys\":" + keysJ + "},\"symbol\":\"AAPL\",\"op\":\">\",\"price\":1}", ip()).code == 400;
+            t("push: endpoints that aren't a real push service (IP addresses, other sites, look-alikes) are rejected", allBad);
+            t("push: the browsers' push services are accepted", Push.pushHost("https://fcm.googleapis.com/fcm/send/abcdefghijk") && Push.pushHost("https://updates.push.services.mozilla.com/wpush/v2/abcdefghijk")
+                    && Push.pushHost("https://wns2-par02p.notify.windows.com/w/?token=abcdefghijk") && Push.pushHost("https://web.push.apple.com/abcdefghijk") && !Push.pushHost("https://notify.windows.com.evil.io/abcdefghijk"));
+            t("push: the sender itself refuses a non-push-service address (drops it as gone)", Push.send("https://169.254.169.254/latest/meta-data", "x", "x", Json.obj()) == 410);
+        }
         t("push: bad subscription rejected", call(p, "POST", "/api/push/alerts", "{\"subscription\":{\"endpoint\":\"javascript:x\"},\"symbol\":\"AAPL\",\"op\":\">\",\"price\":1}", ip()).code == 400);
         System.setProperty("ALERTS_HEARTBEAT_URL", base + "/hb");
         Push.check();

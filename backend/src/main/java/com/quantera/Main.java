@@ -26,6 +26,25 @@ public final class Main {
         return Json.obj("ok", true, "storage", Store.on(), "ai", Providers.aiOn(), "alerts", Push.on());
     }
 
+    /** Public status: on/off flags only. The site reads ok, market, news, ai, intraday and marketOpen to switch to live data. */
+    static Map<String, Object> health() {
+        return Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(),
+                "intraday", Providers.twelveOn() || Yahoo.on(), "marketOpen", Providers.usMarketOpen(), "global", Yahoo.on(), "pushAlerts", Push.on(),
+                "economyKey", cfg("FRED_API_KEY", null) != null);
+    }
+
+    /** Everything /api/health used to show, including which providers are in use and their last errors: /api/health/detail, admin only. */
+    static Map<String, Object> healthDetail() {
+        return Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn() || Yahoo.on(), "marketOpen", Providers.usMarketOpen(), "global", Yahoo.on(), "pushAlerts", Push.on(), "economyKey", cfg("FRED_API_KEY", null) != null, "lastPushError", Push.LAST_ERR, "lastProviderError", Providers.LAST_ERR, "lastGlobalError", Yahoo.LAST_ERR, "aiUsedToday", AiBudget.usedToday(), "aiDailyLimit", AiBudget.limit());
+    }
+
+    /** True when the request carries X-Admin-Token equal to ADMIN_TOKEN (constant-time compare). No ADMIN_TOKEN set means nobody. */
+    static boolean admin(HttpExchange ex) {
+        String want = cfg("ADMIN_TOKEN", null), got = ex.getRequestHeaders().getFirst("X-Admin-Token");
+        if (want == null || want.isBlank() || got == null) return false;
+        return java.security.MessageDigest.isEqual(want.trim().getBytes(StandardCharsets.UTF_8), got.trim().getBytes(StandardCharsets.UTF_8));
+    }
+
     record Route(Handler h, int ttlSec, int maxPerMin) {}
     /** Optional numeric screener filter; empty means no filter. */
     private static Double screenNum(Req r, String k) {
@@ -54,7 +73,7 @@ public final class Main {
     }
 
     static void routes() {
-        ROUTES.put("/api/health", new Route(r -> Json.obj("ok", true, "market", Providers.marketOn(), "news", Providers.newsOn(), "ai", Providers.aiOn(), "storage", Store.on(), "quotes", Providers.finnhubOn() ? "finnhub" : "alphavantage", "charts", Providers.twelveOn() ? "twelvedata" : "alphavantage", "aiProvider", Anthropic.provider(), "intraday", Providers.twelveOn() || Yahoo.on(), "marketOpen", Providers.usMarketOpen(), "global", Yahoo.on(), "pushAlerts", Push.on(), "economyKey", cfg("FRED_API_KEY", null) != null, "lastPushError", Push.LAST_ERR, "lastProviderError", Providers.LAST_ERR, "lastGlobalError", Yahoo.LAST_ERR), 30, 120));
+        ROUTES.put("/api/health", new Route(r -> health(), 30, 120));
         ROUTES.put("/api/quote", new Route(r -> Providers.quote(symbol(r), 60_000), 60, 60));
         ROUTES.put("/api/history", new Route(r -> Providers.history(symbol(r), "1".equals(r.query().get("full"))), 3600, 60));
         ROUTES.put("/api/intraday", new Route(r -> Providers.intraday(symbol(r), r.query().getOrDefault("interval", "5min")), 60, 30));
@@ -337,6 +356,11 @@ public final class Main {
                 if (LIMITER.limited(clientIp(ex), "/seo", 120) || LIMITER.limited("conn:" + connectingIp(ex), "/seo", 1200)) { send(ex, 429, Json.obj("error", "Too many requests"), 0); return; }
                 Seo.Page pg = Seo.route(path);
                 if (pg != null) { sendPage(ex, pg); return; }
+            }
+            if (path.equals("/api/health/detail")) { // admin diagnostics: looks like any unknown path without the token
+                if (LIMITER.limited(clientIp(ex), path, 10) || LIMITER.limited("conn:" + connectingIp(ex), path, 10)) { send(ex, 429, Json.obj("error", "Too many requests"), 0); return; }
+                if (!admin(ex)) { send(ex, 404, Json.obj("error", "Not found"), 0); return; }
+                send(ex, 200, healthDetail(), 0); return;
             }
             Route route = ROUTES.get(path);
             if (route == null) { send(ex, 404, Json.obj("error", "Not found"), 0); return; }
