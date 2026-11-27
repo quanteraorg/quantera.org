@@ -16,17 +16,19 @@ To run the website and API together on one origin (mock data when no keys are se
 GET /api/health · /api/markets · /api/quote?symbol= · /api/quotes?symbols=A,B · /api/history?symbol=&full=1 · /api/intraday?symbol=&interval=5min|15min|1h|4h (20 sessions, New York time, Twelve Data) · /api/overview?symbol= · /api/search?q= (US first, then every other country) · GET /api/world (44 countries by region with live index levels) · /api/world/country?c=in&kind=stocks|etfs|indexes&sector=&sort=cap|gainers|losers|active&page= · /api/news?symbols= or ?q= · /api/calendar?type=earnings|ipo · POST /api/ai {"messages":[{"role","content"}]} · POST /api/waitlist {"email","interest","source"} · POST /api/events {"name"} · GET /api/article?id=<uuid> (story, per-company passages, related stories) · GET /api/snapshot (every warm quote with sector, ~125 symbols) · GET /api/directory?q=&type=stock|etf|adr&page= (every US-listed stock/ETF/ADR) · POST /api/explain {"lens","title","summary","symbols"} (AI explanations: tldr, eli5, matters, sides, five_w, numbers, questions)
 
 ## Waitlist and usage events (Supabase)
-1. Create a free project at supabase.com and run this in its SQL editor:
-
-        create table waitlist (id bigint generated always as identity primary key, email text not null unique, interest text, source text, created_at timestamptz not null default now());
-        create table events (id bigint generated always as identity primary key, name text not null, created_at timestamptz not null default now());
-        alter table waitlist enable row level security;
-        alter table events enable row level security;
-
-   Row level security with no policies keeps both tables closed to the public; the server uses the service key.
+1. Create a free project at supabase.com and run supabase-waitlist.sql and supabase-events.sql in its SQL editor
+   (both are safe to run again). Row level security with no policies keeps both tables closed to the public; the server
+   uses the service key. The other tables have their own files: supabase-user-data.sql, supabase-leaderboard.sql,
+   supabase-feedback.sql, supabase-push-alerts.sql and supabase-reaction-events.sql.
 3. For sign-in sync (watchlist, paper trades, settings), run supabase-user-data.sql. It creates `user_data` with row level security so each person can only read and write their own row, and ends with a check that every Quantera table has row level security on.
 2. Set SUPABASE_URL (Project Settings -> API -> Project URL) and SUPABASE_SERVICE_KEY (the service_role key) on the server.
 3. /api/health then reports "storage":true. Without them, /api/waitlist answers 503 and events are dropped.
+4. To check row level security still isolates people, paste supabase-rls-check.sql into the SQL editor and run it. It works
+   inside one transaction that ends in ROLLBACK (no data is left behind) and finishes with "RLS check passed", or stops
+   with an error naming what leaked. Signing in as one user it confirms they see and change only their own rows; as the
+   public key, that only the leaderboard is readable.
+5. Deleting an account (Settings) removes its saved data, leaderboard row, waitlist and feedback rows for the verified
+   email, this browser's price alerts, then the login itself.
 
 ## Live quotes (Finnhub, recommended)
 Set FINNHUB_API_KEY (free at finnhub.io: 60 calls/minute, no daily cap). Quotes, the markets board and the

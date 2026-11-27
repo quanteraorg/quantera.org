@@ -157,7 +157,7 @@ public class TestMain {
             synchronized (pushRows) {
                 if (mth.equals("POST")) { List<Object> out = new ArrayList<>(); for (Object o : l(Json.parse(body))) { Map<String, Object> r = new LinkedHashMap<>(m(o)); r.put("id", (double) pushIds.incrementAndGet()); r.put("fired_at", null); pushRows.add(r); out.add(r); } reply(ex, 201, "application/json", Json.write(out)); return; }
                 if (mth.equals("PATCH")) { for (Map<String, Object> r : pushRows) if (match.test(r)) r.putAll(m(Json.parse(body))); reply(ex, 200, "application/json", "[]"); return; }
-                if (mth.equals("DELETE")) { pushRows.removeIf(match); reply(ex, 200, "application/json", "[]"); return; }
+                if (mth.equals("DELETE")) { upstreamCalls.add("supabase-delete push_alerts?" + ex.getRequestURI().getRawQuery()); pushRows.removeIf(match); reply(ex, 200, "application/json", "[]"); return; }
                 List<Object> out = new ArrayList<>(); for (Map<String, Object> r : pushRows) if (match.test(r)) out.add(r); reply(ex, 200, "application/json", Json.write(out)); }
         });
         fake.createContext("/push/", ex -> { pushed.add(new String[]{ex.getRequestHeaders().getFirst("Authorization"), ex.getRequestHeaders().getFirst("Content-Encoding"), Base64.getEncoder().encodeToString(ex.getRequestBody().readAllBytes())}); reply(ex, 201, "text/plain", ""); });
@@ -170,6 +170,7 @@ public class TestMain {
         fake.createContext("/sb/rest/v1/", ex -> {
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8), table = ex.getRequestURI().getPath().substring("/sb/rest/v1/".length());
             upstreamCalls.add("supabase " + table + " key=" + ex.getRequestHeaders().getFirst("apikey") + " " + body);
+            if (ex.getRequestMethod().equals("DELETE")) { upstreamCalls.add("supabase-delete " + table + "?" + ex.getRequestURI().getRawQuery()); reply(ex, 200, "application/json", "[]"); return; }
             if (table.equals("waitlist")) { String email = String.valueOf(m(l(Json.parse(body)).get(0)).get("email")); reply(ex, 201, "application/json", joined.add(email) ? body : "[]"); }
             else reply(ex, 201, "application/json", body);
         });
@@ -388,6 +389,13 @@ public class TestMain {
         t("invalid API key -> 503, not symbol not found", get(p, "/api/quote?symbol=MSFT").code == 503); avMode = "ok"; Providers.AV_BLOCKED_UNTIL = 0;
         Providers.CACHE.get("stale-test", 0, () -> "good");
         t("rate-limited refresh serves the last good value", "good".equals(Providers.CACHE.get("stale-test", 0, () -> { throw new Support.UpstreamException("limit", 429); })));
+        {
+            Map<String, Object> fresh = Providers.CACHE.get("stale-map", 0, () -> Json.obj("price", 10.0));
+            Map<String, Object> old = Providers.CACHE.get("stale-map", 0, () -> { throw new Support.UpstreamException("limit", 429); });
+            Map<String, Object> again = Providers.CACHE.peek("stale-map");
+            t("stale data is marked: stale=true with the time it was fetched; fresh data and the cached copy carry no flag", !fresh.containsKey("stale")
+                    && Boolean.TRUE.equals(old.get("stale")) && String.valueOf(old.get("asOf")).matches("\\d{4}-\\d{2}-\\d{2}T.*Z") && d(old.get("price")) == 10 && !again.containsKey("stale"));
+        }
         boolean nf = false; try { Providers.CACHE.get("stale-test", 0, () -> { throw new Support.UpstreamException("gone", 404); }); } catch (Support.UpstreamException e) { nf = e.code == 404; }
         t("not-found errors are not hidden by stale data", nf);
         r = get(p, "/api/article?id=11111111-2222-3333-4444-555555555555");
@@ -425,8 +433,16 @@ public class TestMain {
         Anthropic.AI_PROBLEM = null;
         t("delete account: missing token -> 401", call(p, "POST", "/api/account/delete", "{}", ip()).code == 401);
         t("delete account: token Supabase rejects -> 401, nothing deleted", call(p, "POST", "/api/account/delete", "{\"token\":\"bad-user-token-1234567890\"}", ip()).code == 401 && upstreamCalls.stream().noneMatch(u -> u.startsWith("supabase-admin")));
-        r = call(p, "POST", "/api/account/delete", "{\"token\":\"good-user-token-1234567890\"}", ip());
+        java.io.PrintStream realOut = System.out; java.io.ByteArrayOutputStream logBuf = new java.io.ByteArrayOutputStream();
+        System.setOut(new java.io.PrintStream(new java.io.OutputStream() { public void write(int b) { logBuf.write(b); realOut.write(b); } }, true));
+        r = call(p, "POST", "/api/account/delete", "{\"token\":\"good-user-token-1234567890\",\"subscription\":{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/device-abcdefgh\",\"keys\":{\"p256dh\":\"BPk0aXdlbnR5Y2hhcnNfX19fX18\",\"auth\":\"YXV0aHNlY3JldDEyMzQ1Ng\"}}}", ip());
+        System.setOut(realOut);
         t("delete account: verifies the token, removes saved data + leaderboard, then the login", r.code == 200 && upstreamCalls.stream().anyMatch(u -> u.startsWith("supabase user_data")) && upstreamCalls.stream().anyMatch(u -> u.startsWith("supabase leaderboard")) && upstreamCalls.stream().anyMatch(u -> u.equals("supabase-admin DELETE 0a1b2c3d-1111-2222-3333-444455556666 key=sb-test")) && !r.raw.contains("sb-test"));
+        t("delete account: also removes the waitlist and feedback rows for the verified email, and this browser's price alerts",
+                upstreamCalls.contains("supabase-delete waitlist?email=eq.ada%40example.com") && upstreamCalls.contains("supabase-delete feedback?email=eq.ada%40example.com")
+                && upstreamCalls.contains("supabase-delete push_alerts?endpoint=eq.https%3A%2F%2Ffcm.googleapis.com%2Ffcm%2Fsend%2Fdevice-abcdefgh")
+                && l(m(r.body).get("removed")).containsAll(List.of("user_data", "leaderboard", "waitlist", "feedback", "push_alerts")));
+        t("delete account: the email never appears in the server log", !logBuf.toString(StandardCharsets.UTF_8).toLowerCase().contains("ada@example.com") && !logBuf.toString(StandardCharsets.UTF_8).contains("ada%40example.com"));
         t("delete account rejects GET", get(p, "/api/account/delete").code == 405);
         System.setProperty("SUPABASE_SERVICE_KEY", "sb_secret_abc\n••••");
         r = call(p, "POST", "/api/waitlist", "{\"email\":\"masked@y.io\"}", ip());
