@@ -109,6 +109,9 @@ Note: Vercel itself does not run long-lived Java servers, which is why the API i
 - Json.java       small JSON reader/writer
 - src/test/.../TestMain.java  the 108 checks
 
+## Data sources
+Every outside service the site reads from or sends data to, with where it's shown, caching and attribution: [docs/data-sources.md](../docs/data-sources.md).
+
 ## Honest limits
 - Cache and rate limiter live in memory per instance. Use Redis if you run several instances.
 - Not built yet: user accounts, Academy progress and Market Lab storage.
