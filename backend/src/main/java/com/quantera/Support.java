@@ -39,11 +39,22 @@ final class Support {
             T v;
             try { v = fn.get(); }
             catch (UpstreamException x) {
-                if (e != null && now - e.t < STALE_MS && (x.code == 429 || x.code >= 500)) return (T) e.v;
+                if (e != null && now - e.t < STALE_MS && (x.code == 429 || x.code >= 500)) return (T) staleCopy(e);
                 throw x;
             }
             m.put(key, new E(now, v));
             return v;
+        }
+        /**
+         * An old value served because the refresh failed: maps come back as a copy marked "stale": true with "asOf"
+         * (when it was fetched), so the site can say the price may be out of date. The cached object is never changed.
+         */
+        private static Object staleCopy(E e) {
+            if (!(e.v instanceof Map<?, ?> mv)) return e.v;
+            Map<Object, Object> c = new LinkedHashMap<>(mv);
+            c.put("stale", true);
+            c.put("asOf", java.time.Instant.ofEpochMilli(e.t).toString());
+            return c;
         }
         void put(String key, Object v) { m.put(key, new E(System.currentTimeMillis(), v)); }
         /** Cached value regardless of age (null if absent); never calls upstream. */

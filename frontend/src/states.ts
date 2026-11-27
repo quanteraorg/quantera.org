@@ -11,7 +11,8 @@ body,.big,.k,h1,h2,h3,td,th,.p,.sv,.pill,#tape,.hl,.hmv,.cmpt{font-variant-numer
 .qfresh i{width:6px;height:6px;border-radius:50%;background:var(--up);display:inline-block}.qfresh.stale i{background:#e8a07a}
 @media(max-width:800px){.qfresh{display:none}}
 .qbanner{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px 16px;font-size:13.5px;background:rgba(232,160,122,.12);color:var(--tx);border-bottom:1px solid rgba(232,160,122,.35);text-align:center}
-.qbanner button{margin:0;padding:4px 12px;font-size:13px}`;
+.qbanner button{margin:0;padding:4px 12px;font-size:13px}
+.qstalenote{display:flex;align-items:center;gap:6px;margin:4px 0 10px;font-size:12.5px;color:var(--mu)}.qstalenote i{width:6px;height:6px;border-radius:50%;background:#e8a07a;display:inline-block}`;
 
 const NEG = /(^|[\s(])-(?=\$?\d)/;
 const NEG_ALL = /(^|[\s(])-(?=\$?\d)/g;
@@ -47,7 +48,51 @@ export function loadingSkeletons(root: Element): void {
   });
 }
 
-const fresh = { last: 0, fails: 0, noticeAt: 0 };
+const fresh = { last: 0, fails: 0, noticeAt: 0, staleAsOf: 0, staleSeen: 0 };
+/** Symbols the server answered with an old (stale) price, and when that price was fetched. */
+const staleSyms = new Map<string, number>();
+const STALE_FLAG_MS = 3 * 60_000; // forget a stale answer once no new one has arrived for a few minutes
+
+const clock = (t: number) => new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+/** The server marks data it served from its fallback cache with stale:true and asOf (when it was really fetched). */
+function noteStale(body: unknown): void {
+  const seen: Array<{ sym?: string; at: number }> = [];
+  const visit = (o: unknown, depth: number) => {
+    if (!o || typeof o !== 'object' || depth > 3) return;
+    if (Array.isArray(o)) { o.slice(0, 400).forEach(x => visit(x, depth + 1)); return; }
+    const r = o as Record<string, unknown>;
+    if (r.stale === true) {
+      const at = Date.parse(String(r.asOf ?? ''));
+      seen.push({ sym: typeof r.symbol === 'string' ? r.symbol.toUpperCase() : undefined, at: Number.isFinite(at) ? at : Date.now() });
+    }
+    for (const k of ['quotes', 'items', 'data', 'results']) if (k in r) visit(r[k], depth + 1);
+  };
+  visit(body, 0);
+  if (!seen.length) return;
+  fresh.staleSeen = Date.now();
+  fresh.staleAsOf = Math.min(...seen.map(x => x.at), fresh.staleAsOf || Infinity);
+  for (const x of seen) if (x.sym) staleSyms.set(x.sym, x.at);
+  drawFreshness();
+  drawStaleNote();
+}
+
+/** On a stock's page, a short note under the title when its price came from the fallback cache. */
+function drawStaleNote(): void {
+  const main = document.getElementById('m');
+  if (!main) return;
+  const m = /^#\/(?:asset|trade)\/([^/?]+)/.exec(location.hash);
+  const sym = m ? decodeURIComponent(m[1]).toUpperCase() : '';
+  const at = sym ? staleSyms.get(sym) : undefined;
+  const live = at !== undefined && Date.now() - fresh.staleSeen < STALE_FLAG_MS;
+  let e = main.querySelector<HTMLElement>('.qstalenote');
+  if (!live) { e?.remove(); return; }
+  const title = main.querySelector('h1');
+  if (!title) return;
+  if (!e) { e = document.createElement('div'); e.className = 'qstalenote'; e.setAttribute('role', 'status'); title.insertAdjacentElement('afterend', e); }
+  const text = `Prices may be out of date · as of ${clock(at!)}`;
+  if (e.textContent !== text) e.innerHTML = `<i></i>${text}`;
+}
 
 function drawFreshness(): void {
   const tape = document.getElementById('tape');
@@ -62,10 +107,12 @@ function drawFreshness(): void {
   }
   if (!fresh.last) { e.style.display = 'none'; return; }
   e.style.display = '';
-  const stale = Date.now() - fresh.last > STALE_MS || fresh.fails >= 3;
+  const served = fresh.staleAsOf > 0 && Date.now() - fresh.staleSeen < STALE_FLAG_MS;
+  if (!served) fresh.staleAsOf = 0;
+  const stale = served || Date.now() - fresh.last > STALE_MS || fresh.fails >= 3;
   e.classList.toggle('stale', stale);
   const when = new Date(fresh.last).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  e.innerHTML = `<i></i>${stale ? 'Prices may be out of date' : 'Prices as of ' + when} · some delayed 15 min`;
+  e.innerHTML = `<i></i>${served ? 'Prices may be out of date · as of ' + clock(fresh.staleAsOf) : stale ? 'Prices may be out of date' : 'Prices as of ' + when} · some delayed 15 min`;
 }
 
 function dataFailed(): void {
@@ -86,7 +133,10 @@ function watchFetch(): void {
     try {
       const r = await original(input, init);
       if (isData) {
-        if (r.ok) { fresh.last = Date.now(); fresh.fails = 0; drawFreshness(); }
+        if (r.ok) {
+          fresh.last = Date.now(); fresh.fails = 0; drawFreshness();
+          if ((r.headers.get('content-type') || '').includes('json')) r.clone().json().then(noteStale).catch(() => { /* not JSON after all */ });
+        }
         else if (r.status >= 500) dataFailed();
       }
       return r;
@@ -102,7 +152,7 @@ function sampleDataBanner(): void {
   const deployed = /^https?:/.test(location.protocol) && !/^(localhost|127\.)/.test(location.hostname);
   if (!deployed || QLIVE.ok || document.querySelector('.qbanner')) return;
   document.querySelector('header')?.insertAdjacentHTML('afterend',
-    '<div class="qbanner" role="status"><span><b>Live data is unavailable right now.</b> Prices shown are sample data, not real quotes.</span>' +
+    '<div class="qbanner" role="status"><span><b>Live data is unavailable right now.</b> Prices will appear as soon as it reconnects.</span>' +
     '<button class="btn" onclick="location.reload()">Try again</button></div>');
 }
 
@@ -111,7 +161,7 @@ export function initStates(): void {
   const main = document.getElementById('m');
   if (main) {
     let t: number | undefined;
-    const run = () => { trueMinus(main); loadingSkeletons(main); };
+    const run = () => { trueMinus(main); loadingSkeletons(main); drawStaleNote(); };
     new MutationObserver(() => { clearTimeout(t); t = window.setTimeout(run, 60); })
       .observe(main, { childList: true, subtree: true, characterData: true });
     run();

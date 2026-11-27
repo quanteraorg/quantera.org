@@ -156,12 +156,29 @@ final class Store {
         if (!on()) throw new UpstreamException("Deleting accounts isn't available right now. Please try again later.", 503);
         HttpResponse<String> me = auth("GET", "user", token);
         if (me.statusCode() / 100 != 2) throw new UpstreamException("Please log in again, then try once more.", 401);
-        String id = String.valueOf(map(Json.parse(me.body())).getOrDefault("id", ""));
+        Map<String, Object> user = map(Json.parse(me.body()));
+        String id = String.valueOf(user.getOrDefault("id", "")), email = str(user.get("email"));
         if (!UID.matcher(id).matches()) throw new UpstreamException("Please log in again, then try once more.", 401);
-        for (String t : List.of("user_data", "leaderboard")) try { rest("DELETE", t + "?user_id=eq." + id, null); } catch (UpstreamException ignored) { /* table may not exist on this project */ }
+        List<String> removed = new ArrayList<>();
+        for (String t : List.of("user_data", "leaderboard")) try { rest("DELETE", t + "?user_id=eq." + id, null); removed.add(t); } catch (UpstreamException ignored) { /* table may not exist on this project */ }
+        // Everything else stored with the same verified email, and this browser's price alerts. Best effort: a failure is
+        // logged by table name only (never the email) and the account is still deleted.
+        if (email != null && !email.isBlank()) {
+            String e = java.net.URLEncoder.encode(email.trim().toLowerCase(java.util.Locale.ROOT), java.nio.charset.StandardCharsets.UTF_8);
+            for (String t : List.of("waitlist", "feedback")) {
+                try { rest("DELETE", t + "?email=eq." + e, null); removed.add(t); }
+                catch (UpstreamException x) { System.out.println("account delete: couldn't clear " + t + " (" + x.code + ")"); }
+            }
+        }
+        if (map(body).get("subscription") != null) {
+            try {
+                Push.Sub s = Push.sub(body);
+                rest("DELETE", "push_alerts?endpoint=eq." + Push.enc(s.endpoint()), null); removed.add("push_alerts");
+            } catch (UpstreamException x) { System.out.println("account delete: couldn't clear push_alerts (" + x.code + ")"); }
+        }
         String key = cfg("SUPABASE_SERVICE_KEY", "").trim();
         HttpResponse<String> del = auth("DELETE", "admin/users/" + id, key.startsWith("eyJ") ? key : null);
         if (del.statusCode() / 100 != 2 && del.statusCode() != 404) throw new UpstreamException("Your account couldn't be deleted. Please try again.");
-        return Json.obj("ok", true);
+        return Json.obj("ok", true, "removed", removed);
     }
 }

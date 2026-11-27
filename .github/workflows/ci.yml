@@ -75,3 +75,5 @@ jobs:
           (cd frontend/public && python3 -m http.server 8124 >/dev/null 2>&1 &)
           for i in $(seq 1 20); do curl -sf http://localhost:8124/ >/dev/null && break; sleep 0.5; done
           cd frontend/tests && npm run interact
+      - name: Offline check (no invented prices or demo-data text for real companies when the API is down)
+        run: cd frontend/tests && npm run offline

@@ -181,7 +181,7 @@ final class Push {
             String sym = str(a.get("symbol"));
             Map<String, Object> q = px.computeIfAbsent(sym, k -> { try { return Providers.quote(k, 60_000); } catch (RuntimeException e) { return Map.of(); } });
             Double p = num(q.get("price")), lim = num(a.get("price"));
-            if (p == null || lim == null) continue;
+            if (p == null || lim == null || Boolean.TRUE.equals(q.get("stale"))) continue; // never alert on an old cached price
             boolean hit = ">".equals(a.get("op")) ? p >= lim : p <= lim;
             if (!hit) continue;
             String cur = str(q.get("currency")), money = (cur == null || cur.equals("USD") ? "$" : "") + String.format(Locale.US, "%,.2f", p) + (cur == null || cur.equals("USD") ? "" : " " + cur);
