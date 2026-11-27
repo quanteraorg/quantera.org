@@ -96,7 +96,7 @@ public class TestMain {
             reply(ex, 200, "application/json", ex.getRequestURI().getRawQuery().contains("symbol=ZZZ") ? "{\"code\":400,\"message\":\"symbol not found\",\"status\":\"error\"}" : "{\"values\":[{\"datetime\":\"2026-10-23\",\"open\":\"11\",\"high\":\"12\",\"low\":\"10\",\"close\":\"11.5\",\"volume\":\"100\"},{\"datetime\":\"2026-10-22\",\"open\":\"10\",\"high\":\"11\",\"low\":\"9\",\"close\":\"10.5\",\"volume\":\"90\"}],\"status\":\"ok\"}"); });
         fake.createContext("/gm/v1beta/models/", ex -> {
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            upstreamCalls.add("gemini " + ex.getRequestURI().getPath() + " key=" + ex.getRequestHeaders().getFirst("x-goog-api-key") + (body.contains("\"OBJECT\"") ? " schema-ok" : ""));
+            upstreamCalls.add("gemini " + ex.getRequestURI().getPath() + " key=" + ex.getRequestHeaders().getFirst("x-goog-api-key") + (body.contains("\"OBJECT\"") ? " schema-ok" : "") + (body.contains("Never tell the user to buy, sell or hold") ? " no-advice" : "") + (body.contains("functionDeclarations") ? " chat" : ""));
             if (body.contains("DENIEDKEY")) { reply(ex, 403, "application/json", "{\"error\":{\"code\":403,\"message\":\"Permission denied on the service.\",\"status\":\"PERMISSION_DENIED\"}}"); return; }
             if (body.contains("BADKEY")) { reply(ex, 400, "application/json", "{\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\",\"status\":\"INVALID_ARGUMENT\"}}"); return; }
             if (body.contains("DATA:")) { String rep = "Here you go: {\"headline\":\"Steady grower\",\"summary\":\"Apple earns a lot (SEC 10-K, FY2025).\",\"sections\":[{\"title\":\"Business\",\"points\":[\"Sells phones.\"]},{\"title\":\"Empty\",\"points\":[]}],\"bull\":[\"Brand\"],\"bear\":[\"Price\"],\"risks\":[\"Rules\"],\"catalysts\":[\"Earnings\"],\"verdict\":{\"rating\":\"Hold\",\"confidence\":\"Sure\",\"reasons\":[\"Fair price\"],\"changeMind\":\"A cheaper price\"}}";
@@ -112,7 +112,7 @@ public class TestMain {
         fake.createContext("/mx/news/similar/", ex -> reply(ex, 200, "application/json", "{\"data\":[{\"uuid\":\"9\",\"title\":\"Related\",\"source\":\"Src\",\"published_at\":\"2026-10-04T00:00:00Z\",\"url\":\"https://x.test/b\"}]}"));
         fake.createContext("/an/v1/messages", ex -> {
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            upstreamCalls.add("anthropic key=" + ex.getRequestHeaders().getFirst("x-api-key") + " hasTools=" + body.contains("get_quote"));
+            upstreamCalls.add("anthropic key=" + ex.getRequestHeaders().getFirst("x-api-key") + " hasTools=" + body.contains("get_quote") + (body.contains("Never tell the user to buy, sell or hold") ? " no-advice" : ""));
             if (body.contains("AUTHFAIL")) { reply(ex, 401, "application/json", "{\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"}}"); return; }
             if (body.contains("NOCREDIT")) { reply(ex, 400, "application/json", "{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API.\"}}"); return; }
             if (body.contains("Task: ")) { upstreamCalls.add("explain " + (body.contains("Today's price moves: AAPL +0.25% today") ? "with-moves" : "no-moves")); reply(ex, 200, "application/json", "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"- **What**: Apple rose\"}]}"); return; }
@@ -456,6 +456,11 @@ public class TestMain {
         r = call(p, "POST", "/api/ai", "{\"messages\":[{\"role\":\"user\",\"content\":\"Tell me about Apple\"}]}", ip());
         t("AI runs tool loop and returns text + tools used", r.code == 200 && String.valueOf(m(r.body).get("text")).contains("Apple") && l(m(r.body).get("used")).contains("Quote AAPL"));
         t("AI reply has clickable sources and a figure check", l(m(r.body).get("sources")).toString().contains("https://finance.yahoo.com/quote/AAPL") && m(r.body).get("check") instanceof Map);
+        t("AI: Ask AI and story explanations tell the model never to give personal buy/sell/hold or allocation advice",
+                upstreamCalls.stream().anyMatch(u -> u.startsWith("anthropic") && u.contains("hasTools=true") && u.endsWith(" no-advice"))
+                && upstreamCalls.stream().anyMatch(u -> u.startsWith("anthropic") && u.contains("hasTools=false") && u.endsWith(" no-advice"))
+                && upstreamCalls.stream().filter(u -> u.startsWith("anthropic") && u.contains("hasTools=true")).allMatch(u -> u.endsWith(" no-advice")));
+        t("AI: the same rule goes to Gemini for chat", upstreamCalls.stream().anyMatch(u -> u.startsWith("gemini") && u.contains(" chat") && u.contains(" no-advice")));
         {
             Map<String, Object> data = Json.obj("price", 226.31, "revenue", 394_328_000_000L, "grossMargin", 0.4621, "head", "Shares rose 3.2% on Tuesday");
             Map<String, Object> ck = Grounding.check("Apple trades at $226.31 (Yahoo Finance). Revenue was $394.3 billion in 2025, gross margin 46.2%, up 3.2% Nov 11. "

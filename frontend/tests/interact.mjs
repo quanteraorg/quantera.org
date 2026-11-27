@@ -329,6 +329,37 @@ async function phoneTaps(browser) {
   await ctx.close();
 }
 
+// ---------- 6. sector rules and honest labels ----------
+// A bank's scorecard skips the checks that don't fit how banks are financed, and says so; the leaderboard says its
+// returns are self-reported.
+async function sectorRules(browser) {
+  const { ctx, page, errors } = await newPage(browser, 'desktop');
+  await page.route('**/api/overview?symbol=JPM*', async route => {
+    const r = await route.fetch().catch(() => null);
+    let b = {}; try { b = r ? await r.json() : {}; } catch { b = {}; }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...b, symbol: 'JPM', name: 'JPMorgan Chase & Co.', sector: 'Financial Services', industry: 'Banks - Diversified' }) });
+  });
+  await page.route('**/rest/v1/leaderboard*', route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.goto(BASE + '/'); await page.waitForTimeout(1500);
+  await go(page, 'asset/JPM'); await page.waitForTimeout(2500);
+  const where = 'desktop #/asset/JPM (bank)';
+  await checks(page, errors, where);
+  const r = await page.evaluate(() => {
+    const note = document.querySelector('#sc .sc-skip');
+    const F = { type: 'EQUITY', key: { currentRatio: 0.4, debtToEquity: 250, freeCashFlow: 5e9, cash: 1e9, debt: 2e9, ps: 3, pe: 11, profitMargin: 0.3, operatingMargin: 0.35, roe: 0.16 }, annual: [] };
+    // eslint-disable-next-line no-undef
+    const names = typeof SCORE === 'function' ? SCORE('JPM', F).flatMap(g => g.C.map(c => c[0])) : null;
+    return { note: note ? note.textContent : '', names };
+  });
+  if (!/Some checks are skipped for Financial Services companies/.test(r.note)) fail(where, `no skipped-checks note on the scorecard (got "${r.note}")`);
+  if (!r.names) fail(where, 'scorecard function not found');
+  else if (r.names.some(n => ['Current ratio', 'Debt / equity', 'Price / sales'].includes(n))) fail(where, `scorecard still applies ${r.names.filter(n => ['Current ratio', 'Debt / equity', 'Price / sales'].includes(n)).join(', ')} to a bank`);
+  await go(page, 'leaderboard'); await page.waitForTimeout(1500);
+  const lb = await page.evaluate(() => (document.getElementById('m') || document.body).innerText);
+  if (!/aren.t independently checked/.test(lb)) fail('desktop #/leaderboard', 'no self-reported returns note');
+  await ctx.close();
+}
+
 const browser = await chromium.launch();
 const t0 = Date.now();
 let clicks = 0;
@@ -337,6 +368,7 @@ try {
   if (!ONLY || ONLY === 'flows') for (const size of ['desktop', 'phone']) { try { await flows(browser, size); } catch (e) { fail(`${size} flows`, 'stopped: ' + String(e.message || e).split('\n')[0]); } }
   if (!ONLY || ONLY === 'api') for (const m of ['slow', 'fail']) { try { await apiStates(browser, m); } catch (e) { fail(`${m} API`, 'stopped: ' + String(e.message || e).split('\n')[0]); } }
   if (!ONLY || ONLY === 'phone') try { await phoneTaps(browser); } catch (e) { fail('phone taps', 'stopped: ' + String(e.message || e).split('\n')[0]); }
+  if (!ONLY || ONLY === 'sector') try { await sectorRules(browser); } catch (e) { fail('sector rules', 'stopped: ' + String(e.message || e).split('\n')[0]); }
 } finally { await browser.close(); }
 const uniq = [...new Set(failures)];
 if (uniq.length) { console.error(`${uniq.length} problem(s):\n` + uniq.map(f => '  - ' + f).join('\n')); process.exit(1); }

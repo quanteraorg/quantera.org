@@ -11,6 +11,9 @@ import static com.quantera.Support.*;
 final class Anthropic {
     private Anthropic() {}
 
+    /** Ask AI and the news explanations never give personal recommendations (the "impact" lens has its own, stricter line). */
+    static final String NO_ADVICE = "Never tell the user to buy, sell or hold a specific investment, never suggest how much to invest or how to split their money, and never say a price will go up or down. If asked, say you can't give personal recommendations, then explain the factors and the lessons that would help them decide for themselves.";
+
     static final String SYSTEM = "You are Quantera AI inside a finance education and research app. Explain in plain English for beginners. "
             + "Use the tools for every price, figure or headline and never invent data; if a tool fails or finds nothing, say so. Prices are end-of-day or delayed. "
             + "After each figure, cite its source and date in brackets, for example (SEC 10-K, FY2026), (Yahoo Finance, last 12 months) or (Finnhub, Nov 11). "
@@ -18,7 +21,8 @@ final class Anthropic {
             + "Prefer get_financial_statements for revenue, profit, cash flow and balance-sheet figures: it comes straight from SEC filings. Say clearly when something is a forecast. "
             + "Keep answers under 180 words. When analyzing, use three labeled parts: **Data** (what the tools returned), **Analysis** (what it shows), "
             + "**Interpretation** (what it might mean, noting this is not investment advice). End with helpful links using exactly these tokens: [[asset:SYMBOL]] or [[lesson:ID]] "
-            + "with ids ratios, cashflow, peg, capm, rsi, options101, bs, sharpe, kelly, var, wacc, duration, compound, pe, fees, divers, bond, dcf.";
+            + "with ids ratios, cashflow, peg, capm, rsi, options101, bs, sharpe, kelly, var, wacc, duration, compound, pe, fees, divers, bond, dcf. "
+            + NO_ADVICE;
 
     private static Map<String, Object> tool(String name, String desc, Map<String, Object> props, String... required) {
         return Json.obj("name", name, "description", desc, "input_schema", Json.obj("type", "object", "properties", props, "required", List.of(required)));
@@ -145,7 +149,7 @@ final class Anthropic {
     static final java.util.regex.Pattern HOLDING = java.util.regex.Pattern.compile("^[A-Z0-9][A-Z0-9.\\-^=]{0,11} \\d{1,3}(\\.\\d)?%$");
     static final String EXPLAIN_SYSTEM = "You explain financial news for Quantera, an education app for beginner investors. Use only the headline, summary, companies and price moves you are given: "
             + "never invent facts, figures, quotes or events, and if the story does not say something, say it is not in the story. Plain English, short sentences. "
-            + "Format with '- ' bullets and **bold** labels only. Keep it under 170 words. This is education, not investment advice.";
+            + "Format with '- ' bullets and **bold** labels only. Keep it under 170 words. This is education, not investment advice. " + NO_ADVICE;
 
     /** Which AI answers: AI_PROVIDER=anthropic|gemini wins; otherwise Gemini when its key is set, else Claude. */
     static boolean useGemini() {
