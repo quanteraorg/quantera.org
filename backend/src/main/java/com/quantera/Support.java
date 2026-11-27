@@ -56,16 +56,35 @@ final class Support {
 
     /** Best-effort per-instance limiter. Use a shared store (Redis) if you run several instances. */
     static final class RateLimiter {
+        static final int MAX_KEYS = 5000;
         private final Map<String, Deque<Long>> hits = new ConcurrentHashMap<>();
+        int size() { return hits.size(); }
         boolean limited(String ip, String route, int max) {
-            if (hits.size() > 5000) hits.clear();
             long now = System.currentTimeMillis();
+            if (hits.size() > MAX_KEYS) evict(now);
             Deque<Long> d = hits.computeIfAbsent(ip + "|" + route, k -> new ArrayDeque<>());
             synchronized (d) {
                 while (!d.isEmpty() && now - d.peekFirst() > 60_000) d.pollFirst();
                 d.addLast(now);
                 return d.size() > max;
             }
+        }
+        /**
+         * Makes room without ever resetting everyone at once (a flood of new addresses used to wipe every counter,
+         * including those of clients already over their limit): drops keys with no hit in the last minute, which
+         * can't be limited anyway, and only if still over the cap, the keys with the fewest recent hits (oldest first),
+         * so a client already over its limit is the last to be forgotten.
+         */
+        private synchronized void evict(long now) {
+            if (hits.size() <= MAX_KEYS) return;
+            hits.entrySet().removeIf(e -> { Deque<Long> d = e.getValue(); synchronized (d) { Long last = d.peekLast(); return last == null || now - last > 60_000; } });
+            int over = hits.size() - MAX_KEYS * 9 / 10;
+            if (over <= 0) return;
+            record K(String key, int n, long last) {}
+            List<K> keys = new ArrayList<>();
+            for (var e : hits.entrySet()) { Deque<Long> d = e.getValue(); synchronized (d) { Long last = d.peekLast(); keys.add(new K(e.getKey(), d.size(), last == null ? 0L : last)); } }
+            keys.sort(Comparator.comparingInt(K::n).thenComparingLong(K::last));
+            for (int i = 0; i < over && i < keys.size(); i++) hits.remove(keys.get(i).key());
         }
     }
 

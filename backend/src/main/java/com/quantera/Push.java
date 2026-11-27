@@ -83,6 +83,8 @@ final class Push {
 
     /** Sends one notification. Returns the push service's status (201 = delivered to the service, 404/410 = subscription gone). */
     static int send(String endpoint, String p256dh, String auth, Map<String, Object> msg) {
+        boolean local = cfg("PUSH_ALLOW_LOCAL", null) != null && endpoint.startsWith("http://127.0.0.1:"); // tests only
+        if (!local && !pushHost(endpoint)) return 410; // never contact anything but a real push service; 410 drops the row
         try {
             byte[] body = encrypt(b64d(p256dh), b64d(auth), Json.write(msg).getBytes(StandardCharsets.UTF_8));
             HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(endpoint)).timeout(Duration.ofSeconds(10)).header("Content-Encoding", "aes128gcm").header("Content-Type", "application/octet-stream")
@@ -99,8 +101,22 @@ final class Push {
         Map<String, Object> s = map(map(body).get("subscription")), k = map(s.get("keys"));
         String e = str(s.get("endpoint")), p = str(k.get("p256dh")), a = str(k.get("auth"));
         boolean local = cfg("PUSH_ALLOW_LOCAL", null) != null && e != null && e.startsWith("http://127.0.0.1:"); // tests only
-        if (e == null || p == null || a == null || (!local && !ENDPOINT.matcher(e).matches()) || !B64.matcher(p).matches() || !B64.matcher(a).matches()) throw new UpstreamException("Invalid push subscription", 400);
+        if (e == null || p == null || a == null || (!local && (!ENDPOINT.matcher(e).matches() || !pushHost(e))) || !B64.matcher(p).matches() || !B64.matcher(a).matches()) throw new UpstreamException("Invalid push subscription", 400);
         return new Sub(e, p, a);
+    }
+    /**
+     * Only the browsers' real push services, so the server never POSTs to an address a visitor picked (an internal
+     * host, an IP address, any other site): Chrome/Edge (FCM), Firefox (Mozilla), Windows (WNS) and Safari (Apple).
+     */
+    static boolean pushHost(String endpoint) {
+        String h;
+        try { h = URI.create(endpoint).getHost(); } catch (IllegalArgumentException ex) { return false; }
+        if (h == null) return false;
+        h = h.toLowerCase(java.util.Locale.ROOT);
+        if (h.endsWith(".")) return false;
+        if (h.matches("[0-9.]+") || h.contains(":")) return false; // IP literals
+        return h.equals("fcm.googleapis.com") || h.equals("updates.push.services.mozilla.com") || h.endsWith(".push.services.mozilla.com")
+                || h.endsWith(".notify.windows.com") || h.equals("web.push.apple.com");
     }
     static String enc(String s) { return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8); }
     static void need() { if (!on()) throw new UpstreamException("Background alerts are not set up yet", 503); }

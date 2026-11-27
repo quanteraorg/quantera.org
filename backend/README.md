@@ -39,17 +39,20 @@ Alpha Vantage: Finnhub serves quotes, movers, company profiles, search, calendar
 
 ## AI provider (Gemini free tier now, Claude later)
 Set GEMINI_API_KEY (free from aistudio.google.com) to run the AI chat and story explanations on Gemini. To move to Claude,
-set a working ANTHROPIC_API_KEY and AI_PROVIDER=anthropic (or remove GEMINI_API_KEY). /api/health reports "aiProvider".
+set a working ANTHROPIC_API_KEY and AI_PROVIDER=anthropic (or remove GEMINI_API_KEY). /api/health/detail reports "aiProvider".
 AI_DAILY_LIMIT caps AI requests across the whole server per UTC day (default 400; 0 turns AI off), so traffic or abuse
-can never run up an unbounded bill. Also set a budget alert for the key in Google Cloud.
+can never run up an unbounded bill, and AI_GLOBAL_PER_MIN (default 30) caps them per minute so a burst can't use the day up
+at once. Both count only requests that reach the AI provider (cached answers are free) and don't depend on the visitor's
+address. Also set a budget alert for the key in Google Cloud.
 Rate limits apply per visitor (first X-Forwarded-For entry, set by Vercel) and, with a ceiling ten times higher, per
-connecting address (CF-Connecting-IP), which a client calling the API server directly cannot fake.
+connecting address (CF-Connecting-IP), which a client calling the API server directly cannot fake. A flood of new
+addresses never resets the limiter: it forgets idle and lightly used addresses first.
 
 ## Global markets (Yahoo Finance, no key)
 Index levels (S&P 500, FTSE 100, Nikkei 225…), every country's stocks and ETFs (by sector, paged), non-US quotes, charts, intraday bars,
 profiles and worldwide search come from Yahoo Finance's public endpoints. Symbols use Yahoo's suffixes (7203.T, RELIANCE.NS, SHEL.L, ^GSPC).
 Prices outside the US are delayed about 15 minutes. It is unofficial and unlicensed: fine for a prototype, but before a public or commercial
-launch move to a licensed feed (e.g. EODHD). Set YAHOO_ENABLED=0 to turn it off; /api/health reports "global" and "lastGlobalError".
+launch move to a licensed feed (e.g. EODHD). Set YAHOO_ENABLED=0 to turn it off; /api/health reports "global", /api/health/detail "lastGlobalError".
 
 ## Economy dashboard (FRED)
 Set FRED_API_KEY (free at fred.stlouisfed.org/docs/api/api_key.html). /api/macro then serves 16 US series (inflation, jobs, GDP, rates,
@@ -64,7 +67,9 @@ revenue, profit, EPS and free cash flow from XBRL. Set SEC_USER_AGENT to "Quante
 2. Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY (base64url P-256 keys) and VAPID_SUBJECT. Keep the private key secret.
 3. The server checks active alerts every 60 s and sends an encrypted push (RFC 8291/8292, no libraries). It only runs while the server
    is awake: on Render's free plan add an uptime pinger hitting /api/health every 5 minutes, or use a paid instance.
-iPhone/iPad users must add the site to the Home Screen before notifications work. /api/health reports "pushAlerts" and "lastPushError".
+iPhone/iPad users must add the site to the Home Screen before notifications work. /api/health reports "pushAlerts", /api/health/detail "lastPushError".
+Subscriptions are accepted only for the browsers' push services (fcm.googleapis.com, *.push.services.mozilla.com,
+*.notify.windows.com, web.push.apple.com), never IP addresses or other hosts, so the server can't be made to call anything else.
 
 ## Rate-limit safety (free plans)
 - Finnhub (60/min): the quote warmer uses ~40/min in session and ~10/min outside it. Any 429 makes every caller back off for 30 s and serve the warm snapshot instead.
@@ -108,6 +113,7 @@ Note: Vercel itself does not run long-lived Java servers, which is why the API i
 - Free Alpha Vantage / Marketaux plans are tiny; check their terms before showing data publicly.
 
 ## Uptime monitoring
-- `/api/health` is lenient on purpose: Render uses it to decide whether the server is alive, so it stays 200 while the server runs.
+- `/api/health` is lenient on purpose: Render uses it to decide whether the server is alive, so it stays 200 while the server runs. It shows on/off flags only.
+- `/api/health/detail` adds which providers are in use, the last provider, Yahoo and push errors and today's AI usage. It needs the header `X-Admin-Token` equal to `ADMIN_TOKEN`; without it (or with ADMIN_TOKEN unset) it answers 404. Example: `curl -H "X-Admin-Token: $ADMIN_TOKEN" https://YOUR-HOST/api/health/detail`.
 - `/api/status` is strict, for uptime monitors (e.g. Better Stack): 200 when everything configured works, 503 naming what's broken (malformed storage key, Supabase project paused or unreachable, AI key rejected or out of credits, price alerts not running). It never includes keys.
 - Set `ALERTS_HEARTBEAT_URL` to a heartbeat URL and the price-alert checker pings it after every successful run (about once a minute), so a stopped checker raises an alert.
